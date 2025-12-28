@@ -1,0 +1,27 @@
+{
+  "greeting": "Hallo! Ik ben uw spraakassistent. Hoe kan ik u helpen vandaag?",
+  "didNotCatch": "Ik heb dat niet verstaan. Kunt u het herhalen?",
+  "didNotHear": "Ik heb niets gehoord. Tot ziens.",
+  "didNotHearRetry": "Sorry, ik heb dat niet verstaan. Kunt u het nog een keer proberen?",
+  "didNotHearFinal": "Het spijt me echt maar ik kan niet horen wat u zegt. Bel alstublieft opnieuw. Tot snel.",
+  "transfer": "Geen probleem, ik verbind u door.",
+  "acknowledgment": "Een moment alstublieft.",
+  "farewell": {
+    "morning": "Graag gedaan! Fijne dag nog. Tot ziens!",
+    "afternoon": "Graag gedaan! Fijne middag nog. Tot ziens!",
+    "evening": "Graag gedaan! Fijne avond nog. Tot ziens!"
+  },
+  "error": "Sorry, er is een fout opgetreden. Probeer het later opnieuw. Tot ziens.",
+  "timeout": "Sorry, ik deed er te lang over om te antwoorden. Probeer het opnieuw. Tot ziens.",
+  "lostQuestion": "Sorry, ik ben uw vraag kwijt. Kunt u het herhalen?",
+  "flow": {
+    "cancelled": "Geen probleem! Ik heb dat geannuleerd. Waarmee kan ik je helpen?"
+  },
+  "sms": {
+    "greeting": "Hallo! Ik ben uw spraakassistent. Hoe kan ik u helpen?",
+    "greetingShort": "Hallo! Stuur me uw vraag!",
+    "callForHelp": "Voor complexe vragen, bel ons direct.",
+    "processingError": "Ik heb moeite om dat te verwerken. Probeer het opnieuw of bel ons.",
+    "genericError": "Sorry, er ging iets mis. Probeer het opnieuw."
+  }
+}

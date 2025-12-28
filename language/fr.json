@@ -1,0 +1,27 @@
+{
+  "greeting": "Bonjour! Je suis votre assistant vocal. Comment puis-je vous aider aujourd'hui?",
+  "didNotCatch": "Je n'ai pas compris. Pourriez-vous repeter, s'il vous plait?",
+  "didNotHear": "Je n'ai rien entendu. Au revoir.",
+  "didNotHearRetry": "Desolee, je n'ai pas compris. Pourriez-vous reessayer?",
+  "didNotHearFinal": "Je suis vraiment desolee mais je n'arrive pas a entendre ce que vous dites. Veuillez rappeler. A bientot.",
+  "transfer": "Pas de probleme, je vous transfiere.",
+  "acknowledgment": "Un instant, s'il vous plait.",
+  "farewell": {
+    "morning": "Je vous en prie! Passez une excellente journee. Au revoir!",
+    "afternoon": "Je vous en prie! Passez un bon apres-midi. Au revoir!",
+    "evening": "Je vous en prie! Passez une bonne soiree. Au revoir!"
+  },
+  "error": "Desole, j'ai rencontre une erreur. Veuillez reessayer plus tard. Au revoir.",
+  "timeout": "Desole, j'ai mis trop de temps a repondre. Veuillez reessayer. Au revoir.",
+  "lostQuestion": "Je suis desole, j'ai perdu le fil de votre question. Pourriez-vous repeter?",
+  "flow": {
+    "cancelled": "Pas de probleme! J'ai annule ca. Comment puis-je vous aider?"
+  },
+  "sms": {
+    "greeting": "Bonjour! Je suis votre assistant vocal. Comment puis-je vous aider?",
+    "greetingShort": "Bonjour! Envoyez-moi votre question!",
+    "callForHelp": "Pour des questions complexes, appelez-nous directement.",
+    "processingError": "J'ai du mal a traiter cela. Veuillez reessayer ou nous appeler.",
+    "genericError": "Desole, quelque chose s'est mal passe. Veuillez reessayer."
+  }
+}

@@ -23,8 +23,8 @@
     "build": "bun run build:clean && bun run build:types && bun run build:esm && bun run build:cjs",
     "build:clean": "rm -rf dist",
     "build:types": "tsc --emitDeclarationOnly --outDir dist",
-    "build:esm": "esbuild src/index.ts --bundle --format=esm --outfile=dist/index.mjs --external:hono --external:openai --external:@diegoaltoworks/chatter --external:@libsql/client --platform=node --target=node18",
-    "build:cjs": "esbuild src/index.ts --bundle --format=cjs --outfile=dist/index.js --external:hono --external:openai --external:@diegoaltoworks/chatter --external:@libsql/client --platform=node --target=node18",
+    "build:esm": "esbuild src/index.ts --bundle --format=esm --outfile=dist/index.mjs --external:hono --external:openai --external:@diegoaltoworks/chatter --external:@libsql/client --platform=node --target=node24",
+    "build:cjs": "esbuild src/index.ts --bundle --format=cjs --outfile=dist/index.js --external:hono --external:openai --external:@diegoaltoworks/chatter --external:@libsql/client --platform=node --target=node24",
     "test": "bun test",
     "test:unit": "bun test src/**/*.test.ts",
     "test:integration": "bun test test/integration/**/*.test.ts",
@@ -64,7 +64,7 @@
   },
   "homepage": "https://github.com/diegoaltoworks/talker#readme",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=24.0.0"
   },
   "peerDependencies": {
     "@diegoaltoworks/chatter": "^0.1.0",

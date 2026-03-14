@@ -1,0 +1,27 @@
+{
+  "greeting": "Hola! Soy su asistente de voz. Como puedo ayudarle hoy?",
+  "didNotCatch": "No entendi eso. Podria repetirlo, por favor?",
+  "didNotHear": "No escuche nada. Adios!",
+  "didNotHearRetry": "Lo siento, no entendi eso. Podria intentarlo de nuevo?",
+  "didNotHearFinal": "Lo siento mucho pero no puedo escuchar lo que dice. Por favor, llame de nuevo. Hasta pronto.",
+  "transfer": "No hay problema, le transfiero ahora.",
+  "acknowledgment": "Un momento, por favor.",
+  "farewell": {
+    "morning": "De nada! Que tenga un buen dia. Adios!",
+    "afternoon": "De nada! Que tenga una buena tarde. Adios!",
+    "evening": "De nada! Que tenga una buena noche. Adios!"
+  },
+  "error": "Lo siento, encontre un error. Por favor, intentelo mas tarde. Adios!",
+  "timeout": "Lo siento, tarde demasiado en responder. Por favor, intentelo de nuevo. Adios!",
+  "lostQuestion": "Lo siento, perdi el hilo de su pregunta. Podria repetir?",
+  "flow": {
+    "cancelled": "No hay problema! He cancelado eso. En que mas puedo ayudar?"
+  },
+  "sms": {
+    "greeting": "Hola! Soy su asistente de voz. Como puedo ayudarle?",
+    "greetingShort": "Hola! Enviame su pregunta!",
+    "callForHelp": "Para consultas complejas, llamenos directamente.",
+    "processingError": "Tengo problemas para procesar eso. Por favor intentelo de nuevo o llamenos.",
+    "genericError": "Lo siento, algo salio mal. Por favor intente de nuevo."
+  }
+}

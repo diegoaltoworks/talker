@@ -1,0 +1,27 @@
+{
+  "greeting": "Hallo! Ich bin Ihr Sprachassistent. Wie kann ich Ihnen heute helfen?",
+  "didNotCatch": "Das habe ich nicht verstanden. Koennten Sie das bitte wiederholen?",
+  "didNotHear": "Ich habe nichts gehoert. Auf Wiedersehen.",
+  "didNotHearRetry": "Entschuldigung, ich habe das nicht verstanden. Koennten Sie es noch einmal versuchen?",
+  "didNotHearFinal": "Es tut mir wirklich leid, aber ich kann nicht hoeren, was Sie sagen. Bitte rufen Sie erneut an. Bis bald.",
+  "transfer": "Kein Problem, ich verbinde Sie jetzt.",
+  "acknowledgment": "Einen Moment bitte.",
+  "farewell": {
+    "morning": "Gern geschehen! Einen schoenen Tag noch. Auf Wiedersehen!",
+    "afternoon": "Gern geschehen! Einen schoenen Nachmittag noch. Auf Wiedersehen!",
+    "evening": "Gern geschehen! Einen schoenen Abend noch. Auf Wiedersehen!"
+  },
+  "error": "Entschuldigung, es ist ein Fehler aufgetreten. Bitte versuchen Sie es spaeter erneut. Auf Wiedersehen.",
+  "timeout": "Entschuldigung, ich habe zu lange gebraucht. Bitte versuchen Sie es erneut. Auf Wiedersehen.",
+  "lostQuestion": "Es tut mir leid, ich habe Ihre Frage verloren. Koennten Sie das wiederholen?",
+  "flow": {
+    "cancelled": "Kein Problem! Ich habe das abgebrochen. Wie kann ich helfen?"
+  },
+  "sms": {
+    "greeting": "Hallo! Ich bin Ihr Sprachassistent. Wie kann ich Ihnen helfen?",
+    "greetingShort": "Hallo! Senden Sie mir Ihre Frage!",
+    "callForHelp": "Fuer komplexe Fragen rufen Sie uns direkt an.",
+    "processingError": "Ich habe Schwierigkeiten, das zu verarbeiten. Bitte versuchen Sie es erneut oder rufen Sie uns an.",
+    "genericError": "Entschuldigung, etwas ist schief gelaufen. Bitte versuchen Sie es erneut."
+  }
+}

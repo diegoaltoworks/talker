@@ -126,6 +126,12 @@ export { getExitMessage } from "./flows/utils";
 // Twilio adapter
 export { sendSMS } from "./adapters/twilio";
 
+// Database (session persistence)
+export { initDbClient, getDbClient, closeDbClient } from "./db/client";
+export { runMigrations } from "./db/migrate";
+export { persistFinalSession, persistSession } from "./db/persist";
+export type { SessionRecord, MessageRecord } from "./db/sessions";
+
 // Route factories (for custom setup)
 export { callRoutes } from "./routes/call";
 export { smsRoutes } from "./routes/sms";

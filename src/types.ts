@@ -99,6 +99,14 @@ export interface TalkerConfig {
   /** Remote chatbot API (standalone mode). Not needed in plugin mode — chatter's RAG is used directly */
   chatbot?: ChatbotConfig;
 
+  /** Database config for session persistence. In plugin mode, falls back to chatter's database config */
+  database?: {
+    /** Turso/libSQL database URL */
+    url: string;
+    /** Turso auth token */
+    authToken: string;
+  };
+
   /** OpenAI API key for the pre/post-processing pipeline. Falls back to chatter's OpenAI client */
   openaiApiKey?: string;
 

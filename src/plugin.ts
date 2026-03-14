@@ -26,6 +26,8 @@ import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import type { Hono } from "hono";
 import { startCleanup } from "./core/context";
 import { logger } from "./core/logger";
+import { initDbClient } from "./db/client";
+import { runMigrations } from "./db/migrate";
 import { FlowRegistry } from "./flows/registry";
 import { callRoutes } from "./routes/call";
 import { smsRoutes } from "./routes/sms";
@@ -56,6 +58,14 @@ export async function createTelephonyRoutes(
     openaiApiKey,
     openaiModel: config.processing?.model || DEFAULT_MODEL,
   };
+
+  // Initialize database — use talker's config, or fall back to chatter's database
+  const dbUrl = config.database?.url || chatterDeps.config.database?.url;
+  const dbToken = config.database?.authToken || chatterDeps.config.database?.authToken;
+  if (dbUrl && dbToken) {
+    initDbClient(dbUrl, dbToken);
+    await runMigrations();
+  }
 
   const registry = new FlowRegistry(config.flowsDir || "");
   if (config.flowsDir) {

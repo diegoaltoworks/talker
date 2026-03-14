@@ -31,6 +31,8 @@ import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import { Hono } from "hono";
 import { startCleanup } from "./core/context";
 import { logger } from "./core/logger";
+import { initDbClient } from "./db/client";
+import { runMigrations } from "./db/migrate";
 import { FlowRegistry } from "./flows/registry";
 import { callRoutes } from "./routes/call";
 import { smsRoutes } from "./routes/sms";
@@ -72,6 +74,12 @@ export async function createStandaloneServer(config: StandaloneConfig) {
     openaiApiKey: config.openaiApiKey,
     openaiModel: config.processing?.model || DEFAULT_MODEL,
   };
+
+  // Initialize database if configured
+  if (config.database?.url && config.database?.authToken) {
+    initDbClient(config.database.url, config.database.authToken);
+    await runMigrations();
+  }
 
   // Initialize flow registry
   const registry = new FlowRegistry(config.flowsDir || "");

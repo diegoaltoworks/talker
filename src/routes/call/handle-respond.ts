@@ -11,6 +11,7 @@ import { getErrorMessage } from "../../core/errors";
 import { logger } from "../../core/logger";
 import { getPhrase } from "../../core/phrases";
 import { acknowledgmentTwiml, gatherTwiml, sayTwiml } from "../../core/twiml";
+import { persistSession } from "../../db/persist";
 import type { FlowRegistry } from "../../flows/registry";
 import type { TalkerDependencies } from "../../types";
 import { setPending } from "./pending";
@@ -61,6 +62,7 @@ export async function handleRespond(
       .then((twiml) => {
         const pending = getPendingForResolve(phoneNumber);
         if (pending) pending.resolve({ twiml });
+        persistSession(phoneNumber, "call");
       })
       .catch((error) => {
         logger.error("background processing error", {
@@ -81,6 +83,7 @@ export async function handleRespond(
   // Synchronous flow
   try {
     const twiml = await processCall(deps, registry, phoneNumber, speechResult);
+    persistSession(phoneNumber, "call");
     return c.text(twiml, 200, { "Content-Type": "text/xml" });
   } catch (error) {
     logger.error("call processing error", { error: getErrorMessage(error) });

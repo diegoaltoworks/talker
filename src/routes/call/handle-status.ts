@@ -2,12 +2,13 @@
  * Call Status Handler
  *
  * Handles POST /call/status — called by Twilio when call state changes.
- * Cleans up conversation context when call completes.
+ * Persists the final session state, then cleans up conversation context.
  */
 
 import type { Context } from "hono";
 import { clearContext } from "../../core/context";
 import { logger } from "../../core/logger";
+import { persistFinalSession, persistSession } from "../../db/persist";
 
 export async function handleStatus(c: Context): Promise<Response> {
   const body = await c.req.parseBody();
@@ -17,6 +18,9 @@ export async function handleStatus(c: Context): Promise<Response> {
   logger.info("call status update", { phoneNumber, callStatus });
 
   if (callStatus === "completed") {
+    // Final save — persist all messages and mark session as ended
+    persistSession(phoneNumber, "call");
+    persistFinalSession(phoneNumber, "call", "ended");
     clearContext(phoneNumber);
   }
 

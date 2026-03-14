@@ -12,6 +12,7 @@ import { processIncoming, processOutgoing } from "../../core/processing";
 import { farewellTwiml, gatherTwiml, transferTwiml } from "../../core/twiml";
 import { getVoiceConfig } from "../../core/voice";
 import { escapeXml } from "../../core/xml";
+import { persistFinalSession, persistSession } from "../../db/persist";
 import { processFlow } from "../../flows/manager";
 import type { FlowRegistry } from "../../flows/registry";
 import type { TalkerDependencies } from "../../types";
@@ -30,12 +31,16 @@ export async function processCall(
   // Transfer to human if requested
   if (incoming.shouldTransfer) {
     logger.info("transferring to human", { phoneNumber, language: incoming.detectedLanguage });
+    persistSession(phoneNumber, "call");
+    persistFinalSession(phoneNumber, "call", "redirected", incoming.processedMessage);
     return transferTwiml(incoming.detectedLanguage, deps.config);
   }
 
   // End call politely if user is done
   if (incoming.shouldEndCall) {
     logger.info("ending call - user done", { phoneNumber, language: incoming.detectedLanguage });
+    persistSession(phoneNumber, "call");
+    persistFinalSession(phoneNumber, "call", "ended");
     clearContext(phoneNumber);
     return farewellTwiml(incoming.detectedLanguage, deps.config);
   }

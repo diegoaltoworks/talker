@@ -9,6 +9,7 @@ import { getErrorMessage } from "../../core/errors";
 import { logger } from "../../core/logger";
 import { getSmsPhrase } from "../../core/phrases";
 import { messageTwiml } from "../../core/twiml";
+import { persistSession } from "../../db/persist";
 import type { FlowRegistry } from "../../flows/registry";
 import type { TalkerDependencies } from "../../types";
 import { processSms } from "./processor";
@@ -32,6 +33,7 @@ export async function handleIncomingSMS(
 
   try {
     const twiml = await processSms(deps, registry, phoneNumber, messageBody);
+    persistSession(phoneNumber, "sms");
     return c.text(twiml, 200, { "Content-Type": "text/xml" });
   } catch (error) {
     logger.error("sms processing error", {

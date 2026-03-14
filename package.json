@@ -23,8 +23,8 @@
     "build": "bun run build:clean && bun run build:types && bun run build:esm && bun run build:cjs",
     "build:clean": "rm -rf dist",
     "build:types": "tsc --emitDeclarationOnly --outDir dist",
-    "build:esm": "esbuild src/index.ts --bundle --format=esm --outfile=dist/index.mjs --external:hono --external:openai --external:@diegoaltoworks/chatter --platform=node --target=node18",
-    "build:cjs": "esbuild src/index.ts --bundle --format=cjs --outfile=dist/index.js --external:hono --external:openai --external:@diegoaltoworks/chatter --platform=node --target=node18",
+    "build:esm": "esbuild src/index.ts --bundle --format=esm --outfile=dist/index.mjs --external:hono --external:openai --external:@diegoaltoworks/chatter --external:@libsql/client --platform=node --target=node18",
+    "build:cjs": "esbuild src/index.ts --bundle --format=cjs --outfile=dist/index.js --external:hono --external:openai --external:@diegoaltoworks/chatter --external:@libsql/client --platform=node --target=node18",
     "test": "bun test",
     "test:unit": "bun test src/**/*.test.ts",
     "test:integration": "bun test test/integration/**/*.test.ts",
@@ -65,11 +65,15 @@
   },
   "peerDependencies": {
     "@diegoaltoworks/chatter": "^0.1.0",
+    "@libsql/client": "^0.6.0 || ^0.7.0 || ^0.8.0 || ^0.9.0 || ^0.10.0",
     "hono": "^4.0.0 || ^5.0.0",
     "openai": "^4.0.0"
   },
   "peerDependenciesMeta": {
     "@diegoaltoworks/chatter": {
+      "optional": true
+    },
+    "@libsql/client": {
       "optional": true
     },
     "openai": {
@@ -79,6 +83,7 @@
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@diegoaltoworks/chatter": "^0.1.8",
+    "@libsql/client": "^0.14.0",
     "@types/bun": "^1.1.12",
     "@types/node": "^22.9.1",
     "esbuild": "^0.27.4",
@@ -90,6 +95,6 @@
   },
   "lint-staged": {
     "*.{ts,js,json,md}": ["biome check --write --no-errors-on-unmatched"],
-    "*.ts": ["tsc --noEmit --skipLibCheck"]
+    "*.ts": ["bash -c 'tsc --noEmit --skipLibCheck'"]
   }
 }

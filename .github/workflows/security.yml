@@ -10,42 +10,24 @@ on:
   workflow_dispatch:
 
 jobs:
-  npm-audit:
-    name: NPM Security Audit
+  audit:
+    name: Security Audit
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: '24.x'
+          bun-version: latest
 
       - name: Install dependencies
-        run: npm ci --omit=dev --ignore-scripts --legacy-peer-deps
+        run: bun install
 
-      - name: Run npm audit
-        run: npm audit --audit-level=moderate --omit=dev || true
-        continue-on-error: false
-
-      - name: Generate audit report
-        if: always()
-        run: |
-          npm audit --json --omit=dev > npm-audit-report.json || true
-          echo "## NPM Audit Report" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
-          cat npm-audit-report.json >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-
-      - name: Upload audit report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: npm-audit-report
-          path: npm-audit-report.json
-          retention-days: 30
+      - name: Run security audit
+        run: bun audit --audit-level=moderate
 
   dependency-review:
     name: Dependency Review
@@ -118,49 +100,3 @@ jobs:
         with:
           path: ./
           extra_args: --only-verified --since-commit ${{ github.event.before || github.sha }}
-
-  outdated-dependencies:
-    name: Check Outdated Dependencies
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24.x'
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Check for outdated dependencies
-        run: |
-          echo "## Outdated Dependencies" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          npm outdated || true >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-
-  security-summary:
-    name: Security Summary
-    runs-on: ubuntu-latest
-    needs: [npm-audit, codeql-analysis]
-    if: always()
-
-    steps:
-      - name: Generate Security Summary
-        run: |
-          echo "# Security Scan Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| NPM Audit | ${{ needs.npm-audit.result == 'success' && 'Passed' || 'Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| CodeQL Analysis | ${{ needs.codeql-analysis.result == 'success' && 'Passed' || 'Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Scan Date:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY

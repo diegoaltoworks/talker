@@ -85,8 +85,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "@diegoaltoworks/chatter": "^0.1.8",
-    "@libsql/client": "^0.14.0",
+    "@diegoaltoworks/chatter": "^0.10.0",
+    "@libsql/client": "^0.17.0",
     "@types/bun": "^1.1.12",
     "@types/node": "^22.9.1",
     "esbuild": "^0.27.4",

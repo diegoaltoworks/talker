@@ -137,4 +137,9 @@ export { callRoutes } from "./routes/call";
 export { smsRoutes } from "./routes/sms";
 
 // Logger
-export { logger } from "./core/logger";
+export { logger, redactPhone } from "./core/logger";
+
+// Security middleware
+export { twilioSignatureMiddleware, validateTwilioSignature } from "./middleware/twilio-signature";
+export { rateLimitMiddleware } from "./middleware/rate-limit";
+export { inputSanitizeMiddleware } from "./middleware/input-sanitize";

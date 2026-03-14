@@ -69,9 +69,10 @@ export async function processCall(
         deps.config.voices,
       );
       const transferNumber = deps.config.transferNumber || "";
+      const escapedFlowResponse = escapeXml(flowResult.response);
       return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="${voice}" language="${lang}">${flowResult.response}</Say>
+    <Say voice="${voice}" language="${lang}">${escapedFlowResponse}</Say>
     <Dial>${transferNumber}</Dial>
 </Response>`;
     }

@@ -122,6 +122,17 @@ export interface TalkerConfig {
   /** Maximum no-speech retries before ending call. Default: 3 */
   maxNoSpeechRetries?: number;
 
+  /** Rate limiting configuration */
+  rateLimit?: {
+    /** Max requests per window per phone number. Default: 30 */
+    maxRequests?: number;
+    /** Window size in milliseconds. Default: 60000 (1 minute) */
+    windowMs?: number;
+  };
+
+  /** Maximum input length for speech/SMS messages in characters. Default: 1000 */
+  maxInputLength?: number;
+
   /** Chat function override. By default, talker queries chatter's RAG pipeline directly */
   chatFn?: (phoneNumber: string, message: string) => Promise<string>;
 }

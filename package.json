@@ -34,8 +34,11 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
-    "check": "bun run typecheck && bun run lint && bun run test",
-    "prepublishOnly": "bun run lint && bun run typecheck && bun run test && bun run build",
+    "security:audit": "bun audit",
+    "security:audit:fix": "bun update",
+    "security:check": "bun audit --audit-level=moderate",
+    "check": "bun run typecheck && bun run lint && bun run test && bun run security:check",
+    "prepublishOnly": "bun run lint && bun run typecheck && bun run test && bun run security:check && bun run build",
     "prepare": "husky || true"
   },
   "keywords": [

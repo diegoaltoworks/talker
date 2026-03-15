@@ -32,8 +32,35 @@ export interface TwilioConfig {
   accountSid?: string;
   /** Twilio auth token */
   authToken?: string;
-  /** Twilio phone number for outbound SMS */
+  /** Twilio phone number for outbound SMS/WhatsApp */
   phoneNumber?: string;
+  /**
+   * Twilio Messaging Service SID.
+   * When set, outbound messages use MessagingServiceSid instead of From.
+   * This enables features like sender pool, sticky sender, and compliance.
+   */
+  messagingServiceSid?: string;
+}
+
+/**
+ * Status callback event from Twilio.
+ * Received at /sms/status and /whatsapp/status endpoints.
+ */
+export interface MessageStatusEvent {
+  /** Twilio message SID */
+  messageSid: string;
+  /** Message status: queued, sent, delivered, undelivered, failed, read */
+  messageStatus: string;
+  /** Channel the message was sent on */
+  channel: "sms" | "whatsapp";
+  /** Sender phone number */
+  from: string;
+  /** Recipient phone number */
+  to: string;
+  /** Twilio error code (if failed/undelivered) */
+  errorCode?: string;
+  /** Twilio error message (if failed/undelivered) */
+  errorMessage?: string;
 }
 
 /**
@@ -143,6 +170,12 @@ export interface TalkerConfig {
 
   /** Chat function override. By default, talker queries chatter's RAG pipeline directly */
   chatFn?: (phoneNumber: string, message: string) => Promise<string>;
+
+  /**
+   * Callback invoked when a message delivery status update is received.
+   * Called for both SMS and WhatsApp status callbacks.
+   */
+  onMessageStatus?: (event: MessageStatusEvent) => void | Promise<void>;
 }
 
 /**

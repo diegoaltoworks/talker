@@ -6,7 +6,7 @@
 CREATE TABLE IF NOT EXISTS talker_sessions (
   id TEXT PRIMARY KEY,
   phone_number TEXT NOT NULL,
-  channel TEXT NOT NULL CHECK(channel IN ('call', 'sms')),
+  channel TEXT NOT NULL CHECK(channel IN ('call', 'sms', 'whatsapp')),
   reason TEXT NOT NULL CHECK(reason IN ('ended', 'redirected')),
   language TEXT NOT NULL,
   started_at INTEGER NOT NULL,
@@ -29,8 +29,23 @@ CREATE TABLE IF NOT EXISTS talker_messages (
   FOREIGN KEY (session_id) REFERENCES talker_sessions(id) ON DELETE CASCADE
 );
 
+-- Message status table: tracks Twilio delivery status callbacks
+CREATE TABLE IF NOT EXISTS talker_message_status (
+  message_sid TEXT PRIMARY KEY,
+  channel TEXT NOT NULL CHECK(channel IN ('sms', 'whatsapp')),
+  phone_from TEXT NOT NULL,
+  phone_to TEXT NOT NULL,
+  status TEXT NOT NULL,
+  error_code TEXT,
+  error_message TEXT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
 -- Indexes for fast queries
 CREATE INDEX IF NOT EXISTS idx_talker_sessions_phone ON talker_sessions(phone_number);
 CREATE INDEX IF NOT EXISTS idx_talker_sessions_created ON talker_sessions(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_talker_messages_session ON talker_messages(session_id);
 CREATE INDEX IF NOT EXISTS idx_talker_messages_ts ON talker_messages(timestamp);
+CREATE INDEX IF NOT EXISTS idx_talker_message_status_phone ON talker_message_status(phone_to);
+CREATE INDEX IF NOT EXISTS idx_talker_message_status_created ON talker_message_status(created_at DESC);

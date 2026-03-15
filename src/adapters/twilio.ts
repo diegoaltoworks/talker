@@ -17,11 +17,58 @@ export function stripWhatsAppPrefix(phoneNumber: string): string {
 }
 
 /**
+ * Options for outbound message sending
+ */
+export interface SendMessageOptions {
+  /** Status callback URL for delivery status updates */
+  statusCallback?: string;
+}
+
+/**
+ * Build the form parameters for a Twilio Messages API call.
+ * Uses MessagingServiceSid when configured, otherwise From.
+ */
+function buildMessageParams(
+  config: TwilioConfig,
+  to: string,
+  message: string,
+  options?: SendMessageOptions,
+): URLSearchParams {
+  const params: Record<string, string> = {
+    To: to,
+    Body: message,
+  };
+
+  // Use MessagingServiceSid if configured, otherwise use From number
+  if (config.messagingServiceSid) {
+    params.MessagingServiceSid = config.messagingServiceSid;
+  } else if (config.phoneNumber) {
+    params.From = config.phoneNumber;
+  }
+
+  if (options?.statusCallback) {
+    params.StatusCallback = options.statusCallback;
+  }
+
+  return new URLSearchParams(params);
+}
+
+/**
  * Send an SMS via Twilio REST API
  */
-export async function sendSMS(config: TwilioConfig, to: string, message: string): Promise<boolean> {
-  if (!config.accountSid || !config.authToken || !config.phoneNumber) {
+export async function sendSMS(
+  config: TwilioConfig,
+  to: string,
+  message: string,
+  options?: SendMessageOptions,
+): Promise<boolean> {
+  if (!config.accountSid || !config.authToken) {
     logger.warn("Twilio credentials not configured, skipping SMS send", { to });
+    return false;
+  }
+
+  if (!config.phoneNumber && !config.messagingServiceSid) {
+    logger.warn("No phone number or messaging service configured, skipping SMS send", { to });
     return false;
   }
 
@@ -36,11 +83,7 @@ export async function sendSMS(config: TwilioConfig, to: string, message: string)
           Authorization: `Basic ${auth}`,
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: new URLSearchParams({
-          From: config.phoneNumber,
-          To: to,
-          Body: message,
-        }),
+        body: buildMessageParams(config, to, message, options),
       },
     );
 
@@ -72,18 +115,40 @@ export async function sendWhatsApp(
   config: TwilioConfig,
   to: string,
   message: string,
+  options?: SendMessageOptions,
 ): Promise<boolean> {
-  if (!config.accountSid || !config.authToken || !config.phoneNumber) {
+  if (!config.accountSid || !config.authToken) {
     logger.warn("Twilio credentials not configured, skipping WhatsApp send", { to });
+    return false;
+  }
+
+  if (!config.phoneNumber && !config.messagingServiceSid) {
+    logger.warn("No phone number or messaging service configured, skipping WhatsApp send", { to });
     return false;
   }
 
   try {
     const auth = Buffer.from(`${config.accountSid}:${config.authToken}`).toString("base64");
     const whatsappTo = to.startsWith("whatsapp:") ? to : `whatsapp:${to}`;
-    const whatsappFrom = config.phoneNumber.startsWith("whatsapp:")
-      ? config.phoneNumber
-      : `whatsapp:${config.phoneNumber}`;
+
+    // Build params with whatsapp: prefix handling
+    const params: Record<string, string> = {
+      To: whatsappTo,
+      Body: message,
+    };
+
+    if (config.messagingServiceSid) {
+      params.MessagingServiceSid = config.messagingServiceSid;
+    } else if (config.phoneNumber) {
+      const whatsappFrom = config.phoneNumber.startsWith("whatsapp:")
+        ? config.phoneNumber
+        : `whatsapp:${config.phoneNumber}`;
+      params.From = whatsappFrom;
+    }
+
+    if (options?.statusCallback) {
+      params.StatusCallback = options.statusCallback;
+    }
 
     const response = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${config.accountSid}/Messages.json`,
@@ -93,11 +158,7 @@ export async function sendWhatsApp(
           Authorization: `Basic ${auth}`,
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: new URLSearchParams({
-          From: whatsappFrom,
-          To: whatsappTo,
-          Body: message,
-        }),
+        body: new URLSearchParams(params),
       },
     );
 

@@ -57,6 +57,7 @@ export type {
   IncomingResult,
   TelephonyContext,
   Phrases,
+  MessageStatusEvent,
 } from "./types";
 
 // Flow types
@@ -126,12 +127,14 @@ export { getExitMessage } from "./flows/utils";
 
 // Twilio adapter
 export { sendSMS, sendWhatsApp, stripWhatsAppPrefix } from "./adapters/twilio";
+export type { SendMessageOptions } from "./adapters/twilio";
 
 // Database (session persistence)
 export { initDbClient, getDbClient, closeDbClient } from "./db/client";
 export { runMigrations } from "./db/migrate";
 export { persistFinalSession, persistSession } from "./db/persist";
-export type { SessionRecord, MessageRecord } from "./db/sessions";
+export type { SessionRecord, MessageRecord, MessageStatusRecord } from "./db/sessions";
+export { upsertMessageStatus } from "./db/sessions";
 
 // Route factories (for custom setup)
 export { callRoutes } from "./routes/call";
@@ -140,6 +143,10 @@ export { whatsappRoutes } from "./routes/whatsapp";
 
 // Logger
 export { logger, redactPhone } from "./core/logger";
+
+// Shared handlers (for custom route setups)
+export { handleStatusCallback } from "./routes/shared/handle-status-callback";
+export { handleFallback } from "./routes/shared/handle-fallback";
 
 // Security middleware
 export { twilioSignatureMiddleware, validateTwilioSignature } from "./middleware/twilio-signature";

@@ -193,4 +193,64 @@ export async function updateSessionIncremental(
   }
 }
 
+/**
+ * Message delivery status record (from Twilio status callbacks)
+ */
+export interface MessageStatusRecord {
+  messageSid: string;
+  channel: "sms" | "whatsapp";
+  from: string;
+  to: string;
+  status: string;
+  errorCode?: string;
+  errorMessage?: string;
+}
+
+/**
+ * Upsert a message delivery status (from Twilio status callback)
+ */
+export async function upsertMessageStatus(record: MessageStatusRecord): Promise<boolean> {
+  const client = getDbClient();
+  if (!client) return false;
+
+  try {
+    await client.execute({
+      sql: `
+        INSERT INTO talker_message_status (
+          message_sid, channel, phone_from, phone_to, status,
+          error_code, error_message, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(message_sid) DO UPDATE SET
+          status = excluded.status,
+          error_code = excluded.error_code,
+          error_message = excluded.error_message,
+          updated_at = excluded.updated_at
+      `,
+      args: [
+        record.messageSid,
+        record.channel,
+        record.from,
+        record.to,
+        record.status,
+        record.errorCode || null,
+        record.errorMessage || null,
+        Date.now(),
+      ],
+    });
+
+    logger.info("message status upserted", {
+      messageSid: record.messageSid,
+      channel: record.channel,
+      status: record.status,
+    });
+    return true;
+  } catch (error) {
+    logger.error("failed to upsert message status", {
+      messageSid: record.messageSid,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+    return false;
+  }
+}
+
 export { generateId };

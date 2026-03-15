@@ -17,9 +17,11 @@ import { handleIncomingSMS } from "./handle-incoming";
  */
 export function smsRoutes(deps: TalkerDependencies, registry: FlowRegistry) {
   const app = new Hono();
+  const authToken = deps.config.twilio?.authToken;
+  const baseUrl = deps.config.publicUrl;
 
   // Security middleware stack (POST only — GET health check is public)
-  app.post("/sms", twilioSignatureMiddleware(deps.config.twilio?.authToken));
+  app.post("/sms", twilioSignatureMiddleware(authToken, baseUrl));
   app.post("/sms", rateLimitMiddleware(deps.config.rateLimit));
   app.post("/sms", inputSanitizeMiddleware(deps.config.maxInputLength));
 

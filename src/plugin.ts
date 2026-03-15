@@ -53,9 +53,15 @@ export async function createTelephonyRoutes(
     throw new Error("OpenAI API key required for talker");
   }
 
+  // Resolve publicUrl: explicit config > chatter's bot.publicUrl > undefined
+  const resolvedConfig: TalkerConfig = {
+    ...config,
+    publicUrl: config.publicUrl || chatterDeps.config.bot?.publicUrl,
+  };
+
   const deps: TalkerDependencies = {
     chatter: chatterDeps,
-    config,
+    config: resolvedConfig,
     openaiApiKey,
     openaiModel: config.processing?.model || DEFAULT_MODEL,
   };

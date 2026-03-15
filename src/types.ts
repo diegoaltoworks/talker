@@ -78,6 +78,14 @@ export interface TalkerConfig {
   /** Twilio credentials and phone number */
   twilio?: TwilioConfig;
 
+  /**
+   * Public URL where webhooks are received (e.g. "https://bot.example.com").
+   * Required for Twilio signature validation behind reverse proxies.
+   * When not set, falls back to chatter's `bot.publicUrl` in plugin mode,
+   * or to `c.req.url` which may use http:// behind a proxy.
+   */
+  publicUrl?: string;
+
   /** Phone number to transfer calls to when human handoff is requested */
   transferNumber?: string;
 

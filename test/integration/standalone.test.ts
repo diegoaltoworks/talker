@@ -11,6 +11,7 @@ import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import { Hono } from "hono";
 import { clearAllContexts, stopCleanup } from "../../src/core/context";
 import { FlowRegistry } from "../../src/flows/registry";
+import { resetRateLimitStore } from "../../src/middleware/rate-limit";
 import { callRoutes } from "../../src/routes/call";
 import { smsRoutes } from "../../src/routes/sms";
 import { whatsappRoutes } from "../../src/routes/whatsapp";
@@ -36,6 +37,7 @@ function createTestDeps(
 describe("Standalone Server", () => {
   afterAll(() => {
     clearAllContexts();
+    resetRateLimitStore();
     stopCleanup();
   });
 

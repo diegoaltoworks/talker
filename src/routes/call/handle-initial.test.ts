@@ -9,6 +9,7 @@ import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import { Hono } from "hono";
 import { clearAllContexts, getContext, stopCleanup } from "../../core/context";
 import { FlowRegistry } from "../../flows/registry";
+import { resetRateLimitStore } from "../../middleware/rate-limit";
 import type { TalkerDependencies } from "../../types";
 import { callRoutes } from "./index";
 
@@ -47,6 +48,7 @@ function postCall(app: ReturnType<typeof createApp>, fields: Record<string, stri
 describe("handleInitialCall", () => {
   afterEach(() => {
     clearAllContexts();
+    resetRateLimitStore();
     stopCleanup();
   });
 

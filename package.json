@@ -1,6 +1,6 @@
 {
   "name": "@diegoaltoworks/talker",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "Telephony plugin for Chatter — adds voice call and SMS support via Twilio",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

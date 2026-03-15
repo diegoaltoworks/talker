@@ -1,14 +1,42 @@
 /**
  * Database Migrations
  *
- * Runs the schema.sql against the configured database.
+ * Creates talker_sessions and talker_messages tables.
  * Safe to run multiple times (uses IF NOT EXISTS).
  */
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { logger } from "../core/logger";
 import { getDbClient } from "./client";
+
+const SCHEMA_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS talker_sessions (
+    id TEXT PRIMARY KEY,
+    phone_number TEXT NOT NULL,
+    channel TEXT NOT NULL CHECK(channel IN ('call', 'sms')),
+    reason TEXT NOT NULL CHECK(reason IN ('ended', 'redirected')),
+    language TEXT NOT NULL,
+    started_at INTEGER NOT NULL,
+    ended_at INTEGER NOT NULL,
+    duration_ms INTEGER NOT NULL,
+    transfer_reason TEXT,
+    conversation_id TEXT,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+    updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+  )`,
+  `CREATE TABLE IF NOT EXISTS talker_messages (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
+    content TEXT NOT NULL,
+    timestamp INTEGER NOT NULL,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+    FOREIGN KEY (session_id) REFERENCES talker_sessions(id) ON DELETE CASCADE
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_talker_sessions_phone ON talker_sessions(phone_number)",
+  "CREATE INDEX IF NOT EXISTS idx_talker_sessions_created ON talker_sessions(created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_talker_messages_session ON talker_messages(session_id)",
+  "CREATE INDEX IF NOT EXISTS idx_talker_messages_ts ON talker_messages(timestamp)",
+];
 
 export async function runMigrations(): Promise<void> {
   const client = getDbClient();
@@ -19,20 +47,9 @@ export async function runMigrations(): Promise<void> {
   }
 
   try {
-    const schemaPath = join(__dirname, "schema.sql");
-    const schema = readFileSync(schemaPath, "utf-8");
+    logger.info("running database migrations", { statementCount: SCHEMA_STATEMENTS.length });
 
-    const statements = schema
-      .split("\n")
-      .filter((line) => !line.trim().startsWith("--"))
-      .join("\n")
-      .split(";")
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-
-    logger.info("running database migrations", { statementCount: statements.length });
-
-    for (const statement of statements) {
+    for (const statement of SCHEMA_STATEMENTS) {
       await client.execute(statement);
     }
 

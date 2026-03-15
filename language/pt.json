@@ -23,5 +23,12 @@
     "callForHelp": "Para questoes complexas, ligue diretamente.",
     "processingError": "Estou tendo dificuldades para processar isso. Por favor, tente novamente ou nos ligue.",
     "genericError": "Desculpe, algo deu errado. Por favor, tente novamente."
+  },
+  "whatsapp": {
+    "greeting": "Ola! Sou seu assistente. Envie-me uma mensagem e eu ajudo voce!",
+    "greetingShort": "Ola! Como posso ajudar?",
+    "callForHelp": "Para questoes complexas, ligue para nos ou responda aqui com mais detalhes.",
+    "processingError": "Estou tendo dificuldades para processar isso. Por favor, envie sua mensagem novamente.",
+    "genericError": "Desculpe, algo deu errado. Por favor, tente novamente."
   }
 }

@@ -23,5 +23,12 @@
     "callForHelp": "Voor complexe vragen, bel ons direct.",
     "processingError": "Ik heb moeite om dat te verwerken. Probeer het opnieuw of bel ons.",
     "genericError": "Sorry, er ging iets mis. Probeer het opnieuw."
+  },
+  "whatsapp": {
+    "greeting": "Hallo! Ik ben uw assistent. Stuur me een bericht en ik help u graag!",
+    "greetingShort": "Hallo! Hoe kan ik helpen?",
+    "callForHelp": "Voor complexe vragen, bel ons of stuur hier meer details.",
+    "processingError": "Ik heb moeite om dat te verwerken. Probeer uw bericht opnieuw te sturen.",
+    "genericError": "Sorry, er ging iets mis. Probeer het opnieuw."
   }
 }

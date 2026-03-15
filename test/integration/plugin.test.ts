@@ -52,6 +52,11 @@ describe("Plugin Mode", () => {
     const smsRes = await app.fetch(new Request("http://localhost/sms", { method: "GET" }));
     expect(smsRes.status).toBe(200);
 
+    // Verify WhatsApp health endpoint is mounted
+    const waRes = await app.fetch(new Request("http://localhost/whatsapp", { method: "GET" }));
+    expect(waRes.status).toBe(200);
+    expect(await waRes.text()).toBe("WhatsApp endpoint active");
+
     // Verify call endpoint is mounted
     const form = new URLSearchParams({ From: "+15551234567" });
     const callRes = await app.fetch(
@@ -80,9 +85,16 @@ describe("Plugin Mode", () => {
     const smsRes = await app.fetch(new Request("http://localhost/tel/sms", { method: "GET" }));
     expect(smsRes.status).toBe(200);
 
+    // WhatsApp should also work with prefix
+    const waRes = await app.fetch(new Request("http://localhost/tel/whatsapp", { method: "GET" }));
+    expect(waRes.status).toBe(200);
+
     // Should NOT work without prefix
     const noPrefix = await app.fetch(new Request("http://localhost/sms", { method: "GET" }));
     expect(noPrefix.status).toBe(404);
+
+    const noPrefixWa = await app.fetch(new Request("http://localhost/whatsapp", { method: "GET" }));
+    expect(noPrefixWa.status).toBe(404);
   });
 
   it("should throw if no OpenAI key is available", async () => {

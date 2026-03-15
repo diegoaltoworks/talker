@@ -1,7 +1,7 @@
 /**
  * Talker — Telephony Plugin for Chatter
  *
- * Adds voice call and SMS support to Chatter chatbots via Twilio.
+ * Adds voice call, SMS, and WhatsApp support to Chatter chatbots via Twilio.
  * Can also run as a standalone telephony server with a custom chatFn.
  *
  * ## Usage as Chatter Plugin
@@ -84,6 +84,7 @@ export {
   getFarewellPhrase,
   getFlowPhrase,
   getSmsPhrase,
+  getWhatsAppPhrase,
   loadPhrases,
 } from "./core/phrases";
 export {
@@ -124,7 +125,7 @@ export { loadFlowsFromDirectory } from "./flows/loader";
 export { getExitMessage } from "./flows/utils";
 
 // Twilio adapter
-export { sendSMS } from "./adapters/twilio";
+export { sendSMS, sendWhatsApp, stripWhatsAppPrefix } from "./adapters/twilio";
 
 // Database (session persistence)
 export { initDbClient, getDbClient, closeDbClient } from "./db/client";
@@ -135,6 +136,7 @@ export type { SessionRecord, MessageRecord } from "./db/sessions";
 // Route factories (for custom setup)
 export { callRoutes } from "./routes/call";
 export { smsRoutes } from "./routes/sms";
+export { whatsappRoutes } from "./routes/whatsapp";
 
 // Logger
 export { logger, redactPhone } from "./core/logger";

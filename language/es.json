@@ -23,5 +23,12 @@
     "callForHelp": "Para consultas complejas, llamenos directamente.",
     "processingError": "Tengo problemas para procesar eso. Por favor intentelo de nuevo o llamenos.",
     "genericError": "Lo siento, algo salio mal. Por favor intente de nuevo."
+  },
+  "whatsapp": {
+    "greeting": "Hola! Soy su asistente. Envieme un mensaje y le ayudare!",
+    "greetingShort": "Hola! Como puedo ayudarle?",
+    "callForHelp": "Para consultas complejas, llamenos o responda aqui con mas detalles.",
+    "processingError": "Tengo problemas para procesar eso. Por favor envie su mensaje de nuevo.",
+    "genericError": "Lo siento, algo salio mal. Por favor intente de nuevo."
   }
 }

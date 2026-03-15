@@ -103,3 +103,20 @@ export function getSmsPhrase(
   const phrases = loadPhrases(language, languageDir);
   return phrases.sms[key];
 }
+
+/**
+ * Get a WhatsApp-specific phrase.
+ * Falls back to SMS phrases if whatsapp phrases are not defined.
+ */
+export function getWhatsAppPhrase(
+  language: string,
+  key: keyof Phrases["whatsapp"],
+  languageDir?: string,
+): string {
+  const phrases = loadPhrases(language, languageDir);
+  if (phrases.whatsapp) {
+    return phrases.whatsapp[key];
+  }
+  // Fallback to SMS phrases for backward compatibility
+  return phrases.sms[key];
+}

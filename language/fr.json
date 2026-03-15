@@ -23,5 +23,12 @@
     "callForHelp": "Pour des questions complexes, appelez-nous directement.",
     "processingError": "J'ai du mal a traiter cela. Veuillez reessayer ou nous appeler.",
     "genericError": "Desole, quelque chose s'est mal passe. Veuillez reessayer."
+  },
+  "whatsapp": {
+    "greeting": "Bonjour! Je suis votre assistant. Envoyez-moi un message et je vous aiderai!",
+    "greetingShort": "Bonjour! Comment puis-je vous aider?",
+    "callForHelp": "Pour des questions complexes, appelez-nous ou repondez ici avec plus de details.",
+    "processingError": "J'ai du mal a traiter cela. Veuillez renvoyer votre message.",
+    "genericError": "Desole, quelque chose s'est mal passe. Veuillez reessayer."
   }
 }

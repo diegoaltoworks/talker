@@ -1,6 +1,13 @@
 import { describe, expect, it } from "bun:test";
 import { join } from "node:path";
-import { getFlowPhrase, getPhrase, getSmsPhrase, loadPhrases } from "./phrases";
+import {
+  getFarewellPhrase,
+  getFlowPhrase,
+  getPhrase,
+  getSmsPhrase,
+  getWhatsAppPhrase,
+  loadPhrases,
+} from "./phrases";
 
 const languageDir = join(__dirname, "../../language");
 
@@ -26,6 +33,8 @@ describe("Phrases", () => {
         expect(phrases.farewell.evening).toBeDefined();
         expect(phrases.sms.greeting).toBeDefined();
         expect(phrases.flow.cancelled).toBeDefined();
+        expect(phrases.whatsapp.greeting).toBeDefined();
+        expect(phrases.whatsapp.callForHelp).toBeDefined();
       }
     });
 
@@ -64,6 +73,73 @@ describe("Phrases", () => {
     it("should return flow cancelled phrase", () => {
       const cancelled = getFlowPhrase("en", "cancelled");
       expect(cancelled).toContain("cancelled");
+    });
+  });
+
+  describe("getWhatsAppPhrase", () => {
+    it("should return WhatsApp-specific phrases for English", () => {
+      const greeting = getWhatsAppPhrase("en", "greeting");
+      expect(greeting).toBeDefined();
+      expect(typeof greeting).toBe("string");
+      expect(greeting.length).toBeGreaterThan(0);
+    });
+
+    it("should return WhatsApp callForHelp phrase", () => {
+      const callForHelp = getWhatsAppPhrase("en", "callForHelp");
+      expect(callForHelp).toBeDefined();
+    });
+
+    it("should return WhatsApp processingError phrase", () => {
+      const error = getWhatsAppPhrase("en", "processingError");
+      expect(error).toBeDefined();
+    });
+
+    it("should return WhatsApp genericError phrase", () => {
+      const error = getWhatsAppPhrase("en", "genericError");
+      expect(error).toBeDefined();
+    });
+
+    it("should return WhatsApp phrases for all supported languages", () => {
+      for (const lang of ["en", "fr", "de", "nl", "es", "pt"]) {
+        const greeting = getWhatsAppPhrase(lang, "greeting");
+        expect(greeting).toBeDefined();
+        expect(greeting.length).toBeGreaterThan(0);
+      }
+    });
+
+    it("should fall back to English for unknown language", () => {
+      const greeting = getWhatsAppPhrase("xx", "greeting");
+      const enGreeting = getWhatsAppPhrase("en", "greeting");
+      expect(greeting).toBe(enGreeting);
+    });
+  });
+
+  describe("getFarewellPhrase", () => {
+    it("should return a farewell phrase for English", () => {
+      const farewell = getFarewellPhrase("en");
+      expect(farewell).toBeDefined();
+      expect(typeof farewell).toBe("string");
+      expect(farewell.length).toBeGreaterThan(0);
+    });
+
+    it("should return a farewell phrase for all supported languages", () => {
+      for (const lang of ["en", "fr", "de", "nl", "es", "pt"]) {
+        const farewell = getFarewellPhrase(lang);
+        expect(farewell).toBeDefined();
+        expect(farewell.length).toBeGreaterThan(0);
+      }
+    });
+
+    it("should return a time-appropriate farewell", () => {
+      // This test verifies the phrase is one of morning/afternoon/evening
+      const phrases = loadPhrases("en");
+      const farewell = getFarewellPhrase("en");
+      const validFarewells = [
+        phrases.farewell.morning,
+        phrases.farewell.afternoon,
+        phrases.farewell.evening,
+      ];
+      expect(validFarewells).toContain(farewell);
     });
   });
 });

@@ -31,6 +31,7 @@ import { runMigrations } from "./db/migrate";
 import { FlowRegistry } from "./flows/registry";
 import { callRoutes } from "./routes/call";
 import { smsRoutes } from "./routes/sms";
+import { whatsappRoutes } from "./routes/whatsapp";
 import type { TalkerConfig, TalkerDependencies } from "./types";
 
 const DEFAULT_CONTEXT_TTL_MS = 30 * 60 * 1000; // 30 minutes
@@ -80,6 +81,7 @@ export async function createTelephonyRoutes(
   const prefix = config.routePrefix || "";
   app.route(prefix, callRoutes(deps, registry));
   app.route(prefix, smsRoutes(deps, registry));
+  app.route(prefix, whatsappRoutes(deps, registry));
 
   logger.info("telephony routes mounted", {
     prefix: prefix || "/",

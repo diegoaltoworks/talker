@@ -23,5 +23,12 @@
     "callForHelp": "For more complex questions, feel free to call back or reach us directly.",
     "processingError": "I'm having trouble processing that. Please try texting again or call back.",
     "genericError": "Sorry, something went wrong. Please try again."
+  },
+  "whatsapp": {
+    "greeting": "Hi! I'm your assistant. Send me a message and I'll help you out!",
+    "greetingShort": "Hi! How can I help?",
+    "callForHelp": "For more complex questions, feel free to call us directly or reply here with more details.",
+    "processingError": "I'm having trouble processing that. Please try sending your message again.",
+    "genericError": "Sorry, something went wrong. Please try again."
   }
 }

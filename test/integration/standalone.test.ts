@@ -13,6 +13,7 @@ import { clearAllContexts, stopCleanup } from "../../src/core/context";
 import { FlowRegistry } from "../../src/flows/registry";
 import { callRoutes } from "../../src/routes/call";
 import { smsRoutes } from "../../src/routes/sms";
+import { whatsappRoutes } from "../../src/routes/whatsapp";
 import type { TalkerDependencies } from "../../src/types";
 
 // Skip tests if env vars not set
@@ -39,18 +40,22 @@ describe("Standalone Server", () => {
   });
 
   describe("Route mounting", () => {
-    it("should mount call and sms routes on a Hono app", async () => {
+    it("should mount call, sms, and whatsapp routes on a Hono app", async () => {
       const deps = createTestDeps();
       const registry = new FlowRegistry("");
       const app = new Hono();
 
       app.route("/", callRoutes(deps, registry));
       app.route("/", smsRoutes(deps, registry));
+      app.route("/", whatsappRoutes(deps, registry));
 
-      // Verify routes exist by checking SMS health endpoint
-      const req = new Request("http://localhost/sms", { method: "GET" });
-      const res = await app.fetch(req);
-      expect(res.status).toBe(200);
+      // Verify routes exist by checking health endpoints
+      const smsRes = await app.fetch(new Request("http://localhost/sms", { method: "GET" }));
+      expect(smsRes.status).toBe(200);
+
+      const waRes = await app.fetch(new Request("http://localhost/whatsapp", { method: "GET" }));
+      expect(waRes.status).toBe(200);
+      expect(await waRes.text()).toBe("WhatsApp endpoint active");
     });
   });
 
@@ -88,6 +93,56 @@ describe("Standalone Server", () => {
         Body: "What time is it?",
       });
       const req = new Request("http://localhost/sms", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: form.toString(),
+      });
+
+      const res = await app.fetch(req);
+      expect(res.status).toBe(200);
+      const text = await res.text();
+      expect(text).toContain("<Message>");
+      expect(text).toContain("<Response>");
+    }, 30000);
+  });
+
+  describe("WhatsApp endpoint", () => {
+    it("should return greeting for empty WhatsApp body", async () => {
+      const deps = createTestDeps();
+      const registry = new FlowRegistry("");
+      const app = new Hono();
+      app.route("/", whatsappRoutes(deps, registry));
+
+      const form = new URLSearchParams({
+        From: "whatsapp:+15551234567",
+        Body: "",
+      });
+      const req = new Request("http://localhost/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: form.toString(),
+      });
+
+      const res = await app.fetch(req);
+      expect(res.status).toBe(200);
+      const text = await res.text();
+      expect(text).toContain("<Message>");
+      expect(text).toContain("</Message>");
+    });
+  });
+
+  (hasOpenAI ? describe : describe.skip)("WhatsApp with OpenAI (requires OPENAI_API_KEY)", () => {
+    it("should process a WhatsApp message end-to-end", async () => {
+      const deps = createTestDeps(async (_phone, msg) => `Test response for: ${msg}`);
+      const registry = new FlowRegistry("");
+      const app = new Hono();
+      app.route("/", whatsappRoutes(deps, registry));
+
+      const form = new URLSearchParams({
+        From: "whatsapp:+15551234567",
+        Body: "What are your hours?",
+      });
+      const req = new Request("http://localhost/whatsapp", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: form.toString(),

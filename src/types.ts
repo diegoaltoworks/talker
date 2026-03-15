@@ -12,7 +12,7 @@ import type OpenAI from "openai";
 /**
  * Channel type for telephony interactions
  */
-export type Channel = "call" | "sms";
+export type Channel = "call" | "sms" | "whatsapp";
 
 /**
  * Voice configuration for text-to-speech
@@ -110,7 +110,7 @@ export interface TalkerConfig {
   /** OpenAI API key for the pre/post-processing pipeline. Falls back to chatter's OpenAI client */
   openaiApiKey?: string;
 
-  /** Route prefix for telephony endpoints. Default: "" (mounts at /call and /sms) */
+  /** Route prefix for telephony endpoints. Default: "" (mounts at /call, /sms, and /whatsapp) */
   routePrefix?: string;
 
   /** Conversation context TTL in milliseconds. Default: 1800000 (30 minutes) */
@@ -202,6 +202,8 @@ export interface FlowHandlerResult {
   say: string;
   /** Optional: different content for SMS */
   sms?: string;
+  /** Optional: different content for WhatsApp */
+  whatsapp?: string;
 }
 
 export interface FlowHandlerContext {
@@ -284,6 +286,13 @@ export interface Phrases {
     cancelled: string;
   };
   sms: {
+    greeting: string;
+    greetingShort: string;
+    callForHelp: string;
+    processingError: string;
+    genericError: string;
+  };
+  whatsapp: {
     greeting: string;
     greetingShort: string;
     callForHelp: string;

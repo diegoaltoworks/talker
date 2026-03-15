@@ -23,5 +23,12 @@
     "callForHelp": "Fuer komplexe Fragen rufen Sie uns direkt an.",
     "processingError": "Ich habe Schwierigkeiten, das zu verarbeiten. Bitte versuchen Sie es erneut oder rufen Sie uns an.",
     "genericError": "Entschuldigung, etwas ist schief gelaufen. Bitte versuchen Sie es erneut."
+  },
+  "whatsapp": {
+    "greeting": "Hallo! Ich bin Ihr Assistent. Senden Sie mir eine Nachricht und ich helfe Ihnen gerne!",
+    "greetingShort": "Hallo! Wie kann ich helfen?",
+    "callForHelp": "Fuer komplexe Fragen rufen Sie uns an oder antworten Sie hier mit mehr Details.",
+    "processingError": "Ich habe Schwierigkeiten, das zu verarbeiten. Bitte senden Sie Ihre Nachricht erneut.",
+    "genericError": "Entschuldigung, etwas ist schief gelaufen. Bitte versuchen Sie es erneut."
   }
 }

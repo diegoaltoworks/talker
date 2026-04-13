@@ -93,7 +93,7 @@
     "hono": "^4.6.14",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.6",
-    "openai": "^4.77.0",
+    "openai": "^6.34.0",
     "typescript": "^5.6.3"
   },
   "lint-staged": {

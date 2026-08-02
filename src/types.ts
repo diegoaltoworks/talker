@@ -172,6 +172,22 @@ export interface TalkerConfig {
   chatFn?: (phoneNumber: string, message: string) => Promise<string>;
 
   /**
+   * Persona resolver for the plugin-mode chat pipeline.
+   *
+   * Called per interaction with the caller's phone number and message; returns a
+   * persona system-prompt layer that REPLACES chatter's default public persona
+   * layer (base rules and RAG context are kept). Return null/undefined to use
+   * the default persona. Errors are logged and fall back to the default.
+   *
+   * Unlike `chatFn`, this keeps talker's full pipeline - retrieval, processing,
+   * flows - and only swaps the voice.
+   */
+  personaFn?: (
+    phoneNumber: string,
+    message: string,
+  ) => Promise<string | null | undefined> | string | null | undefined;
+
+  /**
    * Callback invoked when a message delivery status update is received.
    * Called for both SMS and WhatsApp status callbacks.
    */

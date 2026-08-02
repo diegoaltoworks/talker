@@ -6,7 +6,7 @@
  */
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { logger } from "../core/logger";
 import type { FlowDefinition, FlowHandler, FlowPrefill, LoadedFlow } from "../types";
 
@@ -46,7 +46,10 @@ export async function loadFlowsFromDirectory(flowsDir: string): Promise<Map<stri
 }
 
 async function loadFlow(flowsDir: string, flowName: string): Promise<LoadedFlow> {
-  const flowPath = join(flowsDir, flowName);
+  // Resolve to an absolute path: dynamic import() treats a relative path like
+  // "config/flows/x/handler.ts" as a bare module specifier (a package name),
+  // which fails at runtime in bundled deployments even when existsSync passes.
+  const flowPath = resolve(flowsDir, flowName);
   const definitionPath = join(flowPath, "flow.json");
   const instructionsPath = join(flowPath, "instructions.md");
   const handlerPath = join(flowPath, "handler.ts");

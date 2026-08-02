@@ -1,6 +1,6 @@
 {
   "name": "@diegoaltoworks/talker",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "description": "Telephony plugin for Chatter — adds voice call and SMS support via Twilio",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -39,7 +39,7 @@
     "security:check": "bun audit --audit-level=moderate",
     "check": "bun run typecheck && bun run lint && bun run test && bun run security:check",
     "prepublishOnly": "bun run lint && bun run typecheck && bun run test && bun run security:check && bun run build",
-    "prepare": "husky || true"
+    "prepare": "(husky || true) && bun run build"
   },
   "keywords": [
     "telephony",

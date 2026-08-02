@@ -37,9 +37,23 @@ export async function chat(
 
     const ragContext = await store.query(message, 6, ["base", "public"]);
 
+    // Optional persona swap: replaces the public persona layer only - base
+    // rules and retrieved context are always kept.
+    let personaLayer: string | null | undefined;
+    if (deps.config.personaFn) {
+      try {
+        personaLayer = await deps.config.personaFn(phoneNumber, message);
+      } catch (error) {
+        logger.error("personaFn error, using default persona", {
+          phoneNumber,
+          error: getErrorMessage(error),
+        });
+      }
+    }
+
     const system = [
       prompts.baseSystemRules,
-      prompts.publicPersona,
+      personaLayer || prompts.publicPersona,
       `Context:\n${ragContext.join("\n\n")}`,
     ].join("\n\n");
 

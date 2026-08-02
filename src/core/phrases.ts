@@ -7,7 +7,12 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Phrases } from "../types";
+import type { PhraseValue, Phrases } from "../types";
+
+/** Resolve a phrase entry: arrays rotate - a random variant per use. */
+function pick(value: PhraseValue): string {
+  return Array.isArray(value) ? (value[Math.floor(Math.random() * value.length)] as string) : value;
+}
 
 const phrasesCache: Record<string, Phrases> = {};
 
@@ -122,7 +127,7 @@ type SimplePhraseKey =
  */
 export function getPhrase(language: string, key: SimplePhraseKey, languageDir?: string): string {
   const phrases = loadPhrases(language, languageDir);
-  return phrases[key];
+  return pick(phrases[key]);
 }
 
 /**
@@ -133,12 +138,12 @@ export function getFarewellPhrase(language: string, languageDir?: string): strin
   const hour = new Date().getHours();
 
   if (hour < 12) {
-    return phrases.farewell.morning;
+    return pick(phrases.farewell.morning);
   }
   if (hour < 18) {
-    return phrases.farewell.afternoon;
+    return pick(phrases.farewell.afternoon);
   }
-  return phrases.farewell.evening;
+  return pick(phrases.farewell.evening);
 }
 
 /**
@@ -150,7 +155,7 @@ export function getFlowPhrase(
   languageDir?: string,
 ): string {
   const phrases = loadPhrases(language, languageDir);
-  return phrases.flow[key];
+  return pick(phrases.flow[key]);
 }
 
 /**
@@ -162,7 +167,7 @@ export function getSmsPhrase(
   languageDir?: string,
 ): string {
   const phrases = loadPhrases(language, languageDir);
-  return phrases.sms[key];
+  return pick(phrases.sms[key]);
 }
 
 /**
@@ -176,7 +181,7 @@ export function getWhatsAppPhrase(
 ): string {
   const phrases = loadPhrases(language, languageDir);
   if (phrases.whatsapp) {
-    return phrases.whatsapp[key];
+    return pick(phrases.whatsapp[key]);
   }
-  return phrases.sms[key];
+  return pick(phrases.sms[key]);
 }

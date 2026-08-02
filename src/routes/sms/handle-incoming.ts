@@ -6,6 +6,7 @@
 
 import type { Context } from "hono";
 import { getErrorMessage } from "../../core/errors";
+import { resolveGreeting } from "../../core/greeting";
 import { logger } from "../../core/logger";
 import { getSmsPhrase } from "../../core/phrases";
 import { messageTwiml } from "../../core/twiml";
@@ -26,7 +27,10 @@ export async function handleIncomingSMS(
   logger.info("sms received", { phoneNumber, messageBody });
 
   if (!messageBody.trim()) {
-    return c.text(messageTwiml(getSmsPhrase("en", "greeting", deps.config.languageDir)), 200, {
+    const greeting =
+      (await resolveGreeting(deps.config, phoneNumber, "sms")) ??
+      getSmsPhrase("en", "greeting", deps.config.languageDir);
+    return c.text(messageTwiml(greeting), 200, {
       "Content-Type": "text/xml",
     });
   }

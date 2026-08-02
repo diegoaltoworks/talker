@@ -7,6 +7,7 @@
 
 import type { Context } from "hono";
 import { clearContext } from "../../core/context";
+import { resolveGreeting } from "../../core/greeting";
 import { logger } from "../../core/logger";
 import { getPhrase } from "../../core/phrases";
 import { getVoiceConfig } from "../../core/voice";
@@ -20,7 +21,9 @@ export async function handleInitialCall(c: Context, config: TalkerConfig): Promi
   clearContext(phoneNumber);
 
   const { voice, language: lang } = getVoiceConfig("en", config.voices);
-  const greeting = getPhrase("en", "greeting", config.languageDir);
+  const greeting =
+    (await resolveGreeting(config, phoneNumber, "call")) ??
+    getPhrase("en", "greeting", config.languageDir);
   const didNotHear = getPhrase("en", "didNotHear", config.languageDir);
   const prefix = config.routePrefix || "";
 

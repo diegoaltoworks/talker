@@ -9,6 +9,7 @@
 import type { Context } from "hono";
 import { stripWhatsAppPrefix } from "../../adapters/twilio";
 import { getErrorMessage } from "../../core/errors";
+import { resolveGreeting } from "../../core/greeting";
 import { logger } from "../../core/logger";
 import { getWhatsAppPhrase } from "../../core/phrases";
 import { messageTwiml } from "../../core/twiml";
@@ -30,7 +31,10 @@ export async function handleIncomingWhatsApp(
   logger.info("whatsapp message received", { phoneNumber, messageBody });
 
   if (!messageBody.trim()) {
-    return c.text(messageTwiml(getWhatsAppPhrase("en", "greeting", deps.config.languageDir)), 200, {
+    const greeting =
+      (await resolveGreeting(deps.config, phoneNumber, "whatsapp")) ??
+      getWhatsAppPhrase("en", "greeting", deps.config.languageDir);
+    return c.text(messageTwiml(greeting), 200, {
       "Content-Type": "text/xml",
     });
   }

@@ -188,6 +188,17 @@ export interface TalkerConfig {
   ) => Promise<string | null | undefined> | string | null | undefined;
 
   /**
+   * Dynamic greeting resolver, called with the caller's number and channel
+   * before any phrase lookup - lets a host greet per-caller (by name, persona,
+   * time of day) without an LLM round-trip. Return null/undefined to fall back
+   * to the phrase-file greeting; errors also fall back.
+   */
+  greetingFn?: (
+    phoneNumber: string,
+    channel: "call" | "sms" | "whatsapp",
+  ) => Promise<string | null | undefined> | string | null | undefined;
+
+  /**
    * Callback invoked when a message delivery status update is received.
    * Called for both SMS and WhatsApp status callbacks.
    */
@@ -321,39 +332,45 @@ export interface TelephonyContext {
 }
 
 /**
+ * A phrase entry: a single string, or an array to rotate through (a random
+ * variant is picked per use).
+ */
+export type PhraseValue = string | string[];
+
+/**
  * Phrase file structure for each language
  */
 export interface Phrases {
-  greeting: string;
-  didNotCatch: string;
-  didNotHear: string;
-  didNotHearRetry: string;
-  didNotHearFinal: string;
-  transfer: string;
-  acknowledgment: string;
+  greeting: PhraseValue;
+  didNotCatch: PhraseValue;
+  didNotHear: PhraseValue;
+  didNotHearRetry: PhraseValue;
+  didNotHearFinal: PhraseValue;
+  transfer: PhraseValue;
+  acknowledgment: PhraseValue;
   farewell: {
-    morning: string;
-    afternoon: string;
-    evening: string;
+    morning: PhraseValue;
+    afternoon: PhraseValue;
+    evening: PhraseValue;
   };
-  error: string;
-  timeout: string;
-  lostQuestion: string;
+  error: PhraseValue;
+  timeout: PhraseValue;
+  lostQuestion: PhraseValue;
   flow: {
-    cancelled: string;
+    cancelled: PhraseValue;
   };
   sms: {
-    greeting: string;
-    greetingShort: string;
-    callForHelp: string;
-    processingError: string;
-    genericError: string;
+    greeting: PhraseValue;
+    greetingShort: PhraseValue;
+    callForHelp: PhraseValue;
+    processingError: PhraseValue;
+    genericError: PhraseValue;
   };
   whatsapp: {
-    greeting: string;
-    greetingShort: string;
-    callForHelp: string;
-    processingError: string;
-    genericError: string;
+    greeting: PhraseValue;
+    greetingShort: PhraseValue;
+    callForHelp: PhraseValue;
+    processingError: PhraseValue;
+    genericError: PhraseValue;
   };
 }

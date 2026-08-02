@@ -37,7 +37,6 @@ function loadPromptFile(filename: string, customPath?: string): string | undefin
   return undefined;
 }
 
-// biome-ignore lint/style/noUnusedTemplateLiteral: multiline prompt content
 const DEFAULT_INCOMING_PROMPT = `# Incoming Message Processor
 
 You are a pre-processor for a voice assistant. Your job is to analyze incoming caller speech and determine three things:
@@ -80,7 +79,6 @@ Respond with valid JSON:
 - Remove filler words (um, uh, like, you know)
 - Keep the core intent and original language intact`;
 
-// biome-ignore lint/style/noUnusedTemplateLiteral: multiline prompt content
 const DEFAULT_OUTGOING_PROMPT = `# Outgoing Response Processor
 
 You are a post-processor for a voice assistant. Transform knowledge base responses into channel-appropriate messages.

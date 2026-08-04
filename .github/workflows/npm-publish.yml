@@ -89,7 +89,8 @@ jobs:
           git push origin HEAD:main
           git push origin "v${{ steps.bump.outputs.version }}"
 
-      - name: Publish to NPM
+      - name: Update npm (OIDC trusted publishing needs a recent client)
+        run: npm install -g npm@latest
+
+      - name: Publish to NPM (OIDC trusted publishing - no token)
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

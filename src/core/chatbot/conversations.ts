@@ -6,7 +6,7 @@
  */
 
 import { logger } from "../logger";
-import type { ChatConversation, ChatMessage } from "./types";
+import type { ChatConversation } from "./types";
 
 const conversations = new Map<string, ChatConversation>();
 

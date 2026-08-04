@@ -7,7 +7,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { PhraseValue, Phrases } from "../types";
+import type { Phrases, PhraseValue } from "../types";
 
 /** Resolve a phrase entry: arrays rotate - a random variant per use. */
 function pick(value: PhraseValue): string {

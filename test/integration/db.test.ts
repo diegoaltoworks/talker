@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { type Client, createClient } from "@libsql/client";
 import { clearAllContexts, stopCleanup } from "../../src/core/context";
 import { setDbClient } from "../../src/db/client";
+import type { SessionRecord } from "../../src/db/sessions";
 import {
   generateSessionId,
   insertMessage,
@@ -18,7 +19,6 @@ import {
   updateSessionIncremental,
   upsertSession,
 } from "../../src/db/sessions";
-import type { SessionRecord } from "../../src/db/sessions";
 
 let db: Client;
 

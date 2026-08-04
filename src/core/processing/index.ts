@@ -5,6 +5,6 @@
  */
 
 export { processIncoming } from "./incoming";
-export { processOutgoing } from "./outgoing";
 export { callOpenAI } from "./openai";
+export { processOutgoing } from "./outgoing";
 export { resetPromptCache } from "./prompts";

@@ -8,8 +8,8 @@
  * Run: bun run examples/chatter-plugin.ts
  */
 
-import { createServer } from "@diegoaltoworks/chatter";
 import type { ChatterConfig } from "@diegoaltoworks/chatter";
+import { createServer } from "@diegoaltoworks/chatter";
 import { createTelephonyRoutes } from "../src";
 
 async function start() {

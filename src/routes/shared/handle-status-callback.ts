@@ -19,7 +19,7 @@ import { stripWhatsAppPrefix } from "../../adapters/twilio";
 import { getErrorMessage } from "../../core/errors";
 import { logger } from "../../core/logger";
 import { upsertMessageStatus } from "../../db/sessions";
-import type { Channel, MessageStatusEvent, TalkerDependencies } from "../../types";
+import type { MessageStatusEvent, TalkerDependencies } from "../../types";
 
 /**
  * Handle a message status callback from Twilio.

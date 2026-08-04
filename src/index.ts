@@ -37,118 +37,106 @@
  * @packageDocumentation
  */
 
-// Plugin entry point (chatter integration)
-export { createTelephonyRoutes } from "./plugin";
-
-// Standalone entry point (no chatter required)
-export { createStandaloneServer } from "./standalone";
-export type { StandaloneConfig } from "./standalone";
-
-// Types
-export type {
-  TalkerConfig,
-  TalkerDependencies,
-  TelephonyFeatureFlags,
-  TwilioConfig,
-  ChatbotConfig,
-  ProcessingConfig,
-  Channel,
-  VoiceConfig,
-  IncomingResult,
-  TelephonyContext,
-  Phrases,
-  MessageStatusEvent,
-} from "./types";
-
-// Flow types
-export type {
-  FlowDefinition,
-  FlowSchema,
-  FlowSchemaProperty,
-  FlowState,
-  FlowHandler,
-  FlowHandlerResult,
-  FlowHandlerContext,
-  FlowPrefill,
-  FlowExtractionResult,
-  FlowResult,
-  IntentDetection,
-  LoadedFlow,
-} from "./types";
-
-// Core modules (for advanced customization)
-export { processIncoming, processOutgoing } from "./core/processing";
-export { getVoiceConfig, getDefaultVoices } from "./core/voice";
-export { escapeXml } from "./core/xml";
+export type { SendMessageOptions } from "./adapters/twilio";
+// Twilio adapter
+export { sendSMS, sendWhatsApp, stripWhatsAppPrefix } from "./adapters/twilio";
 export {
-  getPhrase,
+  addMessage,
+  clearActiveFlow,
+  clearAllContexts,
+  clearContext,
+  getActiveFlow,
+  getContext,
+  getDetectedLanguage,
+  getLastPrompt,
+  getMessageHistory,
+  getOrCreateContext,
+  incrementNoSpeechRetries,
+  resetNoSpeechRetries,
+  setActiveFlow,
+  setDetectedLanguage,
+  setLastPrompt,
+  startCleanup,
+  stopCleanup,
+  updateFlowParams,
+} from "./core/context";
+// Logger
+export { logger, redactPhone } from "./core/logger";
+export {
   getFarewellPhrase,
   getFlowPhrase,
+  getPhrase,
   getSmsPhrase,
   getWhatsAppPhrase,
   loadPhrases,
 } from "./core/phrases";
-export {
-  getOrCreateContext,
-  getContext,
-  clearContext,
-  clearAllContexts,
-  setDetectedLanguage,
-  getDetectedLanguage,
-  addMessage,
-  getMessageHistory,
-  setActiveFlow,
-  getActiveFlow,
-  updateFlowParams,
-  clearActiveFlow,
-  incrementNoSpeechRetries,
-  resetNoSpeechRetries,
-  getLastPrompt,
-  setLastPrompt,
-  startCleanup,
-  stopCleanup,
-} from "./core/context";
 
+// Core modules (for advanced customization)
+export { processIncoming, processOutgoing } from "./core/processing";
 // TwiML generators
 export {
-  gatherTwiml,
-  sayTwiml,
-  transferTwiml,
   acknowledgmentTwiml,
   farewellTwiml,
+  gatherTwiml,
   messageTwiml,
+  sayTwiml,
+  transferTwiml,
 } from "./core/twiml";
-
-// Flow engine
-export { FlowRegistry } from "./flows/registry";
-export { processFlow, shouldExitFlow } from "./flows/manager";
-export { loadFlowsFromDirectory } from "./flows/loader";
-export { getExitMessage } from "./flows/utils";
-
-// Twilio adapter
-export { sendSMS, sendWhatsApp, stripWhatsAppPrefix } from "./adapters/twilio";
-export type { SendMessageOptions } from "./adapters/twilio";
-
+export { getDefaultVoices, getVoiceConfig } from "./core/voice";
+export { escapeXml } from "./core/xml";
 // Database (session persistence)
-export { initDbClient, getDbClient, closeDbClient } from "./db/client";
+export { closeDbClient, getDbClient, initDbClient } from "./db/client";
 export { runMigrations } from "./db/migrate";
 export { persistFinalSession, persistSession } from "./db/persist";
-export type { SessionRecord, MessageRecord, MessageStatusRecord } from "./db/sessions";
+export type { MessageRecord, MessageStatusRecord, SessionRecord } from "./db/sessions";
 export { upsertMessageStatus } from "./db/sessions";
+export { loadFlowsFromDirectory } from "./flows/loader";
+export { processFlow, shouldExitFlow } from "./flows/manager";
+// Flow engine
+export { FlowRegistry } from "./flows/registry";
+export { getExitMessage } from "./flows/utils";
+export { inputSanitizeMiddleware } from "./middleware/input-sanitize";
+export { rateLimitMiddleware } from "./middleware/rate-limit";
+// Security middleware
+export { twilioSignatureMiddleware, validateTwilioSignature } from "./middleware/twilio-signature";
+// Plugin entry point (chatter integration)
+export { createTelephonyRoutes } from "./plugin";
 
 // Route factories (for custom setup)
 export { callRoutes } from "./routes/call";
-export { smsRoutes } from "./routes/sms";
-export { whatsappRoutes } from "./routes/whatsapp";
-
-// Logger
-export { logger, redactPhone } from "./core/logger";
-
+export { handleFallback } from "./routes/shared/handle-fallback";
 // Shared handlers (for custom route setups)
 export { handleStatusCallback } from "./routes/shared/handle-status-callback";
-export { handleFallback } from "./routes/shared/handle-fallback";
-
-// Security middleware
-export { twilioSignatureMiddleware, validateTwilioSignature } from "./middleware/twilio-signature";
-export { rateLimitMiddleware } from "./middleware/rate-limit";
-export { inputSanitizeMiddleware } from "./middleware/input-sanitize";
+export { smsRoutes } from "./routes/sms";
+export { whatsappRoutes } from "./routes/whatsapp";
+export type { StandaloneConfig } from "./standalone";
+// Standalone entry point (no chatter required)
+export { createStandaloneServer } from "./standalone";
+// Types
+// Flow types
+export type {
+  Channel,
+  ChatbotConfig,
+  FlowDefinition,
+  FlowExtractionResult,
+  FlowHandler,
+  FlowHandlerContext,
+  FlowHandlerResult,
+  FlowPrefill,
+  FlowResult,
+  FlowSchema,
+  FlowSchemaProperty,
+  FlowState,
+  IncomingResult,
+  IntentDetection,
+  LoadedFlow,
+  MessageStatusEvent,
+  Phrases,
+  ProcessingConfig,
+  TalkerConfig,
+  TalkerDependencies,
+  TelephonyContext,
+  TelephonyFeatureFlags,
+  TwilioConfig,
+  VoiceConfig,
+} from "./types";

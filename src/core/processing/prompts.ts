@@ -8,7 +8,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { TalkerDependencies } from "../../types";
-import { getErrorMessage } from "../errors";
 import { logger } from "../logger";
 
 let incomingPrompt: string | null = null;

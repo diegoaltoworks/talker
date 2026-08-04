@@ -12,7 +12,6 @@ import { FlowRegistry } from "../../flows/registry";
 import type { TalkerDependencies } from "../../types";
 import { callRoutes } from "./index";
 import { deletePending, setPending } from "./pending";
-import type { PendingQuery } from "./pending";
 
 function createTestDeps(): TalkerDependencies {
   return {

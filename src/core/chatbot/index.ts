@@ -11,4 +11,4 @@ export {
   getConversation,
   getOrCreateConversation,
 } from "./conversations";
-export type { ChatConversation, ChatMessage, ChatbotRequest, ChatbotResponse } from "./types";
+export type { ChatbotRequest, ChatbotResponse, ChatConversation, ChatMessage } from "./types";

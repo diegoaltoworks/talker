@@ -5,7 +5,7 @@
  * Each flow is a directory containing: flow.json, handler.ts, instructions.md
  */
 
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { logger } from "../core/logger";
 import type { FlowDefinition, FlowHandler, FlowPrefill, LoadedFlow } from "../types";

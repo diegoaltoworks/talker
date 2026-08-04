@@ -6,8 +6,6 @@
  */
 
 import type { ServerDependencies } from "@diegoaltoworks/chatter";
-import type { Hono } from "hono";
-import type OpenAI from "openai";
 
 /**
  * Channel type for telephony interactions

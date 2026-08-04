@@ -4,7 +4,7 @@
  * Generates Twilio Markup Language (TwiML) XML for voice and SMS responses.
  */
 
-import type { TalkerConfig, VoiceConfig } from "../types";
+import type { TalkerConfig } from "../types";
 import { setLastPrompt } from "./context";
 import { getFarewellPhrase, getPhrase } from "./phrases";
 import { getVoiceConfig } from "./voice";

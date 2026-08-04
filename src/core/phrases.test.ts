@@ -9,7 +9,7 @@ import {
   loadPhrases,
 } from "./phrases";
 
-const languageDir = join(__dirname, "../../language");
+const _languageDir = join(__dirname, "../../language");
 
 describe("Phrases", () => {
   describe("loadPhrases", () => {

@@ -151,7 +151,7 @@ export function getActiveFlow(phoneNumber: string): FlowState | null {
 
 export function updateFlowParams(phoneNumber: string, params: Record<string, unknown>): void {
   const context = contexts.get(phoneNumber);
-  if (!context || !context.activeFlow) return;
+  if (!context?.activeFlow) return;
 
   context.activeFlow.params = { ...context.activeFlow.params, ...params };
   context.activeFlow.attempts += 1;

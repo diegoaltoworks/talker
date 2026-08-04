@@ -8,6 +8,7 @@
 export { closeDbClient, getDbClient, initDbClient } from "./client";
 export { runMigrations } from "./migrate";
 export { persistFinalSession, persistSession } from "./persist";
+export type { MessageRecord, SessionRecord } from "./sessions";
 export {
   generateId,
   generateSessionId,
@@ -16,4 +17,3 @@ export {
   updateSessionIncremental,
   upsertSession,
 } from "./sessions";
-export type { MessageRecord, SessionRecord } from "./sessions";

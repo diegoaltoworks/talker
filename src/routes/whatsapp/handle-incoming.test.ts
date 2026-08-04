@@ -88,7 +88,7 @@ describe("WhatsApp Routes", () => {
       await postWhatsApp(app, { From: "whatsapp:+15559998888", Body: "" });
 
       // The context should be keyed by the bare phone number, not whatsapp:+...
-      const context = getContext("+15559998888");
+      const _context = getContext("+15559998888");
       // No context created for empty body greeting (context is only created in processSms path)
       // But the phone number should be stripped when passed to handlers
     });

@@ -140,3 +140,35 @@ export type {
   TwilioConfig,
   VoiceConfig,
 } from "./types";
+// Voice capabilities (STT, TTS, Ogg/Opus inspection, daily spend guards).
+// Channel-agnostic factories with injected clients — see src/voice/index.ts.
+export type {
+  OggOpusInfo,
+  SynthesizeOptions,
+  Synthesizer,
+  SynthesizerConfig,
+  Transcriber,
+  TranscriberConfig,
+  VoiceLimitCheck,
+  VoiceLimiter,
+  VoiceLimiterDeps,
+  VoiceLimitReason,
+  VoiceLimitsConfig,
+  VoiceLimitsEnv,
+  VoiceLimitsStore,
+  VoiceNote,
+} from "./voice";
+export {
+  createSynthesizer,
+  createTranscriber,
+  createVoiceLimiter,
+  DEFAULT_GLOBAL_DAILY_LIMIT,
+  DEFAULT_MAX_VOICE_TEXT_CHARS,
+  DEFAULT_PER_NUMBER_DAILY_LIMIT,
+  DEFAULT_TRANSCRIPT_MAX_CHARS,
+  GLOBAL_LIMIT_KEY,
+  parseOggOpus,
+  pickDailyLimit,
+  resolveVoiceLimitsConfig,
+  utcDayKey,
+} from "./voice";

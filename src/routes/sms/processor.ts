@@ -66,7 +66,7 @@ export async function processSms(
   }
 
   // Get chatbot response
-  const botResponse = await chat(deps, phoneNumber, incoming.processedMessage);
+  const botResponse = await chat(deps, phoneNumber, incoming.processedMessage, "sms");
   const smsResponse = await processOutgoing(deps, phoneNumber, botResponse, "sms");
 
   tapOutbound(smsResponse);

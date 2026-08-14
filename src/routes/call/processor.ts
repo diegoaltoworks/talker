@@ -100,7 +100,7 @@ export async function processCall(
   }
 
   // Get chatbot response
-  const botResponse = await chat(deps, phoneNumber, incoming.processedMessage);
+  const botResponse = await chat(deps, phoneNumber, incoming.processedMessage, "call");
   const phoneResponse = await processOutgoing(deps, phoneNumber, botResponse, "call");
   const escapedResponse = escapeXml(phoneResponse);
 

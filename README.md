@@ -165,6 +165,20 @@ interface TalkerConfig {
 }
 ```
 
+### Chat resolution order
+
+In plugin mode, a message is answered by the first of:
+
+1. `chatFn`, if set — full override, bypasses chatter entirely.
+2. `chatbot.url`, if set — remote HTTP API (standalone mode).
+3. Chatter's RAG pipeline, via chatter's `prepareChat`. The assembled system
+   prompt layers base rules, then a persona (chatter's default, or
+   `personaFn`'s per-interaction override), then a hint naming the channel
+   (call/sms/whatsapp), then retrieved context. Retrieval scope honours
+   chatter's own `bucketsFor` hook (set on the chatter server config, not
+   here) for per-sender role-gated knowledge; an unidentified caller is
+   always clamped to the channel's default buckets.
+
 ## Twilio Setup
 
 1. Get a Twilio phone number

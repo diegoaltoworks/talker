@@ -9,17 +9,19 @@ import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import { Hono } from "hono";
 import { clearAllContexts, getContext, stopCleanup } from "../../core/context";
 import { FlowRegistry } from "../../flows/registry";
-import type { TalkerDependencies } from "../../types";
+import type { MessageTapEvent, TalkerDependencies } from "../../types";
 import { whatsappRoutes } from "./index";
 
 function createTestDeps(
   chatFn?: (phone: string, msg: string) => Promise<string>,
+  configOverrides?: Partial<TalkerDependencies["config"]>,
 ): TalkerDependencies {
   return {
     chatter: {} as ServerDependencies,
     config: {
       transferNumber: "+441234567890",
       chatFn: chatFn || (async (_phone, msg) => `Echo: ${msg}`),
+      ...configOverrides,
     },
     openaiApiKey: "test-key",
     openaiModel: "gpt-4o-mini",
@@ -134,6 +136,64 @@ describe("WhatsApp Routes", () => {
       expect(res.status).toBe(200);
       const text = await res.text();
       expect(text).toContain("<Response>");
+      expect(text).toContain("<Message>");
+    });
+  });
+
+  describe("onMessage tap", () => {
+    async function flushTapQueue() {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    }
+
+    it("fires inbound and outbound events with the whatsapp: prefix stripped", async () => {
+      const events: MessageTapEvent[] = [];
+      const deps = createTestDeps(async (_phone, msg) => `Echo: ${msg}`, {
+        onMessage: (event) => void events.push(event),
+      });
+      const app = createApp(deps);
+
+      await postWhatsApp(app, {
+        From: "whatsapp:+15559990020",
+        To: "whatsapp:+15559876543",
+        Body: "Hello",
+      });
+      await flushTapQueue();
+
+      expect(events.length).toBe(2);
+      expect(events[0]).toMatchObject({
+        direction: "inbound",
+        channel: "whatsapp",
+        from: "+15559990020",
+        to: "+15559876543",
+        body: "Hello",
+      });
+      expect(events[1]).toMatchObject({
+        direction: "outbound",
+        channel: "whatsapp",
+        from: "+15559876543",
+        to: "+15559990020",
+      });
+    });
+
+    it("does not throw and still replies when onMessage throws", async () => {
+      const deps = createTestDeps(async (_phone, msg) => `Echo: ${msg}`, {
+        onMessage: () => {
+          throw new Error("tap handler exploded");
+        },
+      });
+      const app = createApp(deps);
+
+      const res = await postWhatsApp(app, {
+        From: "whatsapp:+15559990021",
+        To: "whatsapp:+15559876543",
+        Body: "Hello",
+      });
+      await flushTapQueue();
+
+      expect(res.status).toBe(200);
+      const text = await res.text();
       expect(text).toContain("<Message>");
     });
   });

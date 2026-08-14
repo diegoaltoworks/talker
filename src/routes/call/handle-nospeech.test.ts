@@ -15,7 +15,7 @@ import {
   stopCleanup,
 } from "../../core/context";
 import { FlowRegistry } from "../../flows/registry";
-import type { TalkerDependencies } from "../../types";
+import type { MessageTapEvent, TalkerDependencies } from "../../types";
 import { callRoutes } from "./index";
 
 function createTestDeps(overrides?: Partial<TalkerDependencies["config"]>): TalkerDependencies {
@@ -136,5 +136,23 @@ describe("handleNoSpeech", () => {
 
     // French voice config
     expect(text).toContain("fr-FR");
+  });
+
+  it("fires an outbound onMessage event for the retry prompt", async () => {
+    const events: MessageTapEvent[] = [];
+    const deps = createTestDeps({ onMessage: (event) => void events.push(event) });
+    const app = createApp(deps);
+    getOrCreateContext("+15559990005", "call");
+
+    await postNoSpeech(app, { From: "+15559990005", To: "+15559876543" });
+    await Promise.resolve();
+
+    expect(events.length).toBe(1);
+    expect(events[0]).toMatchObject({
+      direction: "outbound",
+      channel: "call",
+      from: "+15559876543",
+      to: "+15559990005",
+    });
   });
 });

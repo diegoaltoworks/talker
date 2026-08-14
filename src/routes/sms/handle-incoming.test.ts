@@ -9,17 +9,19 @@ import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import { Hono } from "hono";
 import { clearAllContexts, stopCleanup } from "../../core/context";
 import { FlowRegistry } from "../../flows/registry";
-import type { TalkerDependencies } from "../../types";
+import type { MessageTapEvent, TalkerDependencies } from "../../types";
 import { smsRoutes } from "./index";
 
 function createTestDeps(
   chatFn?: (phone: string, msg: string) => Promise<string>,
+  configOverrides?: Partial<TalkerDependencies["config"]>,
 ): TalkerDependencies {
   return {
     chatter: {} as ServerDependencies,
     config: {
       transferNumber: "+441234567890",
       chatFn: chatFn || (async (_phone, msg) => `Echo: ${msg}`),
+      ...configOverrides,
     },
     openaiApiKey: "test-key",
     openaiModel: "gpt-4o-mini",
@@ -112,6 +114,70 @@ describe("SMS Routes", () => {
       const text = await res.text();
       // Should be a valid TwiML response (either processed or error)
       expect(text).toContain("<Response>");
+      expect(text).toContain("<Message>");
+    });
+  });
+
+  describe("onMessage tap", () => {
+    async function flushTapQueue() {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    }
+
+    it("fires inbound and outbound events for a normal exchange", async () => {
+      const events: MessageTapEvent[] = [];
+      const deps = createTestDeps(async (_phone, msg) => `Echo: ${msg}`, {
+        onMessage: (event) => void events.push(event),
+      });
+      const app = createApp(deps);
+
+      await postSms(app, { From: "+15559990010", To: "+15559876543", Body: "Hello" });
+      await flushTapQueue();
+
+      expect(events.length).toBe(2);
+      expect(events[0]).toMatchObject({
+        direction: "inbound",
+        channel: "sms",
+        from: "+15559990010",
+        to: "+15559876543",
+        body: "Hello",
+      });
+      expect(events[1]).toMatchObject({
+        direction: "outbound",
+        channel: "sms",
+        from: "+15559876543",
+        to: "+15559990010",
+      });
+    });
+
+    it("fires inbound and outbound events for the empty-body greeting path", async () => {
+      const events: MessageTapEvent[] = [];
+      const deps = createTestDeps(undefined, { onMessage: (event) => void events.push(event) });
+      const app = createApp(deps);
+
+      await postSms(app, { From: "+15559990011", To: "+15559876543", Body: "" });
+      await flushTapQueue();
+
+      expect(events.length).toBe(2);
+      expect(events[0].direction).toBe("inbound");
+      expect(events[1].direction).toBe("outbound");
+      expect(events[1].body.length).toBeGreaterThan(0);
+    });
+
+    it("does not throw and still replies when onMessage throws", async () => {
+      const deps = createTestDeps(async (_phone, msg) => `Echo: ${msg}`, {
+        onMessage: () => {
+          throw new Error("tap handler exploded");
+        },
+      });
+      const app = createApp(deps);
+
+      const res = await postSms(app, { From: "+15559990012", To: "+15559876543", Body: "Hello" });
+      await flushTapQueue();
+
+      expect(res.status).toBe(200);
+      const text = await res.text();
       expect(text).toContain("<Message>");
     });
   });

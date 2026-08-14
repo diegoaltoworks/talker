@@ -10,7 +10,7 @@ import { Hono } from "hono";
 import { clearAllContexts, getOrCreateContext, stopCleanup } from "../../core/context";
 import { FlowRegistry } from "../../flows/registry";
 import { resetRateLimitStore } from "../../middleware/rate-limit";
-import type { TalkerDependencies } from "../../types";
+import type { MessageTapEvent, TalkerDependencies } from "../../types";
 import { callRoutes } from "./index";
 
 function createTestDeps(overrides?: Partial<TalkerDependencies["config"]>): TalkerDependencies {
@@ -127,5 +127,73 @@ describe("handleRespond", () => {
     expect(text).toContain("<Response>");
     // Acknowledgment includes a redirect to /call/answer
     expect(text).toContain("/call/answer");
+  });
+
+  describe("onMessage tap", () => {
+    it("fires an inbound event for recognized speech and an outbound event for the reply", async () => {
+      const events: MessageTapEvent[] = [];
+      const deps = createTestDeps({ onMessage: (event) => void events.push(event) });
+      const app = createApp(deps);
+      getOrCreateContext("+15559990002", "call");
+
+      await postRespond(app, {
+        From: "+15559990002",
+        To: "+15559876543",
+        SpeechResult: "What time do you open?",
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const inbound = events.filter((e) => e.direction === "inbound");
+      const outbound = events.filter((e) => e.direction === "outbound");
+      expect(inbound.length).toBe(1);
+      expect(inbound[0]).toMatchObject({
+        channel: "call",
+        from: "+15559990002",
+        to: "+15559876543",
+        body: "What time do you open?",
+      });
+      expect(outbound.length).toBeGreaterThanOrEqual(1);
+      expect(outbound[0]).toMatchObject({
+        channel: "call",
+        from: "+15559876543",
+        to: "+15559990002",
+      });
+    });
+
+    it("fires an outbound event for the didNotCatch prompt when SpeechResult is missing", async () => {
+      const events: MessageTapEvent[] = [];
+      const deps = createTestDeps({ onMessage: (event) => void events.push(event) });
+      const app = createApp(deps);
+      getOrCreateContext("+15559990003", "call");
+
+      await postRespond(app, { From: "+15559990003", To: "+15559876543" });
+      await Promise.resolve();
+
+      expect(events.length).toBe(1);
+      expect(events[0].direction).toBe("outbound");
+    });
+
+    it("does not throw and still replies when onMessage throws", async () => {
+      const deps = createTestDeps({
+        onMessage: () => {
+          throw new Error("tap handler exploded");
+        },
+      });
+      const app = createApp(deps);
+      getOrCreateContext("+15559990004", "call");
+
+      const res = await postRespond(app, {
+        From: "+15559990004",
+        To: "+15559876543",
+        SpeechResult: "Hello there",
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(res.status).toBe(200);
+      const text = await res.text();
+      expect(text).toContain("<Response>");
+    });
   });
 });

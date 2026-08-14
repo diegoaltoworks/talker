@@ -61,6 +61,14 @@ describe("TwiML Generation", () => {
       expect(result).toContain("<Dial>+441234567890</Dial>");
       expect(result).toContain("<Say");
     });
+
+    it("should use a caller-supplied message verbatim instead of re-resolving the phrase", () => {
+      // A rotating phrase entry would otherwise be re-picked on a second lookup,
+      // so a caller that already resolved the message (e.g. to tap it) must see
+      // that exact text in the TwiML, not a different random variant.
+      const result = transferTwiml("en", baseConfig, "Caller-supplied transfer message");
+      expect(result).toContain("Caller-supplied transfer message</Say>");
+    });
   });
 
   describe("acknowledgmentTwiml", () => {
@@ -75,6 +83,11 @@ describe("TwiML Generation", () => {
       const result = acknowledgmentTwiml("en", config);
       expect(result).toContain("/api/call/answer");
     });
+
+    it("should use a caller-supplied message verbatim instead of re-resolving the phrase", () => {
+      const result = acknowledgmentTwiml("en", baseConfig, "Caller-supplied ack message");
+      expect(result).toContain("Caller-supplied ack message</Say>");
+    });
   });
 
   describe("farewellTwiml", () => {
@@ -82,6 +95,11 @@ describe("TwiML Generation", () => {
       const result = farewellTwiml("en", baseConfig);
       expect(result).toContain("<Hangup/>");
       expect(result).toContain("<Say");
+    });
+
+    it("should use a caller-supplied message verbatim instead of re-resolving the phrase", () => {
+      const result = farewellTwiml("en", baseConfig, "Caller-supplied farewell message");
+      expect(result).toContain("Caller-supplied farewell message</Say>");
     });
   });
 

@@ -13,6 +13,7 @@
 import type { Context } from "hono";
 import { stripWhatsAppPrefix } from "../../adapters/twilio";
 import { logger } from "../../core/logger";
+import { emitMessageTap } from "../../core/message-tap";
 import { getSmsPhrase, getWhatsAppPhrase } from "../../core/phrases";
 import { messageTwiml } from "../../core/twiml";
 import type { TalkerDependencies } from "../../types";
@@ -30,7 +31,9 @@ export async function handleFallback(
   const body = await c.req.parseBody();
 
   const rawFrom = (body.From as string) || "unknown";
+  const rawTo = (body.To as string) || "";
   const phoneNumber = channel === "whatsapp" ? stripWhatsAppPrefix(rawFrom) : rawFrom.trim();
+  const to = channel === "whatsapp" ? stripWhatsAppPrefix(rawTo) : rawTo;
   const messageBody = (body.Body as string) || "";
   const errorCode = body.ErrorCode as string | undefined;
   const errorUrl = body.ErrorUrl as string | undefined;
@@ -42,6 +45,13 @@ export async function handleFallback(
     errorCode,
     errorUrl,
   });
+  emitMessageTap(deps.config, {
+    direction: "inbound",
+    channel,
+    from: phoneNumber,
+    to,
+    body: messageBody,
+  });
 
   // Respond with a generic error message appropriate to the channel
   const errorMessage =
@@ -49,5 +59,12 @@ export async function handleFallback(
       ? getWhatsAppPhrase("en", "genericError", deps.config.languageDir)
       : getSmsPhrase("en", "genericError", deps.config.languageDir);
 
+  emitMessageTap(deps.config, {
+    direction: "outbound",
+    channel,
+    from: to,
+    to: phoneNumber,
+    body: errorMessage,
+  });
   return c.text(messageTwiml(errorMessage), 200, { "Content-Type": "text/xml" });
 }

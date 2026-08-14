@@ -8,6 +8,7 @@
 import type { Context } from "hono";
 import { getErrorMessage } from "../../core/errors";
 import { logger } from "../../core/logger";
+import { emitMessageTap } from "../../core/message-tap";
 import { getPhrase } from "../../core/phrases";
 import { gatherTwiml, sayTwiml } from "../../core/twiml";
 import type { TalkerConfig } from "../../types";
@@ -16,16 +17,20 @@ import { deletePending, getPending } from "./pending";
 export async function handleAnswer(c: Context, config: TalkerConfig): Promise<Response> {
   const body = await c.req.parseBody();
   const phoneNumber = ((body.From as string) || "unknown").trim();
+  const to = (body.To as string) || "";
 
   const pending = getPending(phoneNumber);
   if (!pending) {
     logger.warn("no pending query found", { phoneNumber });
-    const twiml = gatherTwiml(
-      getPhrase("en", "lostQuestion", config.languageDir),
-      "en",
-      config,
-      phoneNumber,
-    );
+    const message = getPhrase("en", "lostQuestion", config.languageDir);
+    emitMessageTap(config, {
+      direction: "outbound",
+      channel: "call",
+      from: to,
+      to: phoneNumber,
+      body: message,
+    });
+    const twiml = gatherTwiml(message, "en", config, phoneNumber);
     return c.text(twiml, 200, { "Content-Type": "text/xml" });
   }
 
@@ -41,7 +46,15 @@ export async function handleAnswer(c: Context, config: TalkerConfig): Promise<Re
   } catch (error) {
     logger.error("answer error", { phoneNumber, error: getErrorMessage(error) });
     deletePending(phoneNumber);
-    const twiml = sayTwiml(getPhrase("en", "timeout", config.languageDir), "en", config);
+    const message = getPhrase("en", "timeout", config.languageDir);
+    emitMessageTap(config, {
+      direction: "outbound",
+      channel: "call",
+      from: to,
+      to: phoneNumber,
+      body: message,
+    });
+    const twiml = sayTwiml(message, "en", config);
     return c.text(twiml, 200, { "Content-Type": "text/xml" });
   }
 }

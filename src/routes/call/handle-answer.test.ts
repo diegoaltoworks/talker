@@ -9,26 +9,29 @@ import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import { Hono } from "hono";
 import { clearAllContexts, stopCleanup } from "../../core/context";
 import { FlowRegistry } from "../../flows/registry";
-import type { TalkerDependencies } from "../../types";
+import type { MessageTapEvent, TalkerDependencies } from "../../types";
 import { callRoutes } from "./index";
 import { deletePending, setPending } from "./pending";
 
-function createTestDeps(): TalkerDependencies {
+function createTestDeps(
+  configOverrides?: Partial<TalkerDependencies["config"]>,
+): TalkerDependencies {
   return {
     chatter: {} as ServerDependencies,
     config: {
       chatFn: async (_phone, msg) => `Echo: ${msg}`,
+      ...configOverrides,
     },
     openaiApiKey: "test-key",
     openaiModel: "gpt-4o-mini",
   };
 }
 
-function createApp() {
-  const deps = createTestDeps();
+function createApp(deps?: TalkerDependencies) {
+  const d = deps || createTestDeps();
   const registry = new FlowRegistry("");
   const app = new Hono();
-  app.route("/", callRoutes(deps, registry));
+  app.route("/", callRoutes(d, registry));
   return app;
 }
 
@@ -111,5 +114,22 @@ describe("handleAnswer", () => {
     const text = await res.text();
     expect(text).toContain("<Response>");
     expect(text).toContain("<Say");
+  });
+
+  it("fires an outbound onMessage event for the lostQuestion prompt", async () => {
+    const events: MessageTapEvent[] = [];
+    const deps = createTestDeps({ onMessage: (event) => void events.push(event) });
+    const app = createApp(deps);
+
+    await postAnswer(app, { From: "+15559990006", To: "+15559876543" });
+    await Promise.resolve();
+
+    expect(events.length).toBe(1);
+    expect(events[0]).toMatchObject({
+      direction: "outbound",
+      channel: "call",
+      from: "+15559876543",
+      to: "+15559990006",
+    });
   });
 });

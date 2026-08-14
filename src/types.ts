@@ -62,6 +62,25 @@ export interface MessageStatusEvent {
 }
 
 /**
+ * Message-tap event, fired for every inbound message and every outbound
+ * reply on all channels (call, sms, whatsapp).
+ */
+export interface MessageTapEvent {
+  /** "inbound" for a message received from the user, "outbound" for a reply sent to them */
+  direction: "inbound" | "outbound";
+  /** Channel the message travelled on */
+  channel: Channel;
+  /** Sender phone number for this message (bare, no whatsapp: prefix) */
+  from: string;
+  /** Recipient phone number for this message (bare, no whatsapp: prefix) */
+  to: string;
+  /** Message text */
+  body: string;
+  /** Unix ms timestamp when the tap fired */
+  timestamp: number;
+}
+
+/**
  * Remote chatbot API configuration (standalone mode)
  *
  * When running without chatter, talker calls a remote chatbot API over HTTP.
@@ -201,6 +220,16 @@ export interface TalkerConfig {
    * Called for both SMS and WhatsApp status callbacks.
    */
   onMessageStatus?: (event: MessageStatusEvent) => void | Promise<void>;
+
+  /**
+   * Generic message tap, fired for every inbound message and every outbound
+   * reply on all channels (call, sms, whatsapp) - the observability seam a
+   * downstream consumer can use for a live feed without parsing TwiML.
+   * Fire-and-forget: a throwing or slow handler is logged and never affects
+   * message delivery. Complements `onMessageStatus`, which reports delivery
+   * status after Twilio processes a send.
+   */
+  onMessage?: (event: MessageTapEvent) => void | Promise<void>;
 }
 
 /**

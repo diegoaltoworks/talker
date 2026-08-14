@@ -5,6 +5,7 @@
  */
 
 import { chat } from "../../core/chat";
+import { emitMessageTap } from "../../core/message-tap";
 import { getSmsPhrase } from "../../core/phrases";
 import { processIncoming, processOutgoing } from "../../core/processing";
 import { messageTwiml } from "../../core/twiml";
@@ -20,12 +21,23 @@ export async function processSms(
   registry: FlowRegistry,
   phoneNumber: string,
   messageBody: string,
+  to: string,
 ): Promise<string> {
   const incoming = await processIncoming(deps, phoneNumber, messageBody, "sms");
+
+  const tapOutbound = (body: string) =>
+    emitMessageTap(deps.config, {
+      direction: "outbound",
+      channel: "sms",
+      from: to,
+      to: phoneNumber,
+      body,
+    });
 
   // If user wants to talk to a human, give them guidance
   if (incoming.shouldTransfer) {
     const message = getSmsPhrase(incoming.detectedLanguage, "callForHelp", deps.config.languageDir);
+    tapOutbound(message);
     return messageTwiml(message);
   }
 
@@ -45,8 +57,10 @@ export async function processSms(
         "processingError",
         deps.config.languageDir,
       );
+      tapOutbound(message);
       return messageTwiml(message);
     }
+    tapOutbound(flowResult.response);
     return messageTwiml(flowResult.response);
   }
 
@@ -54,5 +68,6 @@ export async function processSms(
   const botResponse = await chat(deps, phoneNumber, incoming.processedMessage);
   const smsResponse = await processOutgoing(deps, phoneNumber, botResponse, "sms");
 
+  tapOutbound(smsResponse);
   return messageTwiml(smsResponse);
 }

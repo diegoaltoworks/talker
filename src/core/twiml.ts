@@ -47,42 +47,51 @@ export function sayTwiml(message: string, language: string, config: TalkerConfig
 }
 
 /**
- * Generate TwiML for transferring to a human
+ * Generate TwiML for transferring to a human.
+ * Pass `message` when the caller already resolved the phrase (e.g. to tap
+ * the exact text delivered) - otherwise it's looked up here, which can pick
+ * a different variant than a caller-side lookup when the phrase rotates.
  */
-export function transferTwiml(language: string, config: TalkerConfig): string {
+export function transferTwiml(language: string, config: TalkerConfig, message?: string): string {
   const { voice, language: lang } = getVoiceConfig(language, config.voices);
-  const message = getPhrase(language, "transfer", config.languageDir);
+  const resolvedMessage = message ?? getPhrase(language, "transfer", config.languageDir);
   const transferNumber = config.transferNumber || "";
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="${voice}" language="${lang}">${message}</Say>
+    <Say voice="${voice}" language="${lang}">${resolvedMessage}</Say>
     <Dial>${transferNumber}</Dial>
 </Response>`;
 }
 
 /**
- * Generate TwiML for the "one moment please" acknowledgment
+ * Generate TwiML for the "one moment please" acknowledgment.
+ * See `transferTwiml` for the `message` override rationale.
  */
-export function acknowledgmentTwiml(language: string, config: TalkerConfig): string {
+export function acknowledgmentTwiml(
+  language: string,
+  config: TalkerConfig,
+  message?: string,
+): string {
   const { voice, language: lang } = getVoiceConfig(language, config.voices);
-  const message = getPhrase(language, "acknowledgment", config.languageDir);
+  const resolvedMessage = message ?? getPhrase(language, "acknowledgment", config.languageDir);
   const prefix = config.routePrefix || "";
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="${voice}" language="${lang}">${message}</Say>
+    <Say voice="${voice}" language="${lang}">${resolvedMessage}</Say>
     <Redirect method="POST">${prefix}/call/answer</Redirect>
 </Response>`;
 }
 
 /**
- * Generate TwiML for ending a call with a farewell
+ * Generate TwiML for ending a call with a farewell.
+ * See `transferTwiml` for the `message` override rationale.
  */
-export function farewellTwiml(language: string, config: TalkerConfig): string {
+export function farewellTwiml(language: string, config: TalkerConfig, message?: string): string {
   const { voice, language: lang } = getVoiceConfig(language, config.voices);
-  const message = getFarewellPhrase(language, config.languageDir);
+  const resolvedMessage = message ?? getFarewellPhrase(language, config.languageDir);
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="${voice}" language="${lang}">${message}</Say>
+    <Say voice="${voice}" language="${lang}">${resolvedMessage}</Say>
     <Hangup/>
 </Response>`;
 }

@@ -132,6 +132,7 @@ export type {
   IntentDetection,
   LoadedFlow,
   MessageStatusEvent,
+  MessageTapEvent,
   Phrases,
   ProcessingConfig,
   TalkerConfig,

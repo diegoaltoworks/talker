@@ -10,7 +10,7 @@ import { Hono } from "hono";
 import { clearAllContexts, getContext, stopCleanup } from "../../core/context";
 import { FlowRegistry } from "../../flows/registry";
 import { resetRateLimitStore } from "../../middleware/rate-limit";
-import type { TalkerDependencies } from "../../types";
+import type { MessageTapEvent, TalkerDependencies } from "../../types";
 import { callRoutes } from "./index";
 
 function createTestDeps(overrides?: Partial<TalkerDependencies["config"]>): TalkerDependencies {
@@ -114,5 +114,23 @@ describe("handleInitialCall", () => {
 
     // Default English voice is Polly.Arthur with en-GB
     expect(text).toContain("en-GB");
+  });
+
+  it("fires an outbound onMessage event for the greeting", async () => {
+    const events: MessageTapEvent[] = [];
+    const deps = createTestDeps({ onMessage: (event) => void events.push(event) });
+    const app = createApp(deps);
+
+    await postCall(app, { From: "+15559990001", To: "+15559876543" });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(events.length).toBe(1);
+    expect(events[0]).toMatchObject({
+      direction: "outbound",
+      channel: "call",
+      from: "+15559876543",
+      to: "+15559990001",
+    });
   });
 });

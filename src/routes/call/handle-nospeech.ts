@@ -8,6 +8,7 @@
 import type { Context } from "hono";
 import { getDetectedLanguage, getLastPrompt, incrementNoSpeechRetries } from "../../core/context";
 import { logger } from "../../core/logger";
+import { emitMessageTap } from "../../core/message-tap";
 import { getPhrase } from "../../core/phrases";
 import { gatherTwiml, sayTwiml } from "../../core/twiml";
 import type { TalkerConfig } from "../../types";
@@ -15,6 +16,7 @@ import type { TalkerConfig } from "../../types";
 export async function handleNoSpeech(c: Context, config: TalkerConfig): Promise<Response> {
   const body = await c.req.parseBody();
   const phoneNumber = ((body.From as string) || "unknown").trim();
+  const to = (body.To as string) || "";
   const maxRetries = config.maxNoSpeechRetries ?? 3;
 
   const retryCount = incrementNoSpeechRetries(phoneNumber);
@@ -23,6 +25,13 @@ export async function handleNoSpeech(c: Context, config: TalkerConfig): Promise<
   if (retryCount > maxRetries) {
     logger.info("max retries reached, ending call", { phoneNumber, retryCount });
     const finalMessage = getPhrase(language, "didNotHearFinal", config.languageDir);
+    emitMessageTap(config, {
+      direction: "outbound",
+      channel: "call",
+      from: to,
+      to: phoneNumber,
+      body: finalMessage,
+    });
     return c.text(sayTwiml(finalMessage, language, config), 200, { "Content-Type": "text/xml" });
   }
 
@@ -37,6 +46,13 @@ export async function handleNoSpeech(c: Context, config: TalkerConfig): Promise<
     prompt = lastPrompt || retryMessage;
   }
 
+  emitMessageTap(config, {
+    direction: "outbound",
+    channel: "call",
+    from: to,
+    to: phoneNumber,
+    body: prompt,
+  });
   return c.text(gatherTwiml(prompt, language, config, phoneNumber), 200, {
     "Content-Type": "text/xml",
   });

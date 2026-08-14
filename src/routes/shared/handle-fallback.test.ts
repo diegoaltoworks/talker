@@ -8,22 +8,24 @@ import { afterEach, describe, expect, it } from "bun:test";
 import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import { Hono } from "hono";
 import { clearAllContexts, stopCleanup } from "../../core/context";
-import type { TalkerDependencies } from "../../types";
+import type { MessageTapEvent, TalkerDependencies } from "../../types";
 import { handleFallback } from "./handle-fallback";
 
-function createTestDeps(): TalkerDependencies {
+function createTestDeps(
+  configOverrides?: Partial<TalkerDependencies["config"]>,
+): TalkerDependencies {
   return {
     chatter: {} as ServerDependencies,
-    config: {},
+    config: { ...configOverrides },
     openaiApiKey: "test-key",
     openaiModel: "gpt-4o-mini",
   };
 }
 
-function createApp(channel: "sms" | "whatsapp") {
-  const deps = createTestDeps();
+function createApp(channel: "sms" | "whatsapp", deps?: TalkerDependencies) {
+  const d = deps || createTestDeps();
   const app = new Hono();
-  app.post("/fallback", (c) => handleFallback(c, deps, channel));
+  app.post("/fallback", (c) => handleFallback(c, d, channel));
   return app;
 }
 
@@ -97,6 +99,63 @@ describe("handleFallback", () => {
       expect(res.status).toBe(200);
       const text = await res.text();
       expect(text).toContain("<Message>");
+    });
+  });
+
+  describe("onMessage tap", () => {
+    it("fires an inbound and an outbound error event", async () => {
+      const events: MessageTapEvent[] = [];
+      const deps = createTestDeps({ onMessage: (event) => void events.push(event) });
+      const app = createApp("sms", deps);
+
+      await postFallback(app, { From: "+15551234567", To: "+15559876543", Body: "Hello" });
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(events.length).toBe(2);
+      expect(events[0]).toMatchObject({
+        direction: "inbound",
+        channel: "sms",
+        from: "+15551234567",
+        to: "+15559876543",
+        body: "Hello",
+      });
+      expect(events[1]).toMatchObject({
+        direction: "outbound",
+        channel: "sms",
+        from: "+15559876543",
+        to: "+15551234567",
+      });
+    });
+
+    it("strips the whatsapp: prefix from from/to on the whatsapp fallback", async () => {
+      const events: MessageTapEvent[] = [];
+      const deps = createTestDeps({ onMessage: (event) => void events.push(event) });
+      const app = createApp("whatsapp", deps);
+
+      await postFallback(app, {
+        From: "whatsapp:+15551234567",
+        To: "whatsapp:+15559876543",
+        Body: "Hello",
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(events.length).toBe(2);
+      expect(events[0]).toMatchObject({
+        direction: "inbound",
+        channel: "whatsapp",
+        from: "+15551234567",
+        to: "+15559876543",
+      });
+      expect(events[1]).toMatchObject({
+        direction: "outbound",
+        channel: "whatsapp",
+        from: "+15559876543",
+        to: "+15551234567",
+      });
     });
   });
 });

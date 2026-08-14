@@ -7,6 +7,7 @@
  */
 
 import { chat } from "../../core/chat";
+import { emitMessageTap } from "../../core/message-tap";
 import { getWhatsAppPhrase } from "../../core/phrases";
 import { processIncoming, processOutgoing } from "../../core/processing";
 import { messageTwiml } from "../../core/twiml";
@@ -22,8 +23,18 @@ export async function processWhatsApp(
   registry: FlowRegistry,
   phoneNumber: string,
   messageBody: string,
+  to: string,
 ): Promise<string> {
   const incoming = await processIncoming(deps, phoneNumber, messageBody, "whatsapp");
+
+  const tapOutbound = (body: string) =>
+    emitMessageTap(deps.config, {
+      direction: "outbound",
+      channel: "whatsapp",
+      from: to,
+      to: phoneNumber,
+      body,
+    });
 
   // If user wants to talk to a human, give them guidance
   if (incoming.shouldTransfer) {
@@ -32,6 +43,7 @@ export async function processWhatsApp(
       "callForHelp",
       deps.config.languageDir,
     );
+    tapOutbound(message);
     return messageTwiml(message);
   }
 
@@ -51,8 +63,10 @@ export async function processWhatsApp(
         "processingError",
         deps.config.languageDir,
       );
+      tapOutbound(message);
       return messageTwiml(message);
     }
+    tapOutbound(flowResult.response);
     return messageTwiml(flowResult.response);
   }
 
@@ -60,5 +74,6 @@ export async function processWhatsApp(
   const botResponse = await chat(deps, phoneNumber, incoming.processedMessage);
   const whatsappResponse = await processOutgoing(deps, phoneNumber, botResponse, "whatsapp");
 
+  tapOutbound(whatsappResponse);
   return messageTwiml(whatsappResponse);
 }

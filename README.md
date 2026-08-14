@@ -141,6 +141,27 @@ interface TalkerConfig {
 
   // Custom chat function (overrides chatbot config and chatter RAG)
   chatFn?: (phoneNumber: string, message: string) => Promise<string>;
+
+  // Callback invoked when a Twilio delivery status update is received for
+  // an SMS/WhatsApp message you sent (queued, sent, delivered, failed...).
+  onMessageStatus?: (event: MessageStatusEvent) => void | Promise<void>;
+
+  // Fired for every inbound message and every outbound reply on all
+  // channels (call, sms, whatsapp) - a live feed without parsing TwiML.
+  // Fire-and-forget: a throwing or slow handler is logged and never affects
+  // message delivery. `from`/`to` flip with direction (outbound `from` is
+  // your Twilio number); `to` is "" when Twilio omits it. Fires when the
+  // reply text is generated, not when Twilio confirms delivery - for
+  // delivery truth use `onMessageStatus`. Handlers run independently and
+  // aren't ordered relative to each other; sort by `timestamp` if needed.
+  onMessage?: (event: {
+    direction: "inbound" | "outbound";
+    channel: "call" | "sms" | "whatsapp";
+    from: string;
+    to: string;
+    body: string;
+    timestamp: number;
+  }) => void | Promise<void>;
 }
 ```
 

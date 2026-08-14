@@ -16,6 +16,7 @@
  */
 
 import type OpenAI from "openai";
+import { getErrorMessage } from "../core/errors";
 import { logger } from "../core/logger";
 import { parseOggOpus } from "./ogg";
 
@@ -68,12 +69,19 @@ export function createSynthesizer(config: SynthesizerConfig): Synthesizer {
   const maxChars = config.maxChars ?? DEFAULT_MAX_VOICE_TEXT_CHARS;
 
   return async function synthesize(text, options = {}) {
-    if (!config.enabled()) return null;
-    const input = text.trim().slice(0, maxChars);
-    if (!input) return null;
-
+    // Everything is inside the try, including the gate and the client factory:
+    // both are host callbacks, and a throw from either would break the
+    // null-not-throw contract the text fallback depends on.
     try {
+      if (!config.enabled()) return null;
+      const input = text.trim().slice(0, maxChars);
+      if (!input) return null;
+
       const voice = config.voiceFor?.(options.personaId) ?? DEFAULT_VOICE;
+      const instructions = [config.baseInstructions ?? "", options.instructions ?? ""]
+        .filter(Boolean)
+        .join(" ");
+
       const response = await config.client().audio.speech.create({
         model: config.model ?? DEFAULT_MODEL,
         // The SDK types `voice` as a closed union of its own presets; the set
@@ -82,9 +90,9 @@ export function createSynthesizer(config: SynthesizerConfig): Synthesizer {
         input,
         response_format: "opus",
         speed: config.speed ?? 1,
-        instructions: [config.baseInstructions ?? "", options.instructions ?? ""]
-          .filter(Boolean)
-          .join(" "),
+        // Omitted rather than sent empty: the older tts-1 models reject the
+        // field outright, which would 400 every call for a host that sets one.
+        ...(instructions ? { instructions } : {}),
       });
 
       const bytes = new Uint8Array(await response.arrayBuffer());
@@ -105,7 +113,7 @@ export function createSynthesizer(config: SynthesizerConfig): Synthesizer {
       logger.info("voice: synthesized", { bytes: bytes.length, seconds: parsed.seconds });
       return { bytes, seconds: parsed.seconds };
     } catch (error) {
-      logger.warn("voice: synthesis failed", { error: String(error) });
+      logger.warn("voice: synthesis failed", { error: getErrorMessage(error) });
       return null;
     }
   };

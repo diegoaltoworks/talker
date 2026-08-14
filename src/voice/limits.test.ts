@@ -53,6 +53,13 @@ describe("pickDailyLimit", () => {
     expect(pickDailyLimit("2.5", 100)).toBe(100);
     expect(pickDailyLimit("lots", 100)).toBe(100);
   });
+
+  it("falls back for a blank-but-present value rather than parsing it as zero", () => {
+    // Number(" ") is 0, a non-negative integer — parsing it would turn a typo
+    // into a cap that blocks everything, indistinguishable from a real limit.
+    expect(pickDailyLimit(" ", 100)).toBe(100);
+    expect(pickDailyLimit("\t\n", 100)).toBe(100);
+  });
 });
 
 describe("resolveVoiceLimitsConfig", () => {
@@ -181,6 +188,37 @@ describe("createVoiceLimiter", () => {
       allowed: false,
       reason: "per-number",
     });
+  });
+
+  it("still burns a per-number unit when the global cap blocks the call", async () => {
+    // Documented as accepted, not fixed (see the checkAndReserve docblock).
+    // Pinned here so a later refactor has to change the test deliberately.
+    const { store, counts } = memoryStore();
+    const limiter = createVoiceLimiter(
+      { perNumberDailyLimit: 100, globalDailyLimit: 0 },
+      { store, now: () => NOON },
+    );
+
+    expect((await limiter.checkAndReserve("+15550001")).reason).toBe("global");
+    expect(counts.get("number:+15550001:2026-08-14")).toBe(1);
+  });
+
+  it("propagates a store failure rather than silently allowing or blocking", async () => {
+    // Resolving `allowed` here would let a counter-store outage uncap spend;
+    // resolving `blocked` would be indistinguishable from a real cap hit.
+    const limiter = createVoiceLimiter(
+      { perNumberDailyLimit: 5, globalDailyLimit: 5 },
+      {
+        store: {
+          incrementAndGet: async () => {
+            throw new Error("counter store unavailable");
+          },
+        },
+        now: () => NOON,
+      },
+    );
+
+    await expect(limiter.checkAndReserve("+15550001")).rejects.toThrow("counter store unavailable");
   });
 
   it("is satisfied structurally by any object with a matching incrementAndGet", async () => {

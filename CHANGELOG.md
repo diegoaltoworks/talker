@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `VoiceLimitsStore`, a structural interface letting a host back the daily
   counters with its own storage — talker takes on no database dependency
 
+`parseOggOpus` walks the container's page structure rather than scanning for the
+capture pattern, so payload bytes cannot pose as a page header; the
+unknown-position granule sentinel and implausible durations return `null`. The
+synthesizer and transcriber return `null` on every failure path including a
+throwing `enabled()` or client factory, so a caller's text fallback is always
+reachable.
+
 Additive only; no existing signature changed. The OpenAI client is injected and
 `openai` is imported for types only, so it remains an optional peer dependency.
 

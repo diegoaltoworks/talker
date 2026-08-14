@@ -73,6 +73,14 @@ export interface VoiceLimiter {
    * way to being told no. This favors the more common cost risk (one number
    * hammering the endpoint) over the rarer one (the global cap saturating and
    * clipping everyone's personal quota).
+   *
+   * A store failure propagates rather than resolving to allowed-or-blocked.
+   * This is the one place the module deliberately does not follow the
+   * null-on-failure shape of its siblings: silently allowing would let an
+   * outage in the host's counter store uncap spend, and silently blocking
+   * would be indistinguishable from a real cap hit. The host decides — but on
+   * a webhook path, catch it, because an unhandled rejection there is a 500
+   * and the response budget is measured in seconds.
    */
   checkAndReserve(phoneNumber: string): Promise<VoiceLimitCheck>;
 }
@@ -84,7 +92,9 @@ export function utcDayKey(now: number): string {
 
 /** A configured non-negative integer wins over the default; anything else falls back. */
 export function pickDailyLimit(value: string | undefined, fallback: number): number {
-  if (value === undefined || value === "") return fallback;
+  // Blank-but-present must fall back, not parse: Number(" ") is 0, which would
+  // silently become a cap of zero and block every request.
+  if (value === undefined || value.trim() === "") return fallback;
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
 }

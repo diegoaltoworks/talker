@@ -61,13 +61,42 @@ describe("createTranscriber", () => {
     expect(await transcribe(audio)).toBeNull();
   });
 
-  it("returns null instead of throwing when the API fails", async () => {
-    const { client } = mockClient(async () => {
-      throw new Error("upstream 500");
-    });
-    const transcribe = createTranscriber({ client, enabled: () => true });
+  // The null-not-throw contract is what makes the caller's text fallback
+  // reachable, so every host-supplied callback is covered, not just the API.
+  describe("never throws", () => {
+    it("returns null instead of throwing when the API fails", async () => {
+      const { client } = mockClient(async () => {
+        throw new Error("upstream 500");
+      });
+      const transcribe = createTranscriber({ client, enabled: () => true });
 
-    expect(await transcribe(audio)).toBeNull();
+      expect(await transcribe(audio)).toBeNull();
+    });
+
+    it("returns null when the enabled gate itself throws", async () => {
+      const { client } = mockClient(async () => ({ text: "hello" }));
+      const transcribe = createTranscriber({
+        client,
+        enabled: () => {
+          throw new Error("config not loaded");
+        },
+      });
+
+      expect(await transcribe(audio)).toBeNull();
+    });
+
+    it("returns null when the client factory throws", async () => {
+      // The likeliest real failure: a lazy `new OpenAI()` with no API key, or
+      // with the optional peer absent.
+      const transcribe = createTranscriber({
+        client: () => {
+          throw new Error("missing OPENAI_API_KEY");
+        },
+        enabled: () => true,
+      });
+
+      expect(await transcribe(audio)).toBeNull();
+    });
   });
 
   it("clamps the transcript to maxChars", async () => {

@@ -15,6 +15,7 @@
  */
 
 import type OpenAI from "openai";
+import { getErrorMessage } from "../core/errors";
 import { logger } from "../core/logger";
 
 export interface TranscriberConfig {
@@ -43,10 +44,13 @@ export function createTranscriber(config: TranscriberConfig): Transcriber {
   const maxChars = config.maxChars ?? DEFAULT_TRANSCRIPT_MAX_CHARS;
 
   return async function transcribe(bytes) {
-    if (!config.enabled()) return null;
-    if (bytes.length === 0) return null;
-
+    // Everything is inside the try, including the gate and the client factory:
+    // both are host callbacks, and a throw from either would break the
+    // null-not-throw contract the text fallback depends on.
     try {
+      if (!config.enabled()) return null;
+      if (bytes.length === 0) return null;
+
       // Copy into a plain ArrayBuffer: a Uint8Array may be backed by shared or
       // pooled memory, which is neither a valid BlobPart nor safe to hand to an
       // upload that outlives this call.
@@ -64,7 +68,7 @@ export function createTranscriber(config: TranscriberConfig): Transcriber {
       logger.info("voice: transcribed", { bytes: bytes.length, chars: text.length });
       return text.slice(0, maxChars);
     } catch (error) {
-      logger.warn("voice: transcription failed", { error: String(error) });
+      logger.warn("voice: transcription failed", { error: getErrorMessage(error) });
       return null;
     }
   };

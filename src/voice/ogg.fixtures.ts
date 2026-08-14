@@ -51,3 +51,27 @@ export function opusHead(channels: number): Uint8Array {
 export function oggOpusStream(channels: number, granule: number): Uint8Array {
   return concatBytes(oggPage(0, opusHead(channels)), oggPage(granule, new Uint8Array([0x00])));
 }
+
+/**
+ * A page whose granule is the spec's unknown-position sentinel — legal, and
+ * meaning "no packet completes here", so it carries no timing.
+ */
+export function unknownGranulePage(payload: Uint8Array): Uint8Array {
+  const page = oggPage(0, payload);
+  new DataView(page.buffer).setBigUint64(6, 0xffffffffffffffffn, true);
+  return page;
+}
+
+/**
+ * An audio page whose *payload* contains the bytes a naive scanner would take
+ * for a page header: the capture pattern followed by a granule implying
+ * `fakeSeconds`. A page walk steps over it; a byte scan reads it as the last
+ * page.
+ */
+export function pageWithDecoyInPayload(granule: number, fakeSeconds: number): Uint8Array {
+  const decoy = new Uint8Array(20);
+  decoy.set(new TextEncoder().encode("OggS"), 0);
+  decoy[4] = 0;
+  new DataView(decoy.buffer).setBigUint64(6, BigInt(48000 * fakeSeconds), true);
+  return oggPage(granule, decoy);
+}

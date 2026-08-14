@@ -290,7 +290,11 @@ note. Callers are expected to fall back to a text reply; the contract exists so
 that fallback is always reachable.
 
 `parseOggOpus(bytes)` returns `{ channels, seconds }` or `null` for anything it
-cannot measure, and is what the synthesizer uses for that validation.
+cannot measure, and is what the synthesizer uses for that validation. It walks
+the container's page structure rather than scanning for the `OggS` capture
+pattern, so payload bytes cannot pose as a page header and drive the reported
+duration — inbound voice notes are attacker-controlled, and this is a root
+export intended to be pointed at them.
 
 Daily spend guards cap voice usage per number and globally. Storage stays with
 the host: implement `VoiceLimitsStore` against whatever database you already run.

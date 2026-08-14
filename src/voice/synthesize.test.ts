@@ -30,15 +30,15 @@ function monoClient(seconds = 3) {
 }
 
 describe("createSynthesizer", () => {
-  it("returns mono bytes and the container duration", async () => {
-    const { client } = monoClient(4);
+  it("returns the client's own bytes and the container duration", async () => {
+    const audio = oggOpusStream(1, 48000 * 4);
+    const { client } = mockClient(async () => audio);
     const synthesize = createSynthesizer({ client, enabled: () => true });
 
     const note = await synthesize("Your booking is confirmed.");
 
-    expect(note).not.toBeNull();
     expect(note?.seconds).toBe(4);
-    expect(note?.bytes.length).toBeGreaterThan(0);
+    expect(note?.bytes).toEqual(new Uint8Array(audio));
   });
 
   it("returns null when disabled, without calling the API", async () => {
@@ -72,13 +72,55 @@ describe("createSynthesizer", () => {
     expect(await synthesize("hello")).toBeNull();
   });
 
-  it("returns null instead of throwing when the API fails", async () => {
-    const { client } = mockClient(async () => {
-      throw new Error("upstream 503");
-    });
-    const synthesize = createSynthesizer({ client, enabled: () => true });
+  // The null-not-throw contract is what makes the caller's text fallback
+  // reachable, so every host-supplied callback is covered, not just the API.
+  describe("never throws", () => {
+    it("returns null instead of throwing when the API fails", async () => {
+      const { client } = mockClient(async () => {
+        throw new Error("upstream 503");
+      });
+      const synthesize = createSynthesizer({ client, enabled: () => true });
 
-    expect(await synthesize("hello")).toBeNull();
+      expect(await synthesize("hello")).toBeNull();
+    });
+
+    it("returns null when the enabled gate itself throws", async () => {
+      const { client } = monoClient();
+      const synthesize = createSynthesizer({
+        client,
+        enabled: () => {
+          throw new Error("config not loaded");
+        },
+      });
+
+      expect(await synthesize("hello")).toBeNull();
+    });
+
+    it("returns null when the client factory throws", async () => {
+      // The likeliest real failure: a lazy `new OpenAI()` with no API key, or
+      // with the optional peer absent.
+      const synthesize = createSynthesizer({
+        client: () => {
+          throw new Error("missing OPENAI_API_KEY");
+        },
+        enabled: () => true,
+      });
+
+      expect(await synthesize("hello")).toBeNull();
+    });
+
+    it("returns null when voiceFor throws", async () => {
+      const { client } = monoClient();
+      const synthesize = createSynthesizer({
+        client,
+        enabled: () => true,
+        voiceFor: () => {
+          throw new Error("no persona map");
+        },
+      });
+
+      expect(await synthesize("hello")).toBeNull();
+    });
   });
 
   it("clamps input to maxChars and trims before sending", async () => {
@@ -130,7 +172,7 @@ describe("createSynthesizer", () => {
 
     await synthesize("hello");
 
-    expect(calls[0]?.voice).toBeTruthy();
+    expect(calls[0]?.voice).toBe("ash");
   });
 
   it("joins base and per-call instructions, skipping empties", async () => {
@@ -146,6 +188,17 @@ describe("createSynthesizer", () => {
 
     expect(calls[0]?.instructions).toBe("Speak warmly. Slow down.");
     expect(calls[1]?.instructions).toBe("Speak warmly.");
+  });
+
+  it("omits instructions entirely when none are configured", async () => {
+    // Sending an empty string would 400 on the older tts-1 models, which
+    // reject the field outright.
+    const { client, calls } = monoClient();
+    const synthesize = createSynthesizer({ client, enabled: () => true });
+
+    await synthesize("hello");
+
+    expect(calls[0]).not.toHaveProperty("instructions");
   });
 
   it("passes model and speed overrides through", async () => {

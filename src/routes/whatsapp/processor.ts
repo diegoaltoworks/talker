@@ -72,7 +72,7 @@ export async function processWhatsApp(
   }
 
   // Get chatbot response
-  const botResponse = await chat(deps, phoneNumber, incoming.processedMessage);
+  const botResponse = await chat(deps, phoneNumber, incoming.processedMessage, "whatsapp");
   const whatsappResponse = await processOutgoing(deps, phoneNumber, botResponse, "whatsapp");
 
   tapOutbound(whatsappResponse);

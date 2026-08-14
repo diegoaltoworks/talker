@@ -15,7 +15,8 @@
   "timeout": "Desculpe, demorei muito para responder. Por favor, tente novamente. Tchau!",
   "lostQuestion": "Desculpe, perdi o fio da sua pergunta. Voce poderia repetir?",
   "flow": {
-    "cancelled": "Sem problema! Cancelei isso. Como posso ajudar?"
+    "cancelled": "Sem problema! Cancelei isso. Como posso ajudar?",
+    "error": "Desculpe, algo deu errado com isso. Vamos comecar de novo - como posso ajudar?"
   },
   "sms": {
     "greeting": "Ola! Sou seu assistente de voz. Como posso ajuda-lo?",

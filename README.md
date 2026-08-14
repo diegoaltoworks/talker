@@ -247,6 +247,11 @@ discard `say`/`sms`/`whatsapp` and substitute a generic error phrase, and a voic
 `transferNumber`. A flow that wants its own in-persona message for an expected failure (a rate limit, a
 validation error) should still return `success: true`.
 
+If the user cancels an in-progress flow (a cancellation keyword like "cancel" or "nevermind"), every
+channel delivers `phrases.flow.cancelled`. If flow processing itself fails - parameter extraction throws,
+the flow can't be found, or a freshly-triggered flow fails to initialize - every channel delivers
+`phrases.flow.error` instead of silently falling through to a full chatbot turn.
+
 See [examples/custom-flows.ts](./examples/custom-flows.ts) for a complete walkthrough.
 
 ### Custom Language Files

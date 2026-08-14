@@ -36,6 +36,7 @@ const ENGLISH_FALLBACK: Phrases = {
   lostQuestion: "I'm sorry, I lost track of your question. Could you please repeat?",
   flow: {
     cancelled: "No problem! I've cancelled that. What else would you like to know?",
+    error: "Sorry, something went wrong with that. Let's start over - what would you like to know?",
   },
   sms: {
     greeting: "Hi! I'm your voice assistant. Ask me anything!",
@@ -155,7 +156,10 @@ export function getFarewellPhrase(language: string, languageDir?: string): strin
 }
 
 /**
- * Get a flow-related phrase
+ * Get a flow-related phrase.
+ * Falls back to the built-in English flow phrases for languages whose
+ * phrase file predates a given `flow` key (e.g. `error` added after
+ * `cancelled`).
  */
 export function getFlowPhrase(
   language: string,
@@ -163,7 +167,8 @@ export function getFlowPhrase(
   languageDir?: string,
 ): string {
   const phrases = loadPhrases(language, languageDir);
-  return pick(phrases.flow[key]);
+  const value = phrases.flow?.[key];
+  return value === undefined ? pick(ENGLISH_FALLBACK.flow[key]) : pick(value);
 }
 
 /**

@@ -15,7 +15,8 @@
   "timeout": "Sorry, ik deed er te lang over om te antwoorden. Probeer het opnieuw. Tot ziens.",
   "lostQuestion": "Sorry, ik ben uw vraag kwijt. Kunt u het herhalen?",
   "flow": {
-    "cancelled": "Geen probleem! Ik heb dat geannuleerd. Waarmee kan ik je helpen?"
+    "cancelled": "Geen probleem! Ik heb dat geannuleerd. Waarmee kan ik je helpen?",
+    "error": "Sorry, daar ging iets mis. Laten we opnieuw beginnen - waarmee kan ik je helpen?"
   },
   "sms": {
     "greeting": "Hallo! Ik ben uw spraakassistent. Hoe kan ik u helpen?",

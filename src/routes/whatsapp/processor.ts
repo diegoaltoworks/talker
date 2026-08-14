@@ -56,7 +56,12 @@ export async function processWhatsApp(
     "whatsapp",
   );
 
-  if (flowResult.isFlowActive || flowResult.flowCompleted) {
+  if (
+    flowResult.isFlowActive ||
+    flowResult.flowCompleted ||
+    flowResult.cancelled ||
+    flowResult.error
+  ) {
     if (flowResult.flowCompleted && flowResult.flowSuccess === false) {
       const message = getWhatsAppPhrase(
         incoming.detectedLanguage,

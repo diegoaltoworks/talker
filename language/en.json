@@ -15,7 +15,8 @@
   "timeout": "Sorry, I took too long to respond. Please try again. Goodbye.",
   "lostQuestion": "I'm sorry, I lost track of your question. Could you please repeat?",
   "flow": {
-    "cancelled": "No problem! I've cancelled that. What else would you like to know?"
+    "cancelled": "No problem! I've cancelled that. What else would you like to know?",
+    "error": "Sorry, something went wrong with that. Let's start over - what would you like to know?"
   },
   "sms": {
     "greeting": "Hi! I'm your voice assistant. Ask me anything!",

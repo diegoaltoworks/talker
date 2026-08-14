@@ -70,12 +70,19 @@ export async function processCall(
     "call",
   );
 
-  if (flowResult.isFlowActive || flowResult.flowCompleted) {
+  if (
+    flowResult.isFlowActive ||
+    flowResult.flowCompleted ||
+    flowResult.cancelled ||
+    flowResult.error
+  ) {
     logger.info("FLOW RESULT", {
       phoneNumber,
       active: flowResult.isFlowActive,
       done: flowResult.flowCompleted,
       success: flowResult.flowSuccess,
+      cancelled: flowResult.cancelled,
+      error: flowResult.error,
     });
 
     // If flow completed but failed, transfer to human

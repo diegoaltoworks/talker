@@ -2,9 +2,12 @@
  * Flow Manager
  *
  * Orchestrates the flow lifecycle: triggering, parameter collection,
- * execution, and cleanup.
+ * execution, and cleanup. Parameter extraction is sourced from chatter's flow
+ * engine (`@diegoaltoworks/chatter/flows`) instead of a duplicate raw-fetch
+ * implementation.
  */
 
+import { extractParameters } from "@diegoaltoworks/chatter/flows";
 import {
   clearActiveFlow,
   getActiveFlow,
@@ -17,8 +20,8 @@ import { getErrorMessage } from "../core/errors";
 import { logger } from "../core/logger";
 import { getFlowPhrase } from "../core/phrases";
 import type { Channel, FlowResult, TalkerDependencies } from "../types";
-import { extractParameters } from "./params";
 import type { FlowRegistry } from "./registry";
+import { toChatterFlow } from "./types-adapter";
 import { shouldExitFlow as checkExitFlow, getExitMessage } from "./utils";
 
 export { shouldExitFlow } from "./utils";
@@ -67,13 +70,26 @@ export async function processFlow(
     }
 
     try {
-      const extraction = await extractParameters(
-        deps,
-        flow,
+      logger.info("flow extracting params", {
         phoneNumber,
+        flow: activeFlow.flowName,
+        msg: userMessage.substring(0, 160),
+      });
+
+      const extraction = await extractParameters(
+        deps.chatter.client,
+        deps.openaiModel,
+        toChatterFlow(flow),
         userMessage,
         activeFlow.params as Record<string, unknown>,
       );
+
+      logger.info("flow params extracted", {
+        phoneNumber,
+        flow: activeFlow.flowName,
+        extracted: extraction.extractedParams,
+        complete: extraction.allParamsFilled,
+      });
 
       updateFlowParams(phoneNumber, extraction.extractedParams);
 
@@ -139,13 +155,26 @@ export async function processFlow(
     });
 
     try {
-      const extraction = await extractParameters(
-        deps,
-        matchedFlow,
+      logger.info("flow extracting params", {
         phoneNumber,
+        flow: matchedFlow.definition.id,
+        msg: userMessage.substring(0, 160),
+      });
+
+      const extraction = await extractParameters(
+        deps.chatter.client,
+        deps.openaiModel,
+        toChatterFlow(matchedFlow),
         userMessage,
         globalParams,
       );
+
+      logger.info("flow params extracted", {
+        phoneNumber,
+        flow: matchedFlow.definition.id,
+        extracted: extraction.extractedParams,
+        complete: extraction.allParamsFilled,
+      });
 
       const mergedParams = { ...globalParams, ...extraction.extractedParams };
       setActiveFlow(phoneNumber, matchedFlow.definition.id, mergedParams);

@@ -82,9 +82,18 @@ export async function createStandaloneServer(config: StandaloneConfig) {
     await runMigrations();
   }
 
-  // Initialize flow registry
+  // Initialize flow registry. Flow intent detection and parameter extraction
+  // need a real OpenAI SDK client (chatter's flow engine calls it directly),
+  // so `openai` is only imported here - kept a true optional peer for
+  // standalone deployments that don't use flows.
   const registry = new FlowRegistry(config.flowsDir || "");
   if (config.flowsDir) {
+    const { default: OpenAI } = await import("openai").catch(() => {
+      throw new Error(
+        "flowsDir is configured but the optional peer dependency 'openai' is not installed",
+      );
+    });
+    stubChatterDeps.client = new OpenAI({ apiKey: config.openaiApiKey });
     await registry.loadFlows();
   }
 

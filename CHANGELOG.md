@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `FlowRegistry` and `processFlow` now source LLM intent detection and
+  parameter extraction from chatter's flow engine
+  (`@diegoaltoworks/chatter/flows`) instead of talker's own duplicate
+  raw-fetch implementations. Directory loading stays talker's own
+  (`src/flows/loader.ts`) - chatter's loader requires at least one schema
+  property per flow, which would silently drop zero-parameter flows like a
+  keyword-triggered human handoff. The on-disk flow contract (`flow.json` +
+  `handler.ts` exporting `execute()` + `instructions.md`, optional
+  `prefill.ts`) and the handler's `{success, say, sms?, whatsapp?, result?}`
+  return shape are unchanged - existing flow directories load and run as
+  before.
+- **Breaking for flow users:** `FlowRegistry`/`processFlow` now require a
+  real OpenAI SDK client at `TalkerDependencies.chatter.client` for intent
+  detection and parameter extraction (chatter's engine calls the client
+  directly rather than raw `fetch`). Plugin mode gets this automatically
+  from chatter. Standalone mode constructs one internally whenever
+  `flowsDir` is configured - `openai` remains an optional peer dependency
+  otherwise.
+- Flow session state stays in talker's in-memory per-caller context, as it
+  always has - there is no database table to migrate.
+
 ### Added
 
 - Channel-agnostic voice capabilities as root exports: `createSynthesizer`

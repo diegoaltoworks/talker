@@ -52,6 +52,14 @@ const ENGLISH_FALLBACK: Phrases = {
     processingError: "I'm having trouble processing that. Please try sending your message again.",
     genericError: "Sorry, something went wrong. Please try again.",
   },
+  voice: {
+    overCapPerNumber: "You've reached today's voice reply limit. Please type your message instead.",
+    overCapGlobal: "Voice replies are at capacity right now. Please type your message instead.",
+    limitUnavailable:
+      "I can't check voice availability right now. Please type your message instead.",
+    unintelligible: "I couldn't understand that audio. Could you try again, or type your message?",
+    answerFailed: "Something went wrong preparing a reply. Please try again.",
+  },
 };
 
 /**
@@ -184,4 +192,21 @@ export function getWhatsAppPhrase(
     return pick(phrases.whatsapp[key]);
   }
   return pick(phrases.sms[key]);
+}
+
+/**
+ * Get a voice-reply-ladder phrase.
+ * Falls back to the built-in English voice phrases for languages whose
+ * phrase file predates the `voice` namespace.
+ */
+export function getVoicePhrase(
+  language: string,
+  key: keyof Phrases["voice"],
+  languageDir?: string,
+): string {
+  const phrases = loadPhrases(language, languageDir);
+  if (phrases.voice) {
+    return pick(phrases.voice[key]);
+  }
+  return pick(ENGLISH_FALLBACK.voice[key]);
 }

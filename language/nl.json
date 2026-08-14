@@ -30,5 +30,12 @@
     "callForHelp": "Voor complexe vragen, bel ons of stuur hier meer details.",
     "processingError": "Ik heb moeite om dat te verwerken. Probeer uw bericht opnieuw te sturen.",
     "genericError": "Sorry, er ging iets mis. Probeer het opnieuw."
+  },
+  "voice": {
+    "overCapPerNumber": "U heeft de dagelijkse limiet voor spraakantwoorden bereikt. Typ uw bericht in plaats daarvan.",
+    "overCapGlobal": "Spraakantwoorden zitten momenteel aan de limiet. Typ uw bericht in plaats daarvan.",
+    "limitUnavailable": "Ik kan de beschikbaarheid van spraak nu niet controleren. Typ uw bericht in plaats daarvan.",
+    "unintelligible": "Ik kon die audio niet verstaan. Kunt u het opnieuw proberen, of uw bericht typen?",
+    "answerFailed": "Er ging iets mis bij het voorbereiden van een antwoord. Probeer het opnieuw."
   }
 }

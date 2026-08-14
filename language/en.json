@@ -30,5 +30,12 @@
     "callForHelp": "For more complex questions, feel free to call us directly or reply here with more details.",
     "processingError": "I'm having trouble processing that. Please try sending your message again.",
     "genericError": "Sorry, something went wrong. Please try again."
+  },
+  "voice": {
+    "overCapPerNumber": "You've reached today's voice reply limit. Please type your message instead.",
+    "overCapGlobal": "Voice replies are at capacity right now. Please type your message instead.",
+    "limitUnavailable": "I can't check voice availability right now. Please type your message instead.",
+    "unintelligible": "I couldn't understand that audio. Could you try again, or type your message?",
+    "answerFailed": "Something went wrong preparing a reply. Please try again."
   }
 }

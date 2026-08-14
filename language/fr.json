@@ -30,5 +30,12 @@
     "callForHelp": "Pour des questions complexes, appelez-nous ou repondez ici avec plus de details.",
     "processingError": "J'ai du mal a traiter cela. Veuillez renvoyer votre message.",
     "genericError": "Desole, quelque chose s'est mal passe. Veuillez reessayer."
+  },
+  "voice": {
+    "overCapPerNumber": "Vous avez atteint la limite quotidienne de reponses vocales. Veuillez plutot taper votre message.",
+    "overCapGlobal": "Les reponses vocales sont a pleine capacite en ce moment. Veuillez plutot taper votre message.",
+    "limitUnavailable": "Je ne peux pas verifier la disponibilite vocale en ce moment. Veuillez plutot taper votre message.",
+    "unintelligible": "Je n'ai pas compris cet audio. Pourriez-vous reessayer, ou taper votre message?",
+    "answerFailed": "Un probleme est survenu lors de la preparation d'une reponse. Veuillez reessayer."
   }
 }

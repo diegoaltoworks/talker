@@ -30,5 +30,12 @@
     "callForHelp": "Para questoes complexas, ligue para nos ou responda aqui com mais detalhes.",
     "processingError": "Estou tendo dificuldades para processar isso. Por favor, envie sua mensagem novamente.",
     "genericError": "Desculpe, algo deu errado. Por favor, tente novamente."
+  },
+  "voice": {
+    "overCapPerNumber": "Voce atingiu o limite diario de respostas de voz. Por favor, digite sua mensagem.",
+    "overCapGlobal": "As respostas de voz estao no limite de capacidade agora. Por favor, digite sua mensagem.",
+    "limitUnavailable": "Nao consigo verificar a disponibilidade de voz agora. Por favor, digite sua mensagem.",
+    "unintelligible": "Nao consegui entender esse audio. Voce poderia tentar novamente, ou digitar sua mensagem?",
+    "answerFailed": "Algo deu errado ao preparar uma resposta. Por favor, tente novamente."
   }
 }

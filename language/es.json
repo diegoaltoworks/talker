@@ -30,5 +30,12 @@
     "callForHelp": "Para consultas complejas, llamenos o responda aqui con mas detalles.",
     "processingError": "Tengo problemas para procesar eso. Por favor envie su mensaje de nuevo.",
     "genericError": "Lo siento, algo salio mal. Por favor intente de nuevo."
+  },
+  "voice": {
+    "overCapPerNumber": "Ha alcanzado el limite diario de respuestas de voz. Por favor escriba su mensaje en su lugar.",
+    "overCapGlobal": "Las respuestas de voz estan al maximo de capacidad ahora mismo. Por favor escriba su mensaje en su lugar.",
+    "limitUnavailable": "No puedo verificar la disponibilidad de voz ahora mismo. Por favor escriba su mensaje en su lugar.",
+    "unintelligible": "No pude entender ese audio. Podria intentarlo de nuevo, o escribir su mensaje?",
+    "answerFailed": "Algo salio mal al preparar una respuesta. Por favor intente de nuevo."
   }
 }

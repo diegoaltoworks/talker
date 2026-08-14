@@ -67,6 +67,7 @@ export {
   getFlowPhrase,
   getPhrase,
   getSmsPhrase,
+  getVoicePhrase,
   getWhatsAppPhrase,
   loadPhrases,
 } from "./core/phrases";
@@ -157,6 +158,9 @@ export type {
   VoiceLimitsEnv,
   VoiceLimitsStore,
   VoiceNote,
+  VoiceReplyDeps,
+  VoiceReplyOutcome,
+  VoiceReplyPhrases,
 } from "./voice";
 export {
   createSynthesizer,
@@ -170,5 +174,6 @@ export {
   parseOggOpus,
   pickDailyLimit,
   resolveVoiceLimitsConfig,
+  runVoiceReply,
   utcDayKey,
 } from "./voice";

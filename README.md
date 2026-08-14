@@ -317,6 +317,43 @@ permanent and unconditional — there is no release path, so a retry burns a
 second unit. `incrementAndGet` must increment and read back atomically; a
 read-then-write races across instances.
 
+`runVoiceReply(deps)` chains reserve → download → transcribe → answer →
+synthesize → voice-or-text into the full round-trip, with the hard invariant
+that every branch attempts a delivered message: a limit hit, a transcription
+failure or a synthesis failure all fall back to a text reply rather than
+silence. It is channel-agnostic — no Twilio/webhook types in its signature —
+so a host wires the pieces above (plus its own `answer` and send functions)
+into it directly. Fallback copy comes from `getVoicePhrase`, so it lives in
+`language/*.json` alongside the other phrase namespaces rather than being
+hardcoded; call it once per branch (not once up front) so rotation still
+applies.
+
+```typescript
+import { getVoicePhrase, runVoiceReply } from '@diegoaltoworks/talker';
+
+const outcome = await runVoiceReply({
+  reserve: () => limiter.checkAndReserve(fromNumber),
+  download: () => fetchInboundAudio(),
+  transcribe,
+  answer: (text) => myBot.reply(fromNumber, text),
+  synthesize: (text) => synthesize(text, { personaId: myPersonaFor(fromNumber) }),
+  sendVoice: (note) => sendVoiceNote(fromNumber, note),
+  sendText: (text) => sendSMS({ to: fromNumber, body: text }),
+  phrases: {
+    overCapPerNumber: getVoicePhrase(lang, 'overCapPerNumber'),
+    overCapGlobal: getVoicePhrase(lang, 'overCapGlobal'),
+    limitUnavailable: getVoicePhrase(lang, 'limitUnavailable'),
+    unintelligible: getVoicePhrase(lang, 'unintelligible'),
+    answerFailed: getVoicePhrase(lang, 'answerFailed'),
+  },
+});
+// outcome: 'voice' | 'text' | 'over-cap' | 'limit-error' | 'no-audio' | 'transcribe-failed' | 'answer-failed'
+```
+
+`sendText` is the one call in the ladder that is never wrapped — a failure to
+deliver even the guaranteed fallback propagates to the caller instead of
+resolving to a silent "undeliverable" outcome.
+
 ## Architecture
 
 ```

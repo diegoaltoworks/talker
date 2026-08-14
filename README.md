@@ -194,7 +194,14 @@ In plugin mode, a message is answered by the first of:
 
 ### Custom Flows
 
-Flows are structured conversations with automatic parameter collection. Each flow is a directory with three files:
+Flows are structured conversations with automatic parameter collection. Intent detection and parameter
+extraction are powered by chatter's flow engine (`@diegoaltoworks/chatter/flows`); talker keeps directory
+loading and the presentation layer (per-channel rendering, phrase-sourced cancel/error). In standalone
+mode, configuring `flowsDir` requires `openai` to be installed (it's an optional peer otherwise) - talker
+constructs an OpenAI client internally from `openaiApiKey`. In plugin mode this happens automatically via
+chatter's own client.
+
+Each flow is a directory with three files:
 
 ```
 config/flows/addNumbers/
@@ -413,7 +420,7 @@ Phone Call / SMS
       v  POST /call or /sms
   Talker (Hono routes)
       |-- processIncoming  (OpenAI: language detect, transfer intent, STT cleanup)
-      |-- Flow Engine      (LLM intent detect + parameter extraction)
+      |-- Flow lifecycle   (chatter: intent detect + parameter extraction; talker: loading + presentation)
       |-- chatFn / Chatter RAG pipeline
       |-- processOutgoing  (OpenAI: channel formatting, translation)
       |
@@ -431,7 +438,7 @@ Phone Call / SMS
 | `src/core/chatbot/` | HTTP client for remote chatbot APIs (standalone mode) |
 | `src/core/` | Context store, TwiML generation, voice config, phrases, logger |
 | `src/voice/` | Channel-agnostic voice capabilities — STT, TTS, Ogg/Opus parsing, daily spend guards |
-| `src/flows/` | Flow engine — registry, intent detection, parameter extraction, lifecycle |
+| `src/flows/` | Flow lifecycle and presentation — registry, session state, per-channel rendering (intent detection and parameter extraction live in `@diegoaltoworks/chatter/flows`) |
 | `src/routes/call/` | Individual Hono handlers for each Twilio voice webhook |
 | `src/routes/sms/` | Hono handlers for SMS webhooks |
 | `src/adapters/` | Twilio REST API client (outbound SMS) |

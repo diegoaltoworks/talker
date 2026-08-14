@@ -5,7 +5,7 @@
  * through to FlowResult.
  */
 
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import {
   clearAllContexts,
   getActiveFlow,
@@ -29,8 +29,9 @@ function makeRegistry(handlerResult: FlowHandlerResult): FlowRegistry {
   const flow: LoadedFlow = {
     definition,
     handler: async () => handlerResult,
-    // Read by extractParameters() below; harmless since fetch is mocked and the
-    // file's contents never reach a real prompt.
+    // Read by chatter's extractParameters(); harmless since the client's
+    // chat.completions.create() is mocked and the file's contents never
+    // reach a real prompt.
     instructionsPath: `${import.meta.dir}/manager.test.ts`,
   };
   const stub = {
@@ -40,9 +41,30 @@ function makeRegistry(handlerResult: FlowHandlerResult): FlowRegistry {
   return stub as unknown as FlowRegistry;
 }
 
-function makeDeps(): TalkerDependencies {
+// extractParameters() only reads extractedParams from the response - it
+// recomputes allParamsFilled itself from the (empty) schema, so that flag is
+// inert here and the flow always completes in one turn.
+function makeSucceedingClient(): TalkerDependencies["chatter"]["client"] {
+  const create = mock(async () => ({
+    choices: [{ message: { content: JSON.stringify({ extractedParams: {} }) } }],
+  }));
   return {
-    chatter: {} as TalkerDependencies["chatter"],
+    chat: { completions: { create } },
+  } as unknown as TalkerDependencies["chatter"]["client"];
+}
+
+function makeFailingClient(): TalkerDependencies["chatter"]["client"] {
+  const create = mock(async () => {
+    throw new Error("OpenAI API error: 500");
+  });
+  return {
+    chat: { completions: { create } },
+  } as unknown as TalkerDependencies["chatter"]["client"];
+}
+
+function makeDeps(client = makeSucceedingClient()): TalkerDependencies {
+  return {
+    chatter: { client } as TalkerDependencies["chatter"],
     config: {},
     openaiApiKey: "test-key",
     openaiModel: "gpt-4o-mini",
@@ -50,28 +72,8 @@ function makeDeps(): TalkerDependencies {
 }
 
 describe("processFlow per-channel content", () => {
-  const originalFetch = global.fetch;
-
   beforeEach(() => {
     clearAllContexts();
-    // extractParameters() only reads extractedParams from this response - it
-    // recomputes allParamsFilled itself from the (empty) schema, so that flag
-    // is inert here and the flow always completes in one turn.
-    global.fetch = mock(async () =>
-      Response.json({
-        choices: [
-          {
-            message: {
-              content: JSON.stringify({ extractedParams: {} }),
-            },
-          },
-        ],
-      }),
-    ) as unknown as typeof fetch;
-  });
-
-  afterEach(() => {
-    global.fetch = originalFetch;
   });
 
   it("carries distinct sms/whatsapp content through flow completion", async () => {
@@ -129,14 +131,8 @@ describe("processFlow per-channel content", () => {
 });
 
 describe("processFlow cancel and error outcomes", () => {
-  const originalFetch = global.fetch;
-
   beforeEach(() => {
     clearAllContexts();
-  });
-
-  afterEach(() => {
-    global.fetch = originalFetch;
   });
 
   it("marks a user cancellation and delivers the cancelled phrase", async () => {
@@ -178,11 +174,8 @@ describe("processFlow cancel and error outcomes", () => {
   });
 
   it("marks an error and delivers the error phrase when parameter extraction fails mid-flow", async () => {
-    global.fetch = mock(
-      async () => new Response("failure", { status: 500 }),
-    ) as unknown as typeof fetch;
     const registry = makeRegistry({ success: true, say: "UNUSED" });
-    const deps = makeDeps();
+    const deps = makeDeps(makeFailingClient());
     const phoneNumber = "+15551234572";
 
     getOrCreateContext(phoneNumber);
@@ -196,11 +189,8 @@ describe("processFlow cancel and error outcomes", () => {
   });
 
   it("marks an error, clears dangling active-flow state, and delivers the error phrase when a freshly-triggered flow fails to initialize", async () => {
-    global.fetch = mock(
-      async () => new Response("failure", { status: 500 }),
-    ) as unknown as typeof fetch;
     const registry = makeRegistry({ success: true, say: "UNUSED" });
-    const deps = makeDeps();
+    const deps = makeDeps(makeFailingClient());
     const phoneNumber = "+15551234573";
 
     const result = await processFlow(deps, registry, phoneNumber, "start test flow", "sms");

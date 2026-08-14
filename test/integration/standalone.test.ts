@@ -7,6 +7,9 @@
  */
 
 import { afterAll, describe, expect, it } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import { Hono } from "hono";
 import { clearAllContexts, stopCleanup } from "../../src/core/context";
@@ -15,6 +18,7 @@ import { resetRateLimitStore } from "../../src/middleware/rate-limit";
 import { callRoutes } from "../../src/routes/call";
 import { smsRoutes } from "../../src/routes/sms";
 import { whatsappRoutes } from "../../src/routes/whatsapp";
+import { createStandaloneServer } from "../../src/standalone";
 import type { TalkerDependencies } from "../../src/types";
 
 // Skip tests if env vars not set
@@ -199,6 +203,39 @@ describe("Standalone Server", () => {
 
       const res = await app.fetch(req);
       expect(res.status).toBe(200);
+    });
+  });
+
+  describe("createStandaloneServer with flowsDir", () => {
+    it("constructs an OpenAI client and loads flows without making a network call", async () => {
+      const flowsDir = mkdtempSync(join(tmpdir(), "talker-standalone-flows-"));
+      const flowDir = join(flowsDir, "greet");
+      mkdirSync(flowDir);
+      writeFileSync(
+        join(flowDir, "flow.json"),
+        JSON.stringify({
+          id: "greet",
+          name: "Greet",
+          description: "test",
+          triggerKeywords: ["hello"],
+          schema: { type: "object", properties: { name: { type: "string" } }, required: ["name"] },
+        }),
+      );
+      writeFileSync(
+        join(flowDir, "handler.ts"),
+        "export async function execute(params) { return { success: true, say: 'hi' }; }",
+      );
+      writeFileSync(join(flowDir, "instructions.md"), "Extract the name.");
+
+      try {
+        const app = await createStandaloneServer({
+          openaiApiKey: "test-key",
+          flowsDir,
+        });
+        expect(app).toBeDefined();
+      } finally {
+        rmSync(flowsDir, { recursive: true, force: true });
+      }
     });
   });
 });

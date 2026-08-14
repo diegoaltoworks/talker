@@ -3,6 +3,10 @@
  *
  * Discovers and loads flow definitions from the filesystem.
  * Each flow is a directory containing: flow.json, handler.ts, instructions.md
+ *
+ * Kept as talker's own implementation (not chatter's) because chatter's
+ * loader requires at least one schema property per flow, which would silently
+ * drop zero-parameter flows like a keyword-triggered human handoff.
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";

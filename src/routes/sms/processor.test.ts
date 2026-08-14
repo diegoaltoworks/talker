@@ -89,4 +89,34 @@ describe("processSms channel-specific flow content", () => {
     expect(twiml).not.toContain("SMS_TEXT");
     expect(twiml).not.toContain("SAY_TEXT");
   });
+
+  it("delivers the cancellation response instead of falling through to the chatbot", async () => {
+    flowResultToReturn = {
+      isFlowActive: false,
+      flowCompleted: false,
+      response: "CANCELLED_TEXT",
+      cancelled: true,
+    };
+    const deps = makeDeps();
+    const registry = new FlowRegistry("");
+
+    const twiml = await processSms(deps, registry, "+15551234570", "cancel", "+15559876543");
+
+    expect(twiml).toContain("CANCELLED_TEXT");
+  });
+
+  it("delivers the error response instead of falling through to the chatbot", async () => {
+    flowResultToReturn = {
+      isFlowActive: false,
+      flowCompleted: false,
+      response: "ERROR_TEXT",
+      error: true,
+    };
+    const deps = makeDeps();
+    const registry = new FlowRegistry("");
+
+    const twiml = await processSms(deps, registry, "+15551234571", "hi", "+15559876543");
+
+    expect(twiml).toContain("ERROR_TEXT");
+  });
 });

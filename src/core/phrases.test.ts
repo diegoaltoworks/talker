@@ -77,6 +77,61 @@ describe("Phrases", () => {
       const cancelled = getFlowPhrase("en", "cancelled");
       expect(cancelled).toContain("cancelled");
     });
+
+    it("should return flow error phrase", () => {
+      const error = getFlowPhrase("en", "error");
+      expect(typeof error).toBe("string");
+      expect(error.length).toBeGreaterThan(0);
+    });
+
+    it("should return every flow phrase key for all supported languages", () => {
+      for (const lang of ["en", "fr", "de", "nl", "es", "pt"]) {
+        for (const key of ["cancelled", "error"] as const) {
+          const phrase = getFlowPhrase(lang, key);
+          expect(typeof phrase).toBe("string");
+          expect(phrase.length).toBeGreaterThan(0);
+        }
+      }
+    });
+
+    it("should fall back to the built-in English error copy when a language file predates the flow.error key", () => {
+      const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      writeFileSync(
+        join(dir, "de.json"),
+        JSON.stringify({
+          greeting: "Hallo",
+          didNotCatch: "Wie bitte?",
+          didNotHear: "Nichts gehoert.",
+          didNotHearRetry: "Nochmal bitte.",
+          didNotHearFinal: "Auf Wiedersehen.",
+          transfer: "Verbinde.",
+          acknowledgment: "Moment.",
+          farewell: { morning: "Morgen", afternoon: "Nachmittag", evening: "Abend" },
+          error: "Fehler.",
+          timeout: "Zeitueberschreitung.",
+          lostQuestion: "Frage verloren.",
+          // `flow` namespace predates the `error` key - only `cancelled` shipped.
+          flow: { cancelled: "Abgebrochen." },
+          sms: {
+            greeting: "Hallo",
+            greetingShort: "Hallo",
+            callForHelp: "Anrufen.",
+            processingError: "Fehler.",
+            genericError: "Fehler.",
+          },
+          whatsapp: {
+            greeting: "Hallo",
+            greetingShort: "Hallo",
+            callForHelp: "Anrufen.",
+            processingError: "Fehler.",
+            genericError: "Fehler.",
+          },
+        }),
+      );
+
+      expect(getFlowPhrase("de", "error", dir)).toBe(getFlowPhrase("en", "error"));
+      expect(getFlowPhrase("de", "cancelled", dir)).toBe("Abgebrochen.");
+    });
   });
 
   describe("getWhatsAppPhrase", () => {

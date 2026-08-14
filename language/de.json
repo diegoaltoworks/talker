@@ -15,7 +15,8 @@
   "timeout": "Entschuldigung, ich habe zu lange gebraucht. Bitte versuchen Sie es erneut. Auf Wiedersehen.",
   "lostQuestion": "Es tut mir leid, ich habe Ihre Frage verloren. Koennten Sie das wiederholen?",
   "flow": {
-    "cancelled": "Kein Problem! Ich habe das abgebrochen. Wie kann ich helfen?"
+    "cancelled": "Kein Problem! Ich habe das abgebrochen. Wie kann ich helfen?",
+    "error": "Entschuldigung, dabei ist etwas schiefgelaufen. Fangen wir noch einmal an - wie kann ich helfen?"
   },
   "sms": {
     "greeting": "Hallo! Ich bin Ihr Sprachassistent. Wie kann ich Ihnen helfen?",

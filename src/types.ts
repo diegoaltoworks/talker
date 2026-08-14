@@ -354,6 +354,10 @@ export interface FlowResult {
   /** WhatsApp-specific reply body, delivered by the WhatsApp processor instead of `response` when non-empty */
   whatsappContent?: string;
   flowSuccess?: boolean;
+  /** The user cancelled an active flow; `response` carries phrases.flow.cancelled */
+  cancelled?: boolean;
+  /** Flow processing failed (registry lookup, parameter extraction, or handler init); `response` carries phrases.flow.error */
+  error?: boolean;
 }
 
 /**
@@ -398,6 +402,7 @@ export interface Phrases {
   lostQuestion: PhraseValue;
   flow: {
     cancelled: PhraseValue;
+    error: PhraseValue;
   };
   sms: {
     greeting: PhraseValue;

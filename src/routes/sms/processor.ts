@@ -50,7 +50,12 @@ export async function processSms(
     "sms",
   );
 
-  if (flowResult.isFlowActive || flowResult.flowCompleted) {
+  if (
+    flowResult.isFlowActive ||
+    flowResult.flowCompleted ||
+    flowResult.cancelled ||
+    flowResult.error
+  ) {
     if (flowResult.flowCompleted && flowResult.flowSuccess === false) {
       const message = getSmsPhrase(
         incoming.detectedLanguage,

@@ -6,7 +6,13 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { clearAllContexts, getOrCreateContext, setActiveFlow } from "../core/context";
+import {
+  clearAllContexts,
+  getActiveFlow,
+  getOrCreateContext,
+  setActiveFlow,
+} from "../core/context";
+import { getFlowPhrase } from "../core/phrases";
 import type { FlowDefinition, FlowHandlerResult, LoadedFlow, TalkerDependencies } from "../types";
 import { processFlow } from "./manager";
 import type { FlowRegistry } from "./registry";
@@ -119,5 +125,90 @@ describe("processFlow per-channel content", () => {
     expect(result.response).toBe("SAY_TEXT");
     expect(result.smsContent).toBe("SMS_TEXT");
     expect(result.whatsappContent).toBe("WHATSAPP_TEXT");
+  });
+});
+
+describe("processFlow cancel and error outcomes", () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    clearAllContexts();
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it("marks a user cancellation and delivers the cancelled phrase", async () => {
+    const registry = makeRegistry({ success: true, say: "UNUSED" });
+    const deps = makeDeps();
+    const phoneNumber = "+15551234570";
+
+    getOrCreateContext(phoneNumber);
+    setActiveFlow(phoneNumber, "testFlow", {});
+
+    const result = await processFlow(deps, registry, phoneNumber, "cancel", "sms");
+
+    expect(result.cancelled).toBe(true);
+    expect(result.isFlowActive).toBe(false);
+    expect(result.flowCompleted).toBe(false);
+    expect(result.response).toBe(getFlowPhrase("en", "cancelled"));
+    expect(getActiveFlow(phoneNumber)).toBeFalsy();
+  });
+
+  it("marks an error and delivers the error phrase when the active flow is missing from the registry", async () => {
+    const stub = {
+      getFlow: () => undefined,
+      matchFlow: async () => undefined,
+    } satisfies Pick<FlowRegistry, "getFlow" | "matchFlow">;
+    const registry = stub as unknown as FlowRegistry;
+    const deps = makeDeps();
+    const phoneNumber = "+15551234571";
+
+    getOrCreateContext(phoneNumber);
+    setActiveFlow(phoneNumber, "missingFlow", {});
+
+    const result = await processFlow(deps, registry, phoneNumber, "hello", "sms");
+
+    expect(result.error).toBe(true);
+    expect(result.isFlowActive).toBe(false);
+    expect(result.flowCompleted).toBe(false);
+    expect(result.response).toBe(getFlowPhrase("en", "error"));
+    expect(getActiveFlow(phoneNumber)).toBeFalsy();
+  });
+
+  it("marks an error and delivers the error phrase when parameter extraction fails mid-flow", async () => {
+    global.fetch = mock(
+      async () => new Response("failure", { status: 500 }),
+    ) as unknown as typeof fetch;
+    const registry = makeRegistry({ success: true, say: "UNUSED" });
+    const deps = makeDeps();
+    const phoneNumber = "+15551234572";
+
+    getOrCreateContext(phoneNumber);
+    setActiveFlow(phoneNumber, "testFlow", {});
+
+    const result = await processFlow(deps, registry, phoneNumber, "hello", "sms");
+
+    expect(result.error).toBe(true);
+    expect(result.response).toBe(getFlowPhrase("en", "error"));
+    expect(getActiveFlow(phoneNumber)).toBeFalsy();
+  });
+
+  it("marks an error, clears dangling active-flow state, and delivers the error phrase when a freshly-triggered flow fails to initialize", async () => {
+    global.fetch = mock(
+      async () => new Response("failure", { status: 500 }),
+    ) as unknown as typeof fetch;
+    const registry = makeRegistry({ success: true, say: "UNUSED" });
+    const deps = makeDeps();
+    const phoneNumber = "+15551234573";
+
+    const result = await processFlow(deps, registry, phoneNumber, "start test flow", "sms");
+
+    expect(result.error).toBe(true);
+    expect(result.response).toBe(getFlowPhrase("en", "error"));
+    // setActiveFlow() runs before the throwing extraction call; the catch
+    // must undo it or the next turn is wrongly treated as continuing this flow.
+    expect(getActiveFlow(phoneNumber)).toBeFalsy();
   });
 });

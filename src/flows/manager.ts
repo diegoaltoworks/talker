@@ -15,6 +15,7 @@ import {
 } from "../core/context";
 import { getErrorMessage } from "../core/errors";
 import { logger } from "../core/logger";
+import { getFlowPhrase } from "../core/phrases";
 import type { Channel, FlowResult, TalkerDependencies } from "../types";
 import { extractParameters } from "./params";
 import type { FlowRegistry } from "./registry";
@@ -43,6 +44,7 @@ export async function processFlow(
       isFlowActive: false,
       response: getExitMessage(language, deps.config.languageDir),
       flowCompleted: false,
+      cancelled: true,
     };
   }
 
@@ -55,7 +57,13 @@ export async function processFlow(
         flowName: activeFlow.flowName,
       });
       clearActiveFlow(phoneNumber);
-      return { isFlowActive: false, response: "", flowCompleted: false };
+      const language = getDetectedLanguage(phoneNumber) || "en";
+      return {
+        isFlowActive: false,
+        response: getFlowPhrase(language, "error", deps.config.languageDir),
+        flowCompleted: false,
+        error: true,
+      };
     }
 
     try {
@@ -104,10 +112,12 @@ export async function processFlow(
         error: getErrorMessage(error),
       });
       clearActiveFlow(phoneNumber);
+      const language = getDetectedLanguage(phoneNumber) || "en";
       return {
         isFlowActive: false,
-        response: "Sorry, I encountered an error. Let's start over.",
+        response: getFlowPhrase(language, "error", deps.config.languageDir),
         flowCompleted: false,
+        error: true,
       };
     }
   }
@@ -171,7 +181,14 @@ export async function processFlow(
         flow: matchedFlow.definition.id,
         error: getErrorMessage(error),
       });
-      return { isFlowActive: false, response: "", flowCompleted: false };
+      clearActiveFlow(phoneNumber);
+      const language = getDetectedLanguage(phoneNumber) || "en";
+      return {
+        isFlowActive: false,
+        response: getFlowPhrase(language, "error", deps.config.languageDir),
+        flowCompleted: false,
+        error: true,
+      };
     }
   }
 

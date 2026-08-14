@@ -291,13 +291,23 @@ export interface FlowState {
 }
 
 export interface FlowHandlerResult {
+  /**
+   * Whether the flow itself completed successfully. When `false`, the SMS
+   * and WhatsApp processors discard `say`/`sms`/`whatsapp` entirely and
+   * substitute a generic, out-of-persona "processingError" phrase; a voice
+   * call instead speaks `say` and transfers to `transferNumber`. A handler
+   * that wants its own in-persona message to reach the caller for an
+   * expected failure (rate limit, validation, a caught upstream error) must
+   * still report `success: true` - `success: false` is reserved for
+   * "something went wrong that a generic fallback should cover instead."
+   */
   success: boolean;
   result?: unknown;
   /** What to say via voice/call */
   say: string;
-  /** Optional: different content for SMS */
+  /** Delivered as the SMS reply body when non-empty; falls back to `say` otherwise */
   sms?: string;
-  /** Optional: different content for WhatsApp */
+  /** Delivered as the WhatsApp reply body when non-empty; falls back to `say` otherwise */
   whatsapp?: string;
 }
 
@@ -339,7 +349,10 @@ export interface FlowResult {
   isFlowActive: boolean;
   response: string;
   flowCompleted: boolean;
+  /** SMS-specific reply body, delivered by the SMS processor instead of `response` when non-empty */
   smsContent?: string;
+  /** WhatsApp-specific reply body, delivered by the WhatsApp processor instead of `response` when non-empty */
+  whatsappContent?: string;
   flowSuccess?: boolean;
 }
 

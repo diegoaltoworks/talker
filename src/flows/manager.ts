@@ -87,6 +87,7 @@ export async function processFlow(
           response: result.say,
           flowCompleted: true,
           smsContent: result.sms,
+          whatsappContent: result.whatsapp,
           flowSuccess: result.success,
         };
       }
@@ -154,6 +155,7 @@ export async function processFlow(
           response: result.say,
           flowCompleted: true,
           smsContent: result.sms,
+          whatsappContent: result.whatsapp,
           flowSuccess: result.success,
         };
       }

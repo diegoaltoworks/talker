@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Channel-agnostic voice capabilities as root exports: `createSynthesizer`
+  (text-to-speech), `createTranscriber` (speech-to-text), `parseOggOpus`
+  (Ogg/Opus container inspection), and `createVoiceLimiter` /
+  `resolveVoiceLimitsConfig` (per-number and global daily spend guards)
+- `VoiceLimitsStore`, a structural interface letting a host back the daily
+  counters with its own storage — talker takes on no database dependency
+
+Additive only; no existing signature changed. The OpenAI client is injected and
+`openai` is imported for types only, so it remains an optional peer dependency.
+
 ## [0.1.0] - 2026-03-14
 
 ### Added

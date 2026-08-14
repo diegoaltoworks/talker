@@ -16,6 +16,7 @@
 - **Voice Calls**: Twilio webhook handlers with speech-to-text, text-to-speech, and continuous conversation loops
 - **SMS**: Inbound/outbound messaging with channel-appropriate formatting
 - **Pre/Post-Processing**: OpenAI-powered language detection, STT artifact cleanup, phone-friendly response formatting, and automatic translation
+- **Voice Notes**: Channel-agnostic speech-to-text, text-to-speech, Ogg/Opus inspection, and daily spend guards as standalone exports
 - **Structured Flows**: LLM intent detection + parameter extraction for guided multi-step conversations
 - **Human Handoff**: Automatic transfer to a real person on request or frustration signals
 - **Multi-Language**: English, French, German, Dutch, Spanish, Portuguese out of the box
@@ -245,6 +246,73 @@ createTelephonyRoutes(app, deps, {
 });
 ```
 
+### Voice Capabilities
+
+Speech-to-text, text-to-speech, container inspection and daily spend guards ship
+as plain root exports rather than route options — they are channel-agnostic
+functions, so a host wires them into whichever transport it runs (Twilio
+webhooks, a socket-based worker, its own adapter) by calling the factories
+directly. Nothing here reads the environment; the OpenAI client is injected, and
+`openai` is imported for types only, so it stays an optional peer dependency.
+
+Note the distinction from `getVoiceConfig` above: that maps languages to Polly
+voice identifiers for phone-call TwiML. These produce and consume Ogg/Opus audio
+bytes for voice-note style delivery.
+
+```typescript
+import {
+  createSynthesizer,
+  createTranscriber,
+  createVoiceLimiter,
+  parseOggOpus,
+  resolveVoiceLimitsConfig,
+} from '@diegoaltoworks/talker';
+import OpenAI from 'openai';
+
+const client = () => new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const transcribe = createTranscriber({ client, enabled: () => true });
+const synthesize = createSynthesizer({
+  client,
+  enabled: () => true,
+  baseInstructions: 'Speak clearly and unhurriedly.',
+  voiceFor: (personaId) => myVoiceMap[personaId ?? 'default'],
+});
+
+const text = await transcribe(inboundAudioBytes);   // string | null
+const note = await synthesize('Your table is booked.'); // { bytes, seconds } | null
+```
+
+**Both return `null` rather than throwing** — on every disabled, empty, API-failure
+and validation-failure path. Synthesis also refuses output that is not parseable
+Ogg/Opus or is not mono, since some mobile clients will not play a stereo voice
+note. Callers are expected to fall back to a text reply; the contract exists so
+that fallback is always reachable.
+
+`parseOggOpus(bytes)` returns `{ channels, seconds }` or `null` for anything it
+cannot measure, and is what the synthesizer uses for that validation.
+
+Daily spend guards cap voice usage per number and globally. Storage stays with
+the host: implement `VoiceLimitsStore` against whatever database you already run.
+The type is structural, so no import or subclassing is needed — an object with a
+matching `incrementAndGet` satisfies it.
+
+```typescript
+const limiter = createVoiceLimiter(
+  resolveVoiceLimitsConfig(process.env),  // VOICE_LIMIT_PER_NUMBER, VOICE_LIMIT_GLOBAL
+  { store: myCounterStore },
+);
+
+const check = await limiter.checkAndReserve(fromNumber);
+if (!check.allowed) { /* check.reason: 'per-number' | 'global' */ }
+```
+
+`checkAndReserve` must be called exactly once per voice round-trip, **before**
+transcription starts, so one unit covers transcribe + reply. The increment is
+permanent and unconditional — there is no release path, so a retry burns a
+second unit. `incrementAndGet` must increment and read back atomically; a
+read-then-write races across instances.
+
 ## Architecture
 
 ```
@@ -273,6 +341,7 @@ Phone Call / SMS
 | `src/core/processing/` | OpenAI-powered incoming pre-processor and outgoing post-processor |
 | `src/core/chatbot/` | HTTP client for remote chatbot APIs (standalone mode) |
 | `src/core/` | Context store, TwiML generation, voice config, phrases, logger |
+| `src/voice/` | Channel-agnostic voice capabilities — STT, TTS, Ogg/Opus parsing, daily spend guards |
 | `src/flows/` | Flow engine — registry, intent detection, parameter extraction, lifecycle |
 | `src/routes/call/` | Individual Hono handlers for each Twilio voice webhook |
 | `src/routes/sms/` | Hono handlers for SMS webhooks |

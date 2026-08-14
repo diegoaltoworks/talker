@@ -6,7 +6,7 @@
       "name": "@diegoaltoworks/talker",
       "devDependencies": {
         "@biomejs/biome": "^2.5.6",
-        "@diegoaltoworks/chatter": "^0.18.0",
+        "@diegoaltoworks/chatter": "^0.20.0",
         "@libsql/client": "^0.17.0",
         "@types/bun": "^1.1.12",
         "@types/node": "^26.1.2",
@@ -18,7 +18,7 @@
         "typescript": "^7.0.2",
       },
       "peerDependencies": {
-        "@diegoaltoworks/chatter": "^0.18.0",
+        "@diegoaltoworks/chatter": "^0.20.0",
         "@libsql/client": ">=0.6.0",
         "hono": "^4.12.34 || ^5.0.0",
         "openai": "^4.0.0 || ^7.1.0",
@@ -60,7 +60,7 @@
 
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.5.6", "", { "os": "win32", "cpu": "x64" }, "sha512-WN05KwXnTO/2J45RQPvzZMXf7tZUIofHoR35xIPfCo7pQ2RFidxI8sfb5mGsaTxdMmEOzHzOPRCdA5/fCpc7xQ=="],
 
-    "@diegoaltoworks/chatter": ["@diegoaltoworks/chatter@0.18.0", "", { "dependencies": { "jose": "6.2.3" }, "peerDependencies": { "@libsql/client": "^0.17.2", "@modelcontextprotocol/sdk": "^1.30.0", "hono": "^4.12.14", "openai": "^7.3.0", "zod": "^3.25.76" }, "bin": { "chatter": "dist/bin/create-apikey.js" } }, "sha512-1zVbZcr2kRtRGo+4sQRRLJDzfONvlW/6eFA6t1+Bb5y/ZHzk13z/5uAa2WNHGSs3E3nfrngNSThspSjbP0fDnw=="],
+    "@diegoaltoworks/chatter": ["@diegoaltoworks/chatter@0.20.0", "", { "dependencies": { "jose": "6.2.3" }, "peerDependencies": { "@libsql/client": "^0.17.2", "@modelcontextprotocol/sdk": "^1.30.0", "hono": "^4.12.14", "openai": "^7.3.0", "zod": "^3.25.76 || ^4.4.3" }, "bin": { "chatter": "dist/bin/create-apikey.js" } }, "sha512-MLL/MQsk7mt2LmSLbrAnqpjQb4kNKRhOmREA3HW6e0kgHjWwEoCH27KlRmQclH2SUMNm1o3Akj+uLwgna5DhkA=="],
 
     "@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.28.1", "", { "os": "aix", "cpu": "ppc64" }, "sha512-Svl7tq8k/08+p6CXPpRjQ1fKX+1odH/BQbb48fV6fj3CWHhsoIOoY87w1oHXm0qEpkIK3ZfVgp0hed3XBXzXMQ=="],
 

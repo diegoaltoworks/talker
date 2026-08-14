@@ -8,6 +8,8 @@
  * so nothing here reads env or requires `openai` at module load.
  */
 
+export type { VoiceReplyDeps, VoiceReplyOutcome, VoiceReplyPhrases } from "./ladder";
+export { runVoiceReply } from "./ladder";
 export type {
   VoiceLimitCheck,
   VoiceLimiter,

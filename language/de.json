@@ -30,5 +30,12 @@
     "callForHelp": "Fuer komplexe Fragen rufen Sie uns an oder antworten Sie hier mit mehr Details.",
     "processingError": "Ich habe Schwierigkeiten, das zu verarbeiten. Bitte senden Sie Ihre Nachricht erneut.",
     "genericError": "Entschuldigung, etwas ist schief gelaufen. Bitte versuchen Sie es erneut."
+  },
+  "voice": {
+    "overCapPerNumber": "Sie haben das heutige Sprachnachrichten-Limit erreicht. Bitte tippen Sie Ihre Nachricht stattdessen.",
+    "overCapGlobal": "Sprachnachrichten sind gerade ausgelastet. Bitte tippen Sie Ihre Nachricht stattdessen.",
+    "limitUnavailable": "Ich kann die Sprachnachrichten-Verfuegbarkeit gerade nicht pruefen. Bitte tippen Sie Ihre Nachricht stattdessen.",
+    "unintelligible": "Ich konnte diese Audioaufnahme nicht verstehen. Koennten Sie es erneut versuchen oder Ihre Nachricht tippen?",
+    "answerFailed": "Beim Vorbereiten einer Antwort ist etwas schiefgelaufen. Bitte versuchen Sie es erneut."
   }
 }

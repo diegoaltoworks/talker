@@ -371,4 +371,11 @@ export interface Phrases {
     processingError: PhraseValue;
     genericError: PhraseValue;
   };
+  voice: {
+    overCapPerNumber: PhraseValue;
+    overCapGlobal: PhraseValue;
+    limitUnavailable: PhraseValue;
+    unintelligible: PhraseValue;
+    answerFailed: PhraseValue;
+  };
 }

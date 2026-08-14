@@ -1,10 +1,13 @@
 import { describe, expect, it } from "bun:test";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   getFarewellPhrase,
   getFlowPhrase,
   getPhrase,
   getSmsPhrase,
+  getVoicePhrase,
   getWhatsAppPhrase,
   loadPhrases,
 } from "./phrases";
@@ -111,6 +114,77 @@ describe("Phrases", () => {
       const greeting = getWhatsAppPhrase("xx", "greeting");
       const enGreeting = getWhatsAppPhrase("en", "greeting");
       expect(greeting).toBe(enGreeting);
+    });
+  });
+
+  describe("getVoicePhrase", () => {
+    it("should return voice-ladder-specific phrases for English", () => {
+      const unintelligible = getVoicePhrase("en", "unintelligible");
+      expect(typeof unintelligible).toBe("string");
+      expect(unintelligible.length).toBeGreaterThan(0);
+    });
+
+    it("should return every voice phrase key for all supported languages", () => {
+      for (const lang of ["en", "fr", "de", "nl", "es", "pt"]) {
+        for (const key of [
+          "overCapPerNumber",
+          "overCapGlobal",
+          "limitUnavailable",
+          "unintelligible",
+          "answerFailed",
+        ] as const) {
+          const phrase = getVoicePhrase(lang, key);
+          expect(typeof phrase).toBe("string");
+          expect(phrase.length).toBeGreaterThan(0);
+        }
+      }
+    });
+
+    it("should fall back to English for unknown language", () => {
+      const unintelligible = getVoicePhrase("xx", "unintelligible");
+      const enUnintelligible = getVoicePhrase("en", "unintelligible");
+      expect(unintelligible).toBe(enUnintelligible);
+    });
+
+    it("should fall back to the built-in English voice copy when a language file predates the voice namespace", () => {
+      const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      writeFileSync(
+        join(dir, "de.json"),
+        JSON.stringify({
+          greeting: "Hallo",
+          didNotCatch: "Wie bitte?",
+          didNotHear: "Nichts gehoert.",
+          didNotHearRetry: "Nochmal bitte.",
+          didNotHearFinal: "Auf Wiedersehen.",
+          transfer: "Verbinde.",
+          acknowledgment: "Moment.",
+          farewell: { morning: "Morgen", afternoon: "Nachmittag", evening: "Abend" },
+          error: "Fehler.",
+          timeout: "Zeitueberschreitung.",
+          lostQuestion: "Frage verloren.",
+          flow: { cancelled: "Abgebrochen." },
+          sms: {
+            greeting: "Hallo",
+            greetingShort: "Hallo",
+            callForHelp: "Anrufen.",
+            processingError: "Fehler.",
+            genericError: "Fehler.",
+          },
+          whatsapp: {
+            greeting: "Hallo",
+            greetingShort: "Hallo",
+            callForHelp: "Anrufen.",
+            processingError: "Fehler.",
+            genericError: "Fehler.",
+          },
+          // No `voice` namespace - simulates a host-supplied language file
+          // written before this ladder shipped.
+        }),
+      );
+
+      expect(getVoicePhrase("de", "unintelligible", dir)).toBe(
+        getVoicePhrase("en", "unintelligible"),
+      );
     });
   });
 

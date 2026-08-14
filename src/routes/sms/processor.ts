@@ -60,8 +60,9 @@ export async function processSms(
       tapOutbound(message);
       return messageTwiml(message);
     }
-    tapOutbound(flowResult.response);
-    return messageTwiml(flowResult.response);
+    const content = flowResult.smsContent || flowResult.response;
+    tapOutbound(content);
+    return messageTwiml(content);
   }
 
   // Get chatbot response

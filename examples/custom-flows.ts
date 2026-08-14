@@ -52,8 +52,11 @@ const flowDefinition = {
 //     result: sum,
 //     say: `${a} plus ${b} equals ${sum}. Need anything else?`,
 //     sms: `${a} + ${b} = ${sum}. Anything else?`,
+//     whatsapp: `${a} + ${b} = ${sum}. Anything else?`,
 //   };
 // }
+//
+// `say` is also the fallback for SMS/WhatsApp when `sms`/`whatsapp` is omitted.
 
 // --- config/flows/addNumbers/instructions.md ---
 // # Add Numbers Flow

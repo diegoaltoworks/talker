@@ -221,9 +221,17 @@ export async function execute(
     result: sum,
     say: `${params.firstNumber} plus ${params.secondNumber} equals ${sum}. Need anything else?`,
     sms: `${params.firstNumber} + ${params.secondNumber} = ${sum}`,
+    whatsapp: `${params.firstNumber} + ${params.secondNumber} = ${sum}. Anything else?`,
   };
 }
 ```
+
+`say` is used for voice calls and as the fallback reply on every channel; `sms`/`whatsapp` override it for
+their respective channel when a flow wants channel-specific phrasing (e.g. a link that only makes sense in
+a text message). Set `success: false` only when the flow itself failed - the SMS/WhatsApp processors then
+discard `say`/`sms`/`whatsapp` and substitute a generic error phrase, and a voice call transfers to
+`transferNumber`. A flow that wants its own in-persona message for an expected failure (a rate limit, a
+validation error) should still return `success: true`.
 
 See [examples/custom-flows.ts](./examples/custom-flows.ts) for a complete walkthrough.
 

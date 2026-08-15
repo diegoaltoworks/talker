@@ -4,16 +4,18 @@
  * Central registry for loaded flows. Provides flow lookup, intent matching,
  * and instruction loading. LLM intent detection is sourced from chatter's
  * flow engine (`@diegoaltoworks/chatter/flows`) instead of a duplicate
- * raw-fetch implementation; directory loading stays talker's own (see
+ * raw-fetch implementation, loaded on demand so the optional peer stays
+ * optional (see `./engine.ts`); directory loading stays talker's own (see
  * `./loader.ts` - chatter's loader requires at least one schema property per
  * flow, which would silently drop zero-parameter flows like this registry's
  * own keyword-triggered "transfer" handoff).
  */
 
 import { readFileSync } from "node:fs";
-import { detectIntent } from "@diegoaltoworks/chatter/flows";
+import { getErrorMessage } from "../core/errors";
 import { logger } from "../core/logger";
 import type { LoadedFlow, TalkerDependencies } from "../types";
+import { type FlowEngine, type FlowEngineLoader, loadFlowEngine } from "./engine";
 import { loadFlowsFromDirectory } from "./loader";
 import { toChatterFlow } from "./types-adapter";
 
@@ -22,9 +24,25 @@ const CRITICAL_KEYWORDS = ["human", "person", "agent", "representative", "operat
 export class FlowRegistry {
   private flows = new Map<string, LoadedFlow>();
   private flowsDir: string;
+  private engineLoader: FlowEngineLoader;
 
-  constructor(flowsDir: string) {
+  /**
+   * @param flowsDir Directory of flow definitions.
+   * @param engineLoader Override for chatter's flow engine (tests only).
+   */
+  constructor(flowsDir: string, engineLoader: FlowEngineLoader = loadFlowEngine) {
     this.flowsDir = flowsDir;
+    this.engineLoader = engineLoader;
+  }
+
+  /**
+   * Chatter's flow engine, loaded on first use. The registry owns the handle
+   * so `processFlow` reaches the engine through the same seam.
+   *
+   * Rejects with an actionable message when the optional peer is absent.
+   */
+  getEngine(): Promise<FlowEngine> {
+    return this.engineLoader();
   }
 
   /**
@@ -69,8 +87,22 @@ export class FlowRegistry {
       }
     }
 
-    // Step 2: LLM intent detection
+    // Step 2: LLM intent detection. Keyword matching above needs no peer, so
+    // a host without chatter installed keeps its critical handoff; intent
+    // detection degrades to "no flow matched" with an actionable log line
+    // rather than failing the webhook.
     if (this.flows.size === 0) return undefined;
+
+    let detectIntent: FlowEngine["detectIntent"];
+    try {
+      ({ detectIntent } = await this.getEngine());
+    } catch (error) {
+      logger.error("flow intent detection unavailable", {
+        phoneNumber,
+        error: getErrorMessage(error),
+      });
+      return undefined;
+    }
 
     logger.info("detecting intent", {
       phoneNumber,

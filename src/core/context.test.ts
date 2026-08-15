@@ -16,6 +16,7 @@ import {
   setActiveFlow,
   setDetectedLanguage,
   setLastPrompt,
+  startCleanup,
   stopCleanup,
   updateFlowParams,
 } from "./context";
@@ -160,6 +161,19 @@ describe("Context Store", () => {
       expect(getContext("+1234567890")).toBeUndefined();
       expect(getDetectedLanguage("+1234567890")).toBeNull();
       expect(getMessageHistory("+1234567890")).toEqual([]);
+    });
+  });
+
+  describe("startCleanup", () => {
+    it("should invoke onTick on every sweep so other stores can share the timer", async () => {
+      stopCleanup(); // startCleanup no-ops if a timer from another test is still running
+      let ticks = 0;
+      startCleanup(1000, 5, () => {
+        ticks += 1;
+      });
+
+      await new Promise((r) => setTimeout(r, 20));
+      expect(ticks).toBeGreaterThan(0);
     });
   });
 });

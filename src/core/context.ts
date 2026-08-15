@@ -6,6 +6,7 @@
  */
 
 import type { Channel, FlowState, TelephonyContext } from "../types";
+import { getErrorMessage } from "./errors";
 import { logger } from "./logger";
 
 const contexts = new Map<string, TelephonyContext>();
@@ -13,9 +14,12 @@ const contexts = new Map<string, TelephonyContext>();
 let cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
 /**
- * Start periodic cleanup of stale contexts
+ * Start periodic cleanup of stale contexts. `onTick`, when given, runs on
+ * every tick alongside context expiry - a way for other in-memory stores
+ * (e.g. call/pending's PendingQuery map) to reuse this single timer instead
+ * of running their own.
  */
-export function startCleanup(ttlMs: number, intervalMs: number): void {
+export function startCleanup(ttlMs: number, intervalMs: number, onTick?: () => void): void {
   if (cleanupTimer) return;
   cleanupTimer = setInterval(() => {
     const now = Date.now();
@@ -24,6 +28,11 @@ export function startCleanup(ttlMs: number, intervalMs: number): void {
         contexts.delete(phoneNumber);
         logger.info(`context expired for ${phoneNumber}`);
       }
+    }
+    try {
+      onTick?.();
+    } catch (error) {
+      logger.error("cleanup onTick failed", { error: getErrorMessage(error) });
     }
   }, intervalMs);
 }

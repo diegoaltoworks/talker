@@ -36,12 +36,14 @@ import { initDbClient } from "./db/client";
 import { runMigrations } from "./db/migrate";
 import { FlowRegistry } from "./flows/registry";
 import { callRoutes } from "./routes/call";
+import { sweepPending } from "./routes/call/pending";
 import { smsRoutes } from "./routes/sms";
 import { whatsappRoutes } from "./routes/whatsapp";
 import type { TalkerConfig, TalkerDependencies } from "./types";
 
 const DEFAULT_CONTEXT_TTL_MS = 30 * 60 * 1000;
 const DEFAULT_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+const DEFAULT_PENDING_QUERY_TTL_MS = 60 * 1000;
 const DEFAULT_MODEL = "gpt-4o-mini";
 
 export interface StandaloneConfig extends TalkerConfig {
@@ -104,6 +106,7 @@ export async function createStandaloneServer(config: StandaloneConfig) {
   startCleanup(
     config.contextTtlMs ?? DEFAULT_CONTEXT_TTL_MS,
     config.cleanupIntervalMs ?? DEFAULT_CLEANUP_INTERVAL_MS,
+    () => sweepPending(config.pendingQueryTtlMs ?? DEFAULT_PENDING_QUERY_TTL_MS),
   );
 
   // Create Hono app

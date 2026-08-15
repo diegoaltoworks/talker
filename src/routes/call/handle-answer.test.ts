@@ -11,7 +11,7 @@ import { clearAllContexts, stopCleanup } from "../../core/context";
 import { FlowRegistry } from "../../flows/registry";
 import type { MessageTapEvent, TalkerDependencies } from "../../types";
 import { callRoutes } from "./index";
-import { deletePending, setPending } from "./pending";
+import { deletePending, getPending, setPending } from "./pending";
 
 function createTestDeps(
   configOverrides?: Partial<TalkerDependencies["config"]>,
@@ -94,12 +94,9 @@ describe("handleAnswer", () => {
     expect(text).toContain("Test answer");
   });
 
-  it("should return timeout TwiML when pending query times out", async () => {
+  it("should return timeout TwiML when the pending query itself rejects", async () => {
     const app = createApp();
 
-    // Set up a pending query that never resolves
-    // We'll use a very short custom timeout — but the handler uses 30s hardcoded
-    // Instead, we make the promise reject immediately to simulate timeout
     const promise = new Promise<{ twiml: string }>((_resolve, reject) => {
       setTimeout(() => reject(new Error("Processing timeout")), 10);
     });
@@ -114,8 +111,32 @@ describe("handleAnswer", () => {
 
     expect(res.status).toBe(200);
     const text = await res.text();
-    expect(text).toContain("<Response>");
-    expect(text).toContain("<Say");
+    expect(text).toContain("Sorry, I took too long to respond");
+    expect(getPending("+15551234567")).toBeUndefined();
+  });
+
+  it("should honor a configured callAnswerBudgetMs and speak the timeout phrase before the pending query resolves", async () => {
+    const deps = createTestDeps({ callAnswerBudgetMs: 20 });
+    const app = createApp(deps);
+    const phoneNumber = "+15559990098";
+
+    const promise = new Promise<{ twiml: string }>((resolve) => {
+      setTimeout(
+        () => resolve({ twiml: `<?xml version="1.0"?><Response><Say>Late</Say></Response>` }),
+        200,
+      );
+    });
+
+    setPending(phoneNumber, { speechResult: "test", promise, resolve: () => {} });
+
+    const res = await postAnswer(app, { From: phoneNumber });
+
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain("Sorry, I took too long to respond");
+    expect(text).not.toContain("Late");
+    // The finally block deletes the entry regardless of which race branch won.
+    expect(getPending(phoneNumber)).toBeUndefined();
   });
 
   it("fires an outbound onMessage event for the lostQuestion prompt", async () => {

@@ -174,6 +174,16 @@ interface TalkerConfig {
   // Conversation TTL. Default: 30 minutes
   contextTtlMs?: number;
 
+  // How long an unresolved /call/answer acknowledgment is kept before the
+  // cleanup sweep discards it. Checked once per cleanupIntervalMs tick, not
+  // a hard deadline. Keep it above callAnswerBudgetMs. Default: 1 minute
+  pendingQueryTtlMs?: number;
+
+  // Budget for background call processing before /call/answer gives up and
+  // speaks a timeout phrase. Stay well under Twilio's ~15s webhook timeout
+  // so the phrase is actually deliverable. Default: 8 seconds
+  callAnswerBudgetMs?: number;
+
   // Max silence retries before ending call. Default: 3
   maxNoSpeechRetries?: number;
 

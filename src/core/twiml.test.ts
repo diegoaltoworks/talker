@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import type { TalkerConfig } from "../types";
-import { clearAllContexts, stopCleanup } from "./context";
+import { clearAllContexts, getLastPrompt, stopCleanup } from "./context";
 import {
   acknowledgmentTwiml,
   farewellTwiml,
@@ -112,6 +112,62 @@ describe("TwiML Generation", () => {
     it("should escape XML in messages", () => {
       const result = messageTwiml("A & B <test>");
       expect(result).toContain("A &amp; B &lt;test&gt;");
+    });
+  });
+
+  // A bare "&" in spoken text makes Twilio reject the document with error
+  // 12100 and drop the call, so every helper escapes what it interpolates.
+  describe("XML escaping across every helper", () => {
+    const UNSAFE = `Ben & Jerry's <b>"best"</b>`;
+    const ESCAPED = "Ben &amp; Jerry&apos;s &lt;b&gt;&quot;best&quot;&lt;/b&gt;";
+
+    it("escapes the gather prompt", () => {
+      expect(gatherTwiml(UNSAFE, "en", baseConfig)).toContain(`>${ESCAPED}</Say>`);
+    });
+
+    it("escapes the say message", () => {
+      expect(sayTwiml(UNSAFE, "en", baseConfig)).toContain(`>${ESCAPED}</Say>`);
+    });
+
+    it("escapes the transfer message", () => {
+      expect(transferTwiml("en", baseConfig, UNSAFE)).toContain(`>${ESCAPED}</Say>`);
+    });
+
+    it("escapes the acknowledgment message", () => {
+      expect(acknowledgmentTwiml("en", baseConfig, UNSAFE)).toContain(`>${ESCAPED}</Say>`);
+    });
+
+    it("escapes the farewell message", () => {
+      expect(farewellTwiml("en", baseConfig, UNSAFE)).toContain(`>${ESCAPED}</Say>`);
+    });
+
+    it("escapes the SMS message", () => {
+      expect(messageTwiml(UNSAFE)).toContain(`<Message>${ESCAPED}</Message>`);
+    });
+
+    it("leaves no raw ampersand anywhere in the document", () => {
+      for (const twiml of [
+        gatherTwiml(UNSAFE, "en", baseConfig),
+        sayTwiml(UNSAFE, "en", baseConfig),
+        transferTwiml("en", baseConfig, UNSAFE),
+        acknowledgmentTwiml("en", baseConfig, UNSAFE),
+        farewellTwiml("en", baseConfig, UNSAFE),
+        messageTwiml(UNSAFE),
+      ]) {
+        expect(twiml).not.toMatch(/&(?!(amp|lt|gt|quot|apos);)/);
+      }
+    });
+
+    it("stores the last prompt unescaped so retries do not stack entities", () => {
+      // The no-speech ladder re-speaks the stored prompt through gatherTwiml,
+      // which escapes again - an escaped store would yield "&amp;amp;".
+      const phoneNumber = "+15551234567";
+      gatherTwiml(UNSAFE, "en", baseConfig, phoneNumber);
+
+      expect(getLastPrompt(phoneNumber)).toBe(UNSAFE);
+      expect(gatherTwiml(getLastPrompt(phoneNumber) as string, "en", baseConfig)).toContain(
+        `>${ESCAPED}</Say>`,
+      );
     });
   });
 });

@@ -7,19 +7,25 @@ describe("escapeXml", () => {
   });
 
   it("should escape angle brackets", () => {
-    expect(escapeXml("<script>alert('xss')</script>")).toBe(
-      "&lt;script&gt;alert('xss')&lt;/script&gt;",
-    );
+    expect(escapeXml("<script>alert(1)</script>")).toBe("&lt;script&gt;alert(1)&lt;/script&gt;");
   });
 
   it("should escape double quotes", () => {
     expect(escapeXml('say "hello"')).toBe("say &quot;hello&quot;");
   });
 
+  it("should escape apostrophes", () => {
+    expect(escapeXml("I didn't catch that")).toBe("I didn&apos;t catch that");
+  });
+
   it("should handle multiple special characters", () => {
     expect(escapeXml('<a href="url">link & text</a>')).toBe(
       "&lt;a href=&quot;url&quot;&gt;link &amp; text&lt;/a&gt;",
     );
+  });
+
+  it("should not double-escape the entities it emits", () => {
+    expect(escapeXml("Ben & Jerry's")).toBe("Ben &amp; Jerry&apos;s");
   });
 
   it("should return plain text unchanged", () => {

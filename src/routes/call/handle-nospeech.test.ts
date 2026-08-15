@@ -140,6 +140,20 @@ describe("handleNoSpeech", () => {
     expect(text).toContain("fr-FR");
   });
 
+  it("escapes a stored prompt exactly once on retry", async () => {
+    // The prompt is stored unescaped, so re-speaking it must not stack
+    // entities into "&amp;amp;" (which Twilio reads out literally).
+    const app = createApp();
+    getOrCreateContext("+15551234567", "call");
+    setLastPrompt("+15551234567", "Ben & Jerry's or <other>?");
+
+    const res = await postNoSpeech(app, { From: "+15551234567" });
+    const text = await res.text();
+
+    expect(text).toContain("Ben &amp; Jerry&apos;s or &lt;other&gt;?");
+    expect(text).not.toContain("&amp;amp;");
+  });
+
   it("fires an outbound onMessage event for the retry prompt", async () => {
     const events: MessageTapEvent[] = [];
     const deps = createTestDeps({ onMessage: (event) => void events.push(event) });

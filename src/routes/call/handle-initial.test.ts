@@ -118,6 +118,33 @@ describe("handleInitialCall", () => {
     expect(text).toContain("en-GB");
   });
 
+  it("escapes a host greeting containing XML special characters", async () => {
+    // A bare "&" from greetingFn would make Twilio reject the document
+    // (error 12100) and drop the call before the caller hears anything.
+    const deps = createTestDeps({ greetingFn: async () => `Welcome to Ben & Jerry's <VIP>` });
+    const app = createApp(deps);
+    const res = await postCall(app, { From: "+15551234567" });
+    const text = await res.text();
+
+    expect(text).toContain("Welcome to Ben &amp; Jerry&apos;s &lt;VIP&gt;");
+    expect(text).not.toMatch(/&(?!(amp|lt|gt|quot|apos);)/);
+  });
+
+  it("taps the greeting unescaped", async () => {
+    const events: MessageTapEvent[] = [];
+    const deps = createTestDeps({
+      greetingFn: async () => "Ben & Jerry's",
+      onMessage: (event) => void events.push(event),
+    });
+    const app = createApp(deps);
+
+    await postCall(app, { From: "+15559990002", To: "+15559876543" });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(events[0]?.body).toBe("Ben & Jerry's");
+  });
+
   it("fires an outbound onMessage event for the greeting", async () => {
     const events: MessageTapEvent[] = [];
     const deps = createTestDeps({ onMessage: (event) => void events.push(event) });

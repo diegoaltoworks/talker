@@ -73,3 +73,40 @@ jobs:
       # static guard in src/peer-deps.test.ts.
       - name: Smoke test the packed tarball
         run: bun run test:packaged
+
+  chatter-latest:
+    name: Suite against chatter@latest
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.x
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      # The `test` job pins chatter to the bottom of the peer range; this one
+      # pulls the top. chatter publishes a minor on every merge, so without a
+      # leg that tracks latest, the coupling is only ever proven against a
+      # version no host installs.
+      - name: Install chatter@latest
+        run: bun add -d @diegoaltoworks/chatter@latest
+
+      - name: Report the resolved version
+        run: bun pm ls | grep '@diegoaltoworks/chatter'
+
+      - name: Run type check
+        run: bun run typecheck
+
+      - name: Run tests
+        run: bun test

@@ -81,7 +81,7 @@
     "node": ">=24.0.0"
   },
   "peerDependencies": {
-    "@diegoaltoworks/chatter": "^0.32.0",
+    "@diegoaltoworks/chatter": ">=0.32.0 <1",
     "@libsql/client": ">=0.6.0",
     "hono": "^4.12.34 || ^5.0.0",
     "openai": "^4.0.0 || ^7.1.0"

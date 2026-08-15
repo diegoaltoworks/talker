@@ -97,6 +97,9 @@ describe("handleStatusCallback", () => {
       ErrorCode: "30001",
       ErrorMessage: "Queue overflow",
     });
+    // onMessageStatus is fire-and-forget - let its microtask settle.
+    await Promise.resolve();
+    await Promise.resolve();
 
     expect(events.length).toBe(1);
     expect(events[0].messageSid).toBe("SM789ghi");
@@ -121,6 +124,9 @@ describe("handleStatusCallback", () => {
       From: "whatsapp:+15551234567",
       To: "whatsapp:+15559876543",
     });
+    // onMessageStatus is fire-and-forget - let its microtask settle.
+    await Promise.resolve();
+    await Promise.resolve();
 
     expect(events.length).toBe(1);
     expect(events[0].messageSid).toBe("SM321xyz");
@@ -144,6 +150,38 @@ describe("handleStatusCallback", () => {
     });
 
     expect(res.status).toBe(200);
+  });
+
+  it("returns 200 before a slow onMessageStatus callback resolves", async () => {
+    let callbackStarted = false;
+    let resolveCallback: (() => void) | undefined;
+    let callbackResolved = false;
+    const deps = createTestDeps(() => {
+      callbackStarted = true;
+      return new Promise<void>((resolve) => {
+        resolveCallback = () => {
+          callbackResolved = true;
+          resolve();
+        };
+      });
+    });
+    const app = createApp(deps, "sms");
+
+    const res = await postStatus(app, {
+      MessageSid: "SM-slow",
+      MessageStatus: "delivered",
+      From: "+15551234567",
+      To: "+15559876543",
+    });
+
+    expect(res.status).toBe(200);
+    // The handler was genuinely invoked (proves fire-and-forget didn't just
+    // never call it), but not waited on to completion before the 200.
+    expect(callbackStarted).toBe(true);
+    expect(callbackResolved).toBe(false);
+
+    resolveCallback?.();
+    await Promise.resolve();
   });
 
   it("should handle all Twilio message statuses", async () => {

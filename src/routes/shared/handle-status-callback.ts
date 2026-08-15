@@ -17,6 +17,7 @@
 import type { Context } from "hono";
 import { stripWhatsAppPrefix } from "../../adapters/twilio";
 import { getErrorMessage } from "../../core/errors";
+import { fireAndForget } from "../../core/fire-and-forget";
 import { logger } from "../../core/logger";
 import { upsertMessageStatus } from "../../db/sessions";
 import type { MessageStatusEvent, TalkerDependencies } from "../../types";
@@ -73,8 +74,11 @@ export async function handleStatusCallback(
     });
   });
 
-  // Invoke user callback if configured
-  if (deps.config.onMessageStatus) {
+  // Invoke user callback if configured. Fire-and-forget: Twilio's status
+  // webhook has the same ~15s response budget as every other telephony
+  // webhook, and a slow or throwing handler must not delay the 200.
+  const onMessageStatus = deps.config.onMessageStatus;
+  if (onMessageStatus) {
     const event: MessageStatusEvent = {
       messageSid,
       messageStatus,
@@ -85,14 +89,15 @@ export async function handleStatusCallback(
       errorMessage,
     };
 
-    try {
-      await Promise.resolve(deps.config.onMessageStatus(event));
-    } catch (err) {
-      logger.error("onMessageStatus callback error", {
-        messageSid,
-        error: getErrorMessage(err),
-      });
-    }
+    fireAndForget(
+      () => onMessageStatus(event),
+      (err) => {
+        logger.error("onMessageStatus callback error", {
+          messageSid,
+          error: getErrorMessage(err),
+        });
+      },
+    );
   }
 
   // Twilio expects a 200 response (empty body is fine)

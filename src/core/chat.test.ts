@@ -1,25 +1,42 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
-import type { BucketsFor } from "@diegoaltoworks/chatter";
+import type { AnswerFn, BucketsFor } from "@diegoaltoworks/chatter";
 import { prepareChat, resolveBuckets } from "@diegoaltoworks/chatter";
 import type { TalkerDependencies } from "../types";
 import { chat } from "./chat";
 
 /**
  * Plugin-mode chat tests, focused on the personaFn/channelHint/buckets
- * wiring into chatter's prepareChat.
+ * wiring into chatter's prepareChat, and the chatFn/answerFn hook contracts.
  *
- * Only completeOnce is faked - prepareChat and resolveBuckets are chatter's
+ * Only answerOnce is faked - prepareChat and resolveBuckets are chatter's
  * real implementations, so these tests exercise the actual wiring rather
  * than a hand-rolled stand-in for it.
  */
 
 let lastSystem = "";
-const completeOnce = mock(async ({ system }: { system: string }) => {
-  lastSystem = system;
-  return { content: "a reply" };
-});
+let lastAnswerFn: AnswerFn | undefined;
+let lastSender: string | undefined;
+const answerOnce = mock(
+  async ({
+    system,
+    answerFn,
+    sender,
+  }: {
+    system: string;
+    answerFn?: AnswerFn;
+    sender?: string;
+  }) => {
+    lastSystem = system;
+    lastAnswerFn = answerFn;
+    lastSender = sender;
+    return {
+      content: "a reply",
+      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+    };
+  },
+);
 
-mock.module("@diegoaltoworks/chatter", () => ({ completeOnce, prepareChat, resolveBuckets }));
+mock.module("@diegoaltoworks/chatter", () => ({ answerOnce, prepareChat, resolveBuckets }));
 
 type Query = (query: string, topK: number, buckets: string[]) => Promise<string[]>;
 
@@ -28,6 +45,7 @@ function makeDeps(
     config?: Partial<TalkerDependencies["config"]>;
     query?: Query;
     bucketsFor?: BucketsFor;
+    answerFn?: AnswerFn;
   } = {},
 ): TalkerDependencies {
   const query: Query = opts.query ?? (async () => ["retrieved fact"]);
@@ -36,7 +54,7 @@ function makeDeps(
       client: {},
       store: { query },
       prompts: { baseSystemRules: "BASE_RULES", publicPersona: "DEFAULT_PERSONA" },
-      config: { bucketsFor: opts.bucketsFor },
+      config: { bucketsFor: opts.bucketsFor, answerFn: opts.answerFn },
     } as unknown as TalkerDependencies["chatter"],
     config: { ...opts.config },
     openaiApiKey: "test-key",
@@ -46,7 +64,9 @@ function makeDeps(
 
 beforeEach(() => {
   lastSystem = "";
-  completeOnce.mockClear();
+  lastAnswerFn = undefined;
+  lastSender = undefined;
+  answerOnce.mockClear();
 });
 
 describe("chat personaFn", () => {
@@ -188,6 +208,58 @@ describe("chat retrieval buckets", () => {
     });
     const reply = await chat(deps, "+4470001", "hello", "sms");
     expect(reply).toBe("Sorry, I encountered an error processing your question.");
-    expect(completeOnce).not.toHaveBeenCalled();
+    expect(answerOnce).not.toHaveBeenCalled();
+  });
+});
+
+describe("chat answerFn routing", () => {
+  it("routes the pipeline through answerOnce with the host's answerFn", async () => {
+    const hostAnswerFn: AnswerFn = async () => "brain says hi";
+    const deps = makeDeps({ answerFn: hostAnswerFn });
+
+    const reply = await chat(deps, "+4470001", "hello", "sms");
+
+    expect(reply).toBe("a reply");
+    expect(lastAnswerFn).toBe(hostAnswerFn);
+  });
+
+  it("leaves answerFn undefined for the built-in completion when unset", async () => {
+    const deps = makeDeps();
+    await chat(deps, "+4470001", "hello", "sms");
+    expect(lastAnswerFn).toBeUndefined();
+  });
+
+  it("passes the caller's phone number as sender", async () => {
+    const deps = makeDeps();
+    await chat(deps, "+4470001", "hello", "sms");
+    expect(lastSender).toBe("+4470001");
+  });
+
+  it("passes an undefined sender for the unidentified-caller sentinel", async () => {
+    const deps = makeDeps();
+    await chat(deps, "unknown", "hello", "sms");
+    expect(lastSender).toBeUndefined();
+  });
+});
+
+describe("chat chatFn", () => {
+  it("returns chatFn's reply directly, bypassing the pipeline", async () => {
+    const deps = makeDeps({ config: { chatFn: async () => "override reply" } });
+    const reply = await chat(deps, "+4470001", "hello", "sms");
+    expect(reply).toBe("override reply");
+    expect(answerOnce).not.toHaveBeenCalled();
+  });
+
+  it("returns a generic error and does not fall through to the pipeline when chatFn throws", async () => {
+    const deps = makeDeps({
+      config: {
+        chatFn: async () => {
+          throw new Error("override exploded");
+        },
+      },
+    });
+    const reply = await chat(deps, "+4470001", "hello", "sms");
+    expect(reply).toBe("Sorry, I encountered an error processing your question.");
+    expect(answerOnce).not.toHaveBeenCalled();
   });
 });

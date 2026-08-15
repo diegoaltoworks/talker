@@ -47,7 +47,7 @@ jobs:
         run: bun run build
 
   packaged-install:
-    name: Packed tarball imports with only hono
+    name: Packed tarball imports and resolves every exports key
     runs-on: ubuntu-latest
 
     steps:
@@ -70,7 +70,9 @@ jobs:
       # Optional peers (@diegoaltoworks/chatter, @libsql/client, openai) are
       # absent in the throwaway project this creates, so a top-level value
       # import of any of them fails here — the runtime counterpart to the
-      # static guard in src/peer-deps.test.ts.
+      # static guard in src/peer-deps.test.ts. The script also resolves every
+      # exports key under import and require against the installed artifact,
+      # which is the only place a subpath with no bundle shows up.
       - name: Smoke test the packed tarball
         run: bun run test:packaged
 

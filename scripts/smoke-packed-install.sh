@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 #
 # Packed-tarball smoke test: install the published artifact into a throwaway
-# project that has ONLY hono, and prove it imports.
+# project that has ONLY hono, and prove it imports — then prove every exports
+# key resolves under both import and require, and that no test declarations
+# shipped.
 #
 # The optional peers (@diegoaltoworks/chatter, @libsql/client, openai) are
 # deliberately absent. npm does not auto-install peers marked optional, so this
@@ -87,6 +89,55 @@ assert(
   engineError.message.includes("@diegoaltoworks/chatter"),
   `flow engine error names the peer: ${engineError.message}`,
 );
+
+// Every exports key must resolve under every condition. A subpath whose
+// bundle the build never emits resolves for types and throws at runtime, so
+// import and require are both exercised against the installed artifact.
+const { createRequire } = await import("node:module");
+const fs = await import("node:fs");
+const path = await import("node:path");
+
+const req = createRequire(path.join(process.cwd(), "resolve.cjs"));
+const pkgDir = path.join(process.cwd(), "node_modules", "@diegoaltoworks", "talker");
+const manifest = JSON.parse(fs.readFileSync(path.join(pkgDir, "package.json"), "utf8"));
+
+for (const [key, conditions] of Object.entries(manifest.exports ?? {})) {
+  const specifier = key === "." ? "@diegoaltoworks/talker" : `@diegoaltoworks/talker/${key.slice(2)}`;
+  assert(
+    conditions !== null && typeof conditions === "object",
+    `${specifier} declares conditions as an object`,
+  );
+
+  const esm = await import(specifier);
+  assert(Object.keys(esm).length > 0, `${specifier} resolves via import`);
+
+  const cjs = req(specifier);
+  assert(Object.keys(cjs).length > 0, `${specifier} resolves via require`);
+
+  assert(
+    fs.existsSync(path.join(pkgDir, conditions.types)),
+    `${specifier} ships ${conditions.types}`,
+  );
+}
+
+const twilio = await import("@diegoaltoworks/talker/twilio");
+assert(typeof twilio.sendSMS === "function", "subpath exports sendSMS");
+assert(typeof twilio.sendWhatsApp === "function", "subpath exports sendWhatsApp");
+
+// Test scaffolding and declaration maps are build fallout, not API: the maps
+// point at sources this package does not publish.
+const stray = [];
+const walk = (dir) => {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walk(full);
+    else if (/\.(test|fixtures)\.d\.ts$/.test(entry.name) || entry.name.endsWith(".d.ts.map")) {
+      stray.push(path.relative(pkgDir, full));
+    }
+  }
+};
+walk(path.join(pkgDir, "dist"));
+assert(stray.length === 0, `no test or map declarations shipped (found ${stray.length})`);
 '
 
 echo "==> Packed install smoke test passed"

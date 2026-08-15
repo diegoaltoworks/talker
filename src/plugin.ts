@@ -26,6 +26,7 @@ import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import type { Hono } from "hono";
 import { startCleanup } from "./core/context";
 import { logger } from "./core/logger";
+import { assertWebhookSecurity } from "./core/webhook-security";
 import { initDbClient } from "./db/client";
 import { runMigrations } from "./db/migrate";
 import { FlowRegistry } from "./flows/registry";
@@ -52,6 +53,8 @@ export async function createTelephonyRoutes(
   if (!openaiApiKey) {
     throw new Error("OpenAI API key required for talker");
   }
+
+  assertWebhookSecurity(config);
 
   // Resolve publicUrl: explicit config > chatter's bot.publicUrl > undefined
   const resolvedConfig: TalkerConfig = {

@@ -99,6 +99,7 @@ export { getExitMessage } from "./flows/utils";
 export { inputSanitizeMiddleware } from "./middleware/input-sanitize";
 export { rateLimitMiddleware } from "./middleware/rate-limit";
 // Security middleware
+export type { TwilioSignatureOptions } from "./middleware/twilio-signature";
 export { twilioSignatureMiddleware, validateTwilioSignature } from "./middleware/twilio-signature";
 // Plugin entry point (chatter integration)
 export { createTelephonyRoutes } from "./plugin";

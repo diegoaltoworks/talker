@@ -24,14 +24,15 @@ export function callRoutes(deps: TalkerDependencies, registry: FlowRegistry) {
   const app = new Hono();
   const authToken = deps.config.twilio?.authToken;
   const baseUrl = deps.config.publicUrl;
+  const signatureOptions = { allowUnsigned: deps.config.allowUnsignedWebhooks };
 
   // Security middleware stack
-  app.use("/call/*", twilioSignatureMiddleware(authToken, baseUrl));
+  app.use("/call/*", twilioSignatureMiddleware(authToken, baseUrl, signatureOptions));
   app.use("/call/*", rateLimitMiddleware(deps.config.rateLimit));
   app.use("/call/*", inputSanitizeMiddleware(deps.config.maxInputLength));
 
   // Also apply to the root /call POST
-  app.post("/call", twilioSignatureMiddleware(authToken, baseUrl));
+  app.post("/call", twilioSignatureMiddleware(authToken, baseUrl, signatureOptions));
   app.post("/call", rateLimitMiddleware(deps.config.rateLimit));
   app.post("/call", inputSanitizeMiddleware(deps.config.maxInputLength));
 

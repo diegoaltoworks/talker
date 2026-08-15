@@ -130,6 +130,16 @@ export interface TalkerConfig {
    */
   publicUrl?: string;
 
+  /**
+   * Mount the webhooks even though no `twilio.authToken` is configured, i.e.
+   * without signature validation. Development and local testing only: with this
+   * on, anyone who can reach /call, /sms or /whatsapp can impersonate Twilio.
+   *
+   * Without it, mounting refuses to start when the auth token is missing, and
+   * the signature middleware rejects every request with 403. Default: false.
+   */
+  allowUnsignedWebhooks?: boolean;
+
   /** Phone number to transfer calls to when human handoff is requested */
   transferNumber?: string;
 

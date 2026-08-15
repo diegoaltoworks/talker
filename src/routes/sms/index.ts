@@ -27,17 +27,18 @@ export function smsRoutes(deps: TalkerDependencies, registry: FlowRegistry) {
   const app = new Hono();
   const authToken = deps.config.twilio?.authToken;
   const baseUrl = deps.config.publicUrl;
+  const signatureOptions = { allowUnsigned: deps.config.allowUnsignedWebhooks };
 
   // Security middleware stack for all SMS POST endpoints
-  app.post("/sms", twilioSignatureMiddleware(authToken, baseUrl));
+  app.post("/sms", twilioSignatureMiddleware(authToken, baseUrl, signatureOptions));
   app.post("/sms", rateLimitMiddleware(deps.config.rateLimit));
   app.post("/sms", inputSanitizeMiddleware(deps.config.maxInputLength));
 
-  app.post("/sms/fallback", twilioSignatureMiddleware(authToken, baseUrl));
+  app.post("/sms/fallback", twilioSignatureMiddleware(authToken, baseUrl, signatureOptions));
   app.post("/sms/fallback", rateLimitMiddleware(deps.config.rateLimit));
   app.post("/sms/fallback", inputSanitizeMiddleware(deps.config.maxInputLength));
 
-  app.post("/sms/status", twilioSignatureMiddleware(authToken, baseUrl));
+  app.post("/sms/status", twilioSignatureMiddleware(authToken, baseUrl, signatureOptions));
 
   // Incoming message webhook
   app.post("/sms", (c) => handleIncomingSMS(c, deps, registry));

@@ -65,6 +65,8 @@ import { createStandaloneServer } from '@diegoaltoworks/talker';
 
 const app = await createStandaloneServer({
   openaiApiKey: process.env.OPENAI_CHATGPT_KEY || '',
+  // Required: webhooks refuse to mount without it (see Webhook signature validation)
+  twilio: { authToken: process.env.TWILIO_AUTH_TOKEN },
   chatbot: {
     url: process.env.CHATBOT_URL || 'http://localhost:8181/api/public/chat',
     apiKey: process.env.CHATBOT_API_KEY,
@@ -110,12 +112,22 @@ interface TalkerConfig {
     systemMessage?: string;    // Override default system prompt
   };
 
-  // Twilio credentials (optional — only needed for outbound SMS)
+  // Twilio credentials. `authToken` is required to mount the webhooks:
+  // it is what validates the X-Twilio-Signature header.
   twilio?: {
     accountSid?: string;
     authToken?: string;
     phoneNumber?: string;
   };
+
+  // Public URL webhooks are received on (e.g. "https://bot.example.com").
+  // Set this behind a reverse proxy so signatures are checked against the
+  // URL Twilio actually called. Query strings are preserved.
+  publicUrl?: string;
+
+  // Mount the webhooks without signature validation. Development only.
+  // Default: false — see "Webhook signature validation" below.
+  allowUnsignedWebhooks?: boolean;
 
   // Phone number for human handoff
   transferNumber?: string;
@@ -203,6 +215,22 @@ In plugin mode, a message is answered by the first of:
 | Voice | `https://your-server.com/call` | HTTP POST |
 | SMS | `https://your-server.com/sms` | HTTP POST |
 | Status Callback | `https://your-server.com/call/status` | HTTP POST |
+
+### Webhook signature validation
+
+Every telephony webhook is protected by Twilio's `X-Twilio-Signature` header,
+validated with `twilio.authToken`. Validation fails closed:
+
+- **No `twilio.authToken`** — mounting throws. There is no way to tell a genuine
+  Twilio request from a forged one, so the routes are not exposed at all.
+- **`allowUnsignedWebhooks: true`** — mounting proceeds with an unmissable
+  warning and requests are accepted unsigned. This is for local development and
+  tests; anyone who can reach the endpoints can impersonate Twilio.
+- **Missing or wrong signature** — the request is rejected with `403`.
+
+Signatures are computed over the exact URL Twilio called, including any query
+string. Behind a reverse proxy (where the request URL talker sees is not the
+public one) set `publicUrl` so the two agree.
 
 ## Customization
 

@@ -7,7 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** telephony webhooks now fail closed without a Twilio auth token.
+  `createTelephonyRoutes` and `createStandaloneServer` throw when
+  `twilio.authToken` is absent, and `twilioSignatureMiddleware` rejects every
+  request with 403 instead of passing it through. Previously a deployment that
+  forgot the token exposed `/call`, `/sms` and `/whatsapp` to anyone who could
+  reach them, with no signal that signatures were not being checked. Set
+  `twilio.authToken`, or set `allowUnsignedWebhooks: true` to keep the old
+  behaviour for development — that path mounts with a loud warning.
+
 ### Fixed
+
+- Twilio signature validation no longer drops the query string when `publicUrl`
+  is configured. Twilio signs the full URL it called, so a webhook configured
+  with query parameters failed validation and was rejected as forged.
 
 - The `@diegoaltoworks/chatter` peer range is now `>=0.32.0 <1` instead of
   `^0.32.0`. A caret on a `0.x` version resolves to `>=0.32.0 <0.33.0`, so

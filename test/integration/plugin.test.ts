@@ -11,6 +11,7 @@ import { afterAll, describe, expect, it } from "bun:test";
 import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import { Hono } from "hono";
 import { clearAllContexts, stopCleanup } from "../../src/core/context";
+import { computeTwilioSignature } from "../../src/middleware/twilio-signature";
 import { createTelephonyRoutes } from "../../src/plugin";
 import type { TalkerConfig } from "../../src/types";
 
@@ -42,6 +43,7 @@ describe("Plugin Mode", () => {
     const app = new Hono();
     const deps = createMockChatterDeps();
     const config: TalkerConfig = {
+      allowUnsignedWebhooks: true,
       transferNumber: "+441234567890",
       chatFn: async (_phone, msg) => `Echo: ${msg}`,
     };
@@ -75,6 +77,7 @@ describe("Plugin Mode", () => {
     const app = new Hono();
     const deps = createMockChatterDeps();
     const config: TalkerConfig = {
+      allowUnsignedWebhooks: true,
       routePrefix: "/tel",
       chatFn: async (_phone, msg) => `Echo: ${msg}`,
     };
@@ -105,5 +108,59 @@ describe("Plugin Mode", () => {
     const config: TalkerConfig = {};
 
     await expect(createTelephonyRoutes(app, deps, config)).rejects.toThrow("OpenAI API key");
+  });
+
+  it("should refuse to mount without a Twilio auth token", async () => {
+    const app = new Hono();
+    const deps = createMockChatterDeps();
+
+    await expect(createTelephonyRoutes(app, deps, {})).rejects.toThrow("Twilio auth token missing");
+
+    // Nothing was mounted
+    const smsRes = await app.fetch(new Request("http://localhost/sms", { method: "GET" }));
+    expect(smsRes.status).toBe(404);
+  });
+
+  it("should mount and validate signatures when a Twilio auth token is configured", async () => {
+    const app = new Hono();
+    const deps = createMockChatterDeps();
+    const authToken = "test-auth-token";
+    const publicUrl = "https://bot.example.com";
+    const params = { From: "+15551234567" };
+
+    await createTelephonyRoutes(app, deps, {
+      twilio: { authToken },
+      publicUrl,
+      routePrefix: "/tel",
+      chatFn: async (_phone, msg) => `Echo: ${msg}`,
+    });
+
+    function postCall(path: string, signature?: string) {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/x-www-form-urlencoded",
+      };
+      if (signature) headers["x-twilio-signature"] = signature;
+      return app.fetch(
+        new Request(`http://localhost${path}`, {
+          method: "POST",
+          headers,
+          body: new URLSearchParams(params).toString(),
+        }),
+      );
+    }
+
+    const unsigned = await postCall("/tel/call");
+    expect(unsigned.status).toBe(403);
+
+    // A request signed for the public URL Twilio called reaches the handler —
+    // the prefix and the query string are both part of what Twilio signed.
+    const signature = computeTwilioSignature(
+      authToken,
+      `${publicUrl}/tel/call?tenant=acme`,
+      params,
+    );
+    const signed = await postCall("/tel/call?tenant=acme", signature);
+    expect(signed.status).toBe(200);
+    expect(await signed.text()).toContain("<Response>");
   });
 });

@@ -28,17 +28,18 @@ export function whatsappRoutes(deps: TalkerDependencies, registry: FlowRegistry)
   const app = new Hono();
   const authToken = deps.config.twilio?.authToken;
   const baseUrl = deps.config.publicUrl;
+  const signatureOptions = { allowUnsigned: deps.config.allowUnsignedWebhooks };
 
   // Security middleware stack for all WhatsApp POST endpoints
-  app.post("/whatsapp", twilioSignatureMiddleware(authToken, baseUrl));
+  app.post("/whatsapp", twilioSignatureMiddleware(authToken, baseUrl, signatureOptions));
   app.post("/whatsapp", rateLimitMiddleware(deps.config.rateLimit));
   app.post("/whatsapp", inputSanitizeMiddleware(deps.config.maxInputLength));
 
-  app.post("/whatsapp/fallback", twilioSignatureMiddleware(authToken, baseUrl));
+  app.post("/whatsapp/fallback", twilioSignatureMiddleware(authToken, baseUrl, signatureOptions));
   app.post("/whatsapp/fallback", rateLimitMiddleware(deps.config.rateLimit));
   app.post("/whatsapp/fallback", inputSanitizeMiddleware(deps.config.maxInputLength));
 
-  app.post("/whatsapp/status", twilioSignatureMiddleware(authToken, baseUrl));
+  app.post("/whatsapp/status", twilioSignatureMiddleware(authToken, baseUrl, signatureOptions));
 
   // Incoming message webhook
   app.post("/whatsapp", (c) => handleIncomingWhatsApp(c, deps, registry));

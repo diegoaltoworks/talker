@@ -14,7 +14,7 @@ import type { Context } from "hono";
 import { stripWhatsAppPrefix } from "../../adapters/twilio";
 import { logger } from "../../core/logger";
 import { emitMessageTap } from "../../core/message-tap";
-import { getSmsPhrase, getWhatsAppPhrase } from "../../core/phrases";
+import { getChannelPhrase } from "../../core/phrases";
 import { messageTwiml } from "../../core/twiml";
 import type { TalkerDependencies } from "../../types";
 
@@ -54,10 +54,7 @@ export async function handleFallback(
   });
 
   // Respond with a generic error message appropriate to the channel
-  const errorMessage =
-    channel === "whatsapp"
-      ? getWhatsAppPhrase("en", "genericError", deps.config.languageDir)
-      : getSmsPhrase("en", "genericError", deps.config.languageDir);
+  const errorMessage = getChannelPhrase(channel, "en", "genericError", deps.config.languageDir);
 
   emitMessageTap(deps.config, {
     direction: "outbound",

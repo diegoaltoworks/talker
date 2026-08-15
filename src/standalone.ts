@@ -37,8 +37,7 @@ import { runMigrations } from "./db/migrate";
 import { FlowRegistry } from "./flows/registry";
 import { callRoutes } from "./routes/call";
 import { sweepPending } from "./routes/call/pending";
-import { smsRoutes } from "./routes/sms";
-import { whatsappRoutes } from "./routes/whatsapp";
+import { messagingRoutes } from "./routes/messaging";
 import type { TalkerConfig, TalkerDependencies } from "./types";
 
 const DEFAULT_CONTEXT_TTL_MS = 30 * 60 * 1000;
@@ -118,8 +117,8 @@ export async function createStandaloneServer(config: StandaloneConfig) {
   // Mount telephony routes
   const prefix = config.routePrefix || "";
   app.route(prefix, callRoutes(deps, registry));
-  app.route(prefix, smsRoutes(deps, registry));
-  app.route(prefix, whatsappRoutes(deps, registry));
+  app.route(prefix, messagingRoutes(deps, registry, "sms"));
+  app.route(prefix, messagingRoutes(deps, registry, "whatsapp"));
 
   logger.info("standalone talker server ready", {
     prefix: prefix || "/",

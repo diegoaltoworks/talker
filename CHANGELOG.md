@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- SMS and WhatsApp routing collapsed into a single parameterized
+  `src/routes/messaging/` factory (`messagingRoutes(deps, registry, channel)`)
+  instead of two near-identical route trees. `smsRoutes` and `whatsappRoutes`
+  remain exported as thin, deprecated wrappers around it, so existing
+  integrations keep working unchanged. `getSmsPhrase`/`getWhatsAppPhrase` are
+  now implemented in terms of a new `getChannelPhrase(channel, ...)` export;
+  both keep their previous signatures and fallback behavior.
+
+### Fixed
+
+- The critical-keyword human-handoff check in `FlowRegistry.matchFlow` matched
+  keywords as substrings, so a word like "personality" incorrectly triggered
+  the handoff on the "person" keyword. Matching is now word-bounded.
+
+### Changed
+
 - **Breaking:** telephony webhooks now fail closed without a Twilio auth token.
   `createTelephonyRoutes` and `createStandaloneServer` throw when
   `twilio.authToken` is absent, and `twilioSignatureMiddleware` rejects every

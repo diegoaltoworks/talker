@@ -16,8 +16,7 @@ import { clearAllContexts, stopCleanup } from "../../src/core/context";
 import { FlowRegistry } from "../../src/flows/registry";
 import { resetRateLimitStore } from "../../src/middleware/rate-limit";
 import { callRoutes } from "../../src/routes/call";
-import { smsRoutes } from "../../src/routes/sms";
-import { whatsappRoutes } from "../../src/routes/whatsapp";
+import { messagingRoutes } from "../../src/routes/messaging";
 import { createStandaloneServer } from "../../src/standalone";
 import type { TalkerDependencies } from "../../src/types";
 
@@ -54,8 +53,8 @@ describe("Standalone Server", () => {
       const app = new Hono();
 
       app.route("/", callRoutes(deps, registry));
-      app.route("/", smsRoutes(deps, registry));
-      app.route("/", whatsappRoutes(deps, registry));
+      app.route("/", messagingRoutes(deps, registry, "sms"));
+      app.route("/", messagingRoutes(deps, registry, "whatsapp"));
 
       // Verify routes exist by checking health endpoints
       const smsRes = await app.fetch(new Request("http://localhost/sms", { method: "GET" }));
@@ -72,7 +71,7 @@ describe("Standalone Server", () => {
       const deps = createTestDeps();
       const registry = new FlowRegistry("");
       const app = new Hono();
-      app.route("/", smsRoutes(deps, registry));
+      app.route("/", messagingRoutes(deps, registry, "sms"));
 
       const form = new URLSearchParams({ From: "+15551234567", Body: "" });
       const req = new Request("http://localhost/sms", {
@@ -94,7 +93,7 @@ describe("Standalone Server", () => {
       const deps = createTestDeps(async (_phone, msg) => `Test response for: ${msg}`);
       const registry = new FlowRegistry("");
       const app = new Hono();
-      app.route("/", smsRoutes(deps, registry));
+      app.route("/", messagingRoutes(deps, registry, "sms"));
 
       const form = new URLSearchParams({
         From: "+15551234567",
@@ -119,7 +118,7 @@ describe("Standalone Server", () => {
       const deps = createTestDeps();
       const registry = new FlowRegistry("");
       const app = new Hono();
-      app.route("/", whatsappRoutes(deps, registry));
+      app.route("/", messagingRoutes(deps, registry, "whatsapp"));
 
       const form = new URLSearchParams({
         From: "whatsapp:+15551234567",
@@ -144,7 +143,7 @@ describe("Standalone Server", () => {
       const deps = createTestDeps(async (_phone, msg) => `Test response for: ${msg}`);
       const registry = new FlowRegistry("");
       const app = new Hono();
-      app.route("/", whatsappRoutes(deps, registry));
+      app.route("/", messagingRoutes(deps, registry, "whatsapp"));
 
       const form = new URLSearchParams({
         From: "whatsapp:+15551234567",

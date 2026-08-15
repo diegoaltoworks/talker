@@ -538,7 +538,7 @@ Phone Call / SMS
 | `src/voice/` | Channel-agnostic voice capabilities — STT, TTS, Ogg/Opus parsing, daily spend guards |
 | `src/flows/` | Flow lifecycle and presentation — registry, session state, per-channel rendering (intent detection and parameter extraction live in `@diegoaltoworks/chatter/flows`) |
 | `src/routes/call/` | Individual Hono handlers for each Twilio voice webhook |
-| `src/routes/sms/` | Hono handlers for SMS webhooks |
+| `src/routes/messaging/` | Hono handlers for SMS and WhatsApp webhooks, parameterized by channel |
 | `src/adapters/` | Twilio REST API client (outbound SMS) |
 | `examples/` | Ready-to-run examples for plugin, standalone, and custom flows |
 | `language/` | Built-in phrase files (en, fr, de, nl, es, pt) |

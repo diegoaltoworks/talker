@@ -63,6 +63,7 @@ export {
 // Logger
 export { logger, redactPhone } from "./core/logger";
 export {
+  getChannelPhrase,
   getFarewellPhrase,
   getFlowPhrase,
   getPhrase,
@@ -106,11 +107,11 @@ export { createTelephonyRoutes } from "./plugin";
 
 // Route factories (for custom setup)
 export { callRoutes } from "./routes/call";
+export { messagingRoutes, smsRoutes, whatsappRoutes } from "./routes/messaging";
+export type { MessagingChannel } from "./routes/messaging/processor";
 export { handleFallback } from "./routes/shared/handle-fallback";
 // Shared handlers (for custom route setups)
 export { handleStatusCallback } from "./routes/shared/handle-status-callback";
-export { smsRoutes } from "./routes/sms";
-export { whatsappRoutes } from "./routes/whatsapp";
 export type { StandaloneConfig } from "./standalone";
 // Standalone entry point (no chatter required)
 export { createStandaloneServer } from "./standalone";

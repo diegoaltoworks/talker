@@ -18,12 +18,18 @@ export function truncateInput(input: string, maxLength: number): string {
   return input.substring(0, maxLength);
 }
 
+type ParsedBody = Awaited<ReturnType<Context["req"]["parseBody"]>>;
+
 /**
  * Hono middleware factory for input sanitization.
  *
  * Intercepts the request body and truncates SpeechResult and Body fields
  * to the configured maximum length. Stores the sanitized values on the
  * context so downstream handlers see the truncated values.
+ *
+ * Handlers must read the body via `getSanitizedBody(c)` rather than calling
+ * `c.req.parseBody()` again - Hono re-parses the raw form data fresh on
+ * every call, which would silently discard the truncation done here.
  */
 export function inputSanitizeMiddleware(maxInputLength?: number) {
   const maxLen = maxInputLength ?? DEFAULT_MAX_INPUT_LENGTH;
@@ -31,14 +37,12 @@ export function inputSanitizeMiddleware(maxInputLength?: number) {
   return async (c: Context, next: Next) => {
     const body = await c.req.parseBody();
 
-    let truncated = false;
     if (typeof body.SpeechResult === "string" && body.SpeechResult.length > maxLen) {
       logger.warn("input truncated: SpeechResult", {
         original: body.SpeechResult.length,
         max: maxLen,
       });
       body.SpeechResult = truncateInput(body.SpeechResult, maxLen);
-      truncated = true;
     }
 
     if (typeof body.Body === "string" && body.Body.length > maxLen) {
@@ -47,14 +51,22 @@ export function inputSanitizeMiddleware(maxInputLength?: number) {
         max: maxLen,
       });
       body.Body = truncateInput(body.Body, maxLen);
-      truncated = true;
     }
 
-    if (truncated) {
-      // Store sanitized body on context for downstream handlers
-      c.set("sanitizedBody", body);
-    }
+    c.set("sanitizedBody", body);
 
     return next();
   };
+}
+
+/**
+ * Read the parsed request body, preferring the sanitized copy stored by
+ * `inputSanitizeMiddleware` so truncation isn't lost to a second, fresh
+ * `c.req.parseBody()` parse. Falls back to parsing directly when the
+ * middleware hasn't run (e.g. routes without it, or in tests).
+ */
+export async function getSanitizedBody(c: Context): Promise<ParsedBody> {
+  const cached = c.get("sanitizedBody") as ParsedBody | undefined;
+  if (cached) return cached;
+  return c.req.parseBody();
 }

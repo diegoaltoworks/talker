@@ -6,15 +6,42 @@
  * the `whatsapp:`-prefix stripping is WhatsApp-specific.
  */
 
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, mock } from "bun:test";
 import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import { Hono } from "hono";
 import { clearAllContexts, stopCleanup } from "../../core/context";
 import { FlowRegistry } from "../../flows/registry";
 import { resetRateLimitStore } from "../../middleware/rate-limit";
 import type { MessageTapEvent, TalkerDependencies } from "../../types";
-import { messagingRoutes } from "./index";
 import type { MessagingChannel } from "./processor";
+
+// processIncoming/processOutgoing call OpenAI directly (not through chatFn) -
+// mock it so these route tests never hit the network. Incoming echoes the
+// message back unprocessed; outgoing passes the bot response through as-is,
+// matching this pipeline's own error-fallback behavior.
+const callOpenAI = mock(
+  async (
+    _deps: TalkerDependencies,
+    _systemPrompt: string,
+    userMessage: string,
+    context: { phoneNumber: string; stage: "incoming" | "outgoing" },
+  ) => {
+    if (context.stage === "incoming") {
+      return JSON.stringify({
+        shouldTransfer: false,
+        shouldEndCall: false,
+        detectedLanguage: "en",
+        processedMessage: userMessage,
+      });
+    }
+    return userMessage;
+  },
+);
+mock.module("../../core/processing/openai", () => ({ callOpenAI }));
+
+// Dynamic import so it resolves after the mock.module() call above - a static
+// import of ./index would be hoisted ahead of the mock registration.
+const { messagingRoutes } = await import("./index");
 
 function createTestDeps(
   chatFn?: (phone: string, msg: string) => Promise<string>,
@@ -116,7 +143,6 @@ describe.each(CHANNELS)("$label Routes", ({ channel, label, from }) => {
     });
 
     it("should return 200 with text/xml content type for valid message", async () => {
-      // This will attempt processing — without OpenAI, it may error but should still return TwiML
       const app = createApp(channel);
       const res = await postMessage(channel, app, { From: from("+15551234567"), Body: "Hello" });
 
@@ -126,14 +152,35 @@ describe.each(CHANNELS)("$label Routes", ({ channel, label, from }) => {
       expect(text).toContain("<Response>");
     });
 
-    it("should return error TwiML when processing fails", async () => {
-      const app = createApp(channel);
+    it("clamps an oversized Body to maxInputLength before processing", async () => {
+      const events: MessageTapEvent[] = [];
+      const deps = createTestDeps(undefined, {
+        maxInputLength: 20,
+        onMessage: (event) => void events.push(event),
+      });
+      const app = createApp(channel, deps);
+
+      await postMessage(channel, app, {
+        From: from("+15559990020"),
+        Body: "b".repeat(200),
+      });
+      await flushTapQueue();
+
+      const inbound = events.find((e) => e.direction === "inbound");
+      expect(inbound?.body.length).toBe(20);
+      expect(inbound?.body).toBe("b".repeat(20));
+    });
+
+    it("should return the chat error TwiML when chatFn throws", async () => {
+      const deps = createTestDeps(async () => {
+        throw new Error("downstream failure");
+      });
+      const app = createApp(channel, deps);
       const res = await postMessage(channel, app, { From: from("+15551234567"), Body: "Hello" });
 
       expect(res.status).toBe(200);
       const text = await res.text();
-      expect(text).toContain("<Response>");
-      expect(text).toContain("<Message>");
+      expect(text).toContain("Sorry, I encountered an error processing your question.");
     });
   });
 

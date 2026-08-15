@@ -20,6 +20,12 @@ import { loadFlowsFromDirectory } from "./loader";
 import { toChatterFlow } from "./types-adapter";
 
 const CRITICAL_KEYWORDS = ["human", "person", "agent", "representative", "operator"];
+// Word-bounded with an optional plural "s" - "person" must not fire on
+// "personality", but "agents"/"humans" must still fire.
+const CRITICAL_KEYWORD_MATCHERS = CRITICAL_KEYWORDS.map((keyword) => ({
+  keyword,
+  pattern: new RegExp(`\\b${keyword}s?\\b`, "i"),
+}));
 
 export class FlowRegistry {
   private flows = new Map<string, LoadedFlow>();
@@ -70,11 +76,9 @@ export class FlowRegistry {
     message: string,
     conversationContext?: string[],
   ): Promise<LoadedFlow | undefined> {
-    const lowerMessage = message.toLowerCase();
-
     // Step 1: Check critical keywords
-    for (const keyword of CRITICAL_KEYWORDS) {
-      if (lowerMessage.includes(keyword)) {
+    for (const { keyword, pattern } of CRITICAL_KEYWORD_MATCHERS) {
+      if (pattern.test(message)) {
         const transferFlow = this.flows.get("transfer");
         if (transferFlow) {
           logger.info("flow triggered (critical keyword)", {

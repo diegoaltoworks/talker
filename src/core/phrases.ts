@@ -172,6 +172,24 @@ export function getFlowPhrase(
 }
 
 /**
+ * Get a phrase for a messaging channel (SMS or WhatsApp). WhatsApp falls
+ * back to SMS phrases if whatsapp phrases are not defined in the language
+ * file.
+ */
+export function getChannelPhrase(
+  channel: "sms" | "whatsapp",
+  language: string,
+  key: keyof Phrases["sms"],
+  languageDir?: string,
+): string {
+  const phrases = loadPhrases(language, languageDir);
+  if (channel === "whatsapp" && phrases.whatsapp) {
+    return pick(phrases.whatsapp[key]);
+  }
+  return pick(phrases.sms[key]);
+}
+
+/**
  * Get an SMS-specific phrase
  */
 export function getSmsPhrase(
@@ -179,8 +197,7 @@ export function getSmsPhrase(
   key: keyof Phrases["sms"],
   languageDir?: string,
 ): string {
-  const phrases = loadPhrases(language, languageDir);
-  return pick(phrases.sms[key]);
+  return getChannelPhrase("sms", language, key, languageDir);
 }
 
 /**
@@ -192,11 +209,7 @@ export function getWhatsAppPhrase(
   key: keyof Phrases["whatsapp"],
   languageDir?: string,
 ): string {
-  const phrases = loadPhrases(language, languageDir);
-  if (phrases.whatsapp) {
-    return pick(phrases.whatsapp[key]);
-  }
-  return pick(phrases.sms[key]);
+  return getChannelPhrase("whatsapp", language, key, languageDir);
 }
 
 /**

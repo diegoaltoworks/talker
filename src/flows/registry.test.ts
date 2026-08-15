@@ -78,6 +78,40 @@ describe("FlowRegistry.matchFlow", () => {
     expect(engineLoader).not.toHaveBeenCalled();
   });
 
+  it("matches the plural form of a critical keyword", async () => {
+    const engineLoader = mock(() =>
+      Promise.reject(new Error("engine must not be loaded for keyword matching")),
+    ) as unknown as FlowEngineLoader;
+    const registry = new FlowRegistry(flowsDir, engineLoader);
+    await registry.loadFlows();
+
+    const matched = await registry.matchFlow(
+      makeDeps(),
+      "+441234567890",
+      "let me talk to one of your agents",
+    );
+
+    expect(matched?.definition.id).toBe("transfer");
+  });
+
+  it("does not treat a keyword substring inside another word as a critical keyword", async () => {
+    const engineLoader = (() =>
+      Promise.reject(new Error("Cannot find package"))) as FlowEngineLoader;
+    const registry = new FlowRegistry(flowsDir, engineLoader);
+    await registry.loadFlows();
+
+    // "person" is a critical keyword, but "personality" must not match it -
+    // this should reach (and fail open past) intent detection instead of
+    // triggering the handoff flow.
+    const matched = await registry.matchFlow(
+      makeDeps(),
+      "+441234567890",
+      "tell me about your personality",
+    );
+
+    expect(matched).toBeUndefined();
+  });
+
   it("matches no flow, rather than rejecting, when the engine peer is absent", async () => {
     const engineLoader = (() =>
       Promise.reject(new Error("Cannot find package"))) as FlowEngineLoader;

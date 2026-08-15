@@ -83,7 +83,7 @@ talker/
     core/chatbot/      HTTP client for remote chatbot APIs
     flows/             Flow engine (intent detection, parameter extraction)
     routes/call/       Hono handlers for voice call webhooks
-    routes/sms/        Hono handlers for SMS webhooks
+    routes/messaging/  Hono handlers for SMS and WhatsApp webhooks
     adapters/          Twilio REST API client
     db/                Session persistence (Turso/libSQL)
     plugin.ts          Chatter plugin entry point

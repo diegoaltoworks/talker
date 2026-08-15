@@ -15,7 +15,7 @@ import { acknowledgmentTwiml, gatherTwiml, sayTwiml } from "../../core/twiml";
 import { persistSession } from "../../db/persist";
 import type { FlowRegistry } from "../../flows/registry";
 import type { TalkerDependencies } from "../../types";
-import { setPending } from "./pending";
+import { getPending, setPending } from "./pending";
 import { processCall } from "./processor";
 
 export async function handleRespond(
@@ -76,7 +76,7 @@ export async function handleRespond(
 
     processCall(deps, registry, phoneNumber, speechResult, to)
       .then((twiml) => {
-        const pending = getPendingForResolve(phoneNumber);
+        const pending = getPending(phoneNumber);
         if (pending) pending.resolve({ twiml });
         persistSession(phoneNumber, "call");
       })
@@ -87,7 +87,7 @@ export async function handleRespond(
         });
         const errorMessage = getPhrase("en", "error", config.languageDir);
         tapOutbound(errorMessage);
-        const pending = getPendingForResolve(phoneNumber);
+        const pending = getPending(phoneNumber);
         if (pending) {
           pending.resolve({
             twiml: sayTwiml(errorMessage, "en", config),
@@ -114,11 +114,4 @@ export async function handleRespond(
     const twiml = sayTwiml(errorMessage, "en", config);
     return c.text(twiml, 200, { "Content-Type": "text/xml" });
   }
-}
-
-// Lazy import to avoid circular dependency
-function getPendingForResolve(phoneNumber: string) {
-  // Re-import at call time
-  const { getPending } = require("./pending");
-  return getPending(phoneNumber);
 }

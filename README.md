@@ -93,6 +93,18 @@ fix — at the point of use rather than at import.
 | `openai` | Standalone mode with `flowsDir`; the voice STT/TTS factories when you pass a real client | `createStandaloneServer` throws at setup if `flowsDir` is set; injected-client voice factories are unaffected |
 | `@libsql/client` | Session persistence (`database` config) | `initDbClient` rejects; omit `database` to run without persistence |
 
+### Entry points
+
+| Import | What it gives you |
+| --- | --- |
+| `@diegoaltoworks/talker` | Everything — route factories, plugin and standalone entry points, voice capabilities, flows, TwiML helpers, and the Twilio REST helpers |
+| `@diegoaltoworks/talker/twilio` | Only the outbound Twilio REST helpers — `sendSMS`, `sendWhatsApp`, `stripWhatsAppPrefix` and the `SendMessageOptions` type — for senders that never mount a webhook |
+
+Both are dual ESM/CJS and ship their own type declarations. The subpath is a
+narrower slice of the root export, not a different implementation; an app that
+uses both ends up with two copies of the same stateless helpers, which is
+wasteful rather than wrong.
+
 ## Examples
 
 **[Complete Examples](./examples/)** — Ready-to-run examples for all use cases:

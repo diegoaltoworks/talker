@@ -70,7 +70,7 @@ export async function createTelephonyRoutes(
   const dbUrl = config.database?.url || chatterDeps.config.database?.url;
   const dbToken = config.database?.authToken || chatterDeps.config.database?.authToken;
   if (dbUrl && dbToken) {
-    initDbClient(dbUrl, dbToken);
+    await initDbClient(dbUrl, dbToken);
     await runMigrations();
   }
 

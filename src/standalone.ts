@@ -78,7 +78,7 @@ export async function createStandaloneServer(config: StandaloneConfig) {
 
   // Initialize database if configured
   if (config.database?.url && config.database?.authToken) {
-    initDbClient(config.database.url, config.database.authToken);
+    await initDbClient(config.database.url, config.database.authToken);
     await runMigrations();
   }
 

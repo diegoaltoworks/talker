@@ -4,10 +4,10 @@
  * Orchestrates the flow lifecycle: triggering, parameter collection,
  * execution, and cleanup. Parameter extraction is sourced from chatter's flow
  * engine (`@diegoaltoworks/chatter/flows`) instead of a duplicate raw-fetch
- * implementation.
+ * implementation, loaded on demand so the optional peer stays optional (see
+ * ./engine.ts).
  */
 
-import { extractParameters } from "@diegoaltoworks/chatter/flows";
 import {
   clearActiveFlow,
   getActiveFlow,
@@ -19,12 +19,49 @@ import {
 import { getErrorMessage } from "../core/errors";
 import { logger } from "../core/logger";
 import { getFlowPhrase } from "../core/phrases";
-import type { Channel, FlowResult, TalkerDependencies } from "../types";
+import type {
+  Channel,
+  FlowExtractionResult,
+  FlowResult,
+  LoadedFlow,
+  TalkerDependencies,
+} from "../types";
 import type { FlowRegistry } from "./registry";
 import { toChatterFlow } from "./types-adapter";
 import { shouldExitFlow as checkExitFlow, getExitMessage } from "./utils";
 
 export { shouldExitFlow } from "./utils";
+
+/**
+ * Collect a flow's parameters from the user's message.
+ *
+ * A flow that declares no parameters has nothing to extract, so it completes
+ * without consulting the engine at all. That is not just an LLM call saved:
+ * the keyword-triggered human handoff is exactly such a flow, and it has to
+ * keep working when the optional `@diegoaltoworks/chatter` peer is absent -
+ * the branch that reaches it (critical-keyword matching in FlowRegistry) makes
+ * no LLM call either.
+ */
+async function extractFlowParams(
+  deps: TalkerDependencies,
+  registry: FlowRegistry,
+  flow: LoadedFlow,
+  userMessage: string,
+  knownParams: Record<string, unknown>,
+): Promise<FlowExtractionResult> {
+  if (Object.keys(flow.definition.schema.properties).length === 0) {
+    return { extractedParams: {}, allParamsFilled: true };
+  }
+
+  const { extractParameters } = await registry.getEngine();
+  return extractParameters(
+    deps.chatter.client,
+    deps.openaiModel,
+    toChatterFlow(flow),
+    userMessage,
+    knownParams,
+  );
+}
 
 /**
  * Process a flow for a user message
@@ -76,10 +113,10 @@ export async function processFlow(
         msg: userMessage.substring(0, 160),
       });
 
-      const extraction = await extractParameters(
-        deps.chatter.client,
-        deps.openaiModel,
-        toChatterFlow(flow),
+      const extraction = await extractFlowParams(
+        deps,
+        registry,
+        flow,
         userMessage,
         activeFlow.params as Record<string, unknown>,
       );
@@ -161,10 +198,10 @@ export async function processFlow(
         msg: userMessage.substring(0, 160),
       });
 
-      const extraction = await extractParameters(
-        deps.chatter.client,
-        deps.openaiModel,
-        toChatterFlow(matchedFlow),
+      const extraction = await extractFlowParams(
+        deps,
+        registry,
+        matchedFlow,
         userMessage,
         globalParams,
       );

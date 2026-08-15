@@ -77,6 +77,20 @@ Bun.serve({ port: 3000, fetch: app.fetch });
 
 **Requirements:** OpenAI API key, Bun runtime. Twilio account for production use.
 
+### Optional peer dependencies
+
+`hono` is the only hard requirement. The rest are optional peers: talker imports
+them for types only and loads them on first use, so importing the package never
+fails because one is missing, and installing one you don't need is never
+necessary. A feature whose peer is absent says so — naming the package and the
+fix — at the point of use rather than at import.
+
+| Package | Needed for | Without it |
+| --- | --- | --- |
+| `@diegoaltoworks/chatter` | Plugin mode; flow intent detection and parameter extraction | LLM intent detection matches nothing; the critical-keyword handoff and any parameterless flow still run |
+| `openai` | Standalone mode with `flowsDir`; the voice STT/TTS factories when you pass a real client | `createStandaloneServer` throws at setup if `flowsDir` is set; injected-client voice factories are unaffected |
+| `@libsql/client` | Session persistence (`database` config) | `initDbClient` rejects; omit `database` to run without persistence |
+
 ## Examples
 
 **[Complete Examples](./examples/)** — Ready-to-run examples for all use cases:
@@ -196,10 +210,12 @@ In plugin mode, a message is answered by the first of:
 
 Flows are structured conversations with automatic parameter collection. Intent detection and parameter
 extraction are powered by chatter's flow engine (`@diegoaltoworks/chatter/flows`); talker keeps directory
-loading and the presentation layer (per-channel rendering, phrase-sourced cancel/error). In standalone
-mode, configuring `flowsDir` requires `openai` to be installed (it's an optional peer otherwise) - talker
-constructs an OpenAI client internally from `openaiApiKey`. In plugin mode this happens automatically via
-chatter's own client.
+loading and the presentation layer (per-channel rendering, phrase-sourced cancel/error). Both engine
+functions are loaded on first use, so `@diegoaltoworks/chatter` stays an optional peer - without it,
+intent detection logs an actionable error and no flow matches, while the critical-keyword handoff (which
+needs no LLM call) keeps working. In standalone mode, configuring `flowsDir` also requires `openai` to be
+installed - talker constructs an OpenAI client internally from `openaiApiKey`. In plugin mode this happens
+automatically via chatter's own client.
 
 Each flow is a directory with three files:
 

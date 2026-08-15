@@ -2,7 +2,9 @@
  * Flow Manager Tests
  *
  * Covers processFlow wiring a handler's per-channel content (say/sms/whatsapp)
- * through to FlowResult.
+ * through to FlowResult, its cancel/error outcomes, and the zero-parameter
+ * short-circuit that keeps parameterless flows working without the optional
+ * flow-engine peer.
  */
 
 import { beforeEach, describe, expect, it, mock } from "bun:test";
@@ -14,20 +16,33 @@ import {
 } from "../core/context";
 import { getFlowPhrase } from "../core/phrases";
 import type { FlowDefinition, FlowHandlerResult, LoadedFlow, TalkerDependencies } from "../types";
+import { type FlowEngineLoader, loadFlowEngine } from "./engine";
 import { processFlow } from "./manager";
 import type { FlowRegistry } from "./registry";
 
+// One property, nothing required: chatter's extractParameters() recomputes
+// allParamsFilled from `required`, so the flow completes in one turn while the
+// extraction call itself is still exercised.
 const definition: FlowDefinition = {
   id: "testFlow",
   name: "Test Flow",
   description: "test",
   triggerKeywords: ["test"],
+  schema: { type: "object", properties: { detail: { type: "string" } }, required: [] },
+};
+
+/** A parameterless flow, like the keyword-triggered human handoff. */
+const parameterlessDefinition: FlowDefinition = {
+  ...definition,
   schema: { type: "object", properties: {}, required: [] },
 };
 
-function makeRegistry(handlerResult: FlowHandlerResult): FlowRegistry {
+function makeRegistry(
+  handlerResult: FlowHandlerResult,
+  options: { definition?: FlowDefinition; engineLoader?: FlowEngineLoader } = {},
+): FlowRegistry {
   const flow: LoadedFlow = {
-    definition,
+    definition: options.definition ?? definition,
     handler: async () => handlerResult,
     // Read by chatter's extractParameters(); harmless since the client's
     // chat.completions.create() is mocked and the file's contents never
@@ -37,13 +52,14 @@ function makeRegistry(handlerResult: FlowHandlerResult): FlowRegistry {
   const stub = {
     getFlow: () => flow,
     matchFlow: async () => flow,
-  } satisfies Pick<FlowRegistry, "getFlow" | "matchFlow">;
+    getEngine: options.engineLoader ?? loadFlowEngine,
+  } satisfies Pick<FlowRegistry, "getFlow" | "matchFlow" | "getEngine">;
   return stub as unknown as FlowRegistry;
 }
 
 // extractParameters() only reads extractedParams from the response - it
-// recomputes allParamsFilled itself from the (empty) schema, so that flag is
-// inert here and the flow always completes in one turn.
+// recomputes allParamsFilled itself from the (empty) `required` list, so that
+// flag is inert here and the flow always completes in one turn.
 function makeSucceedingClient(): TalkerDependencies["chatter"]["client"] {
   const create = mock(async () => ({
     choices: [{ message: { content: JSON.stringify({ extractedParams: {} }) } }],
@@ -130,6 +146,53 @@ describe("processFlow per-channel content", () => {
   });
 });
 
+describe("processFlow without the flow-engine peer", () => {
+  beforeEach(() => {
+    clearAllContexts();
+  });
+
+  // The critical-keyword branch of FlowRegistry.matchFlow reaches the human
+  // handoff without an LLM call. That flow declares no parameters, so
+  // processFlow must complete it without the engine too - otherwise the
+  // handoff dies on a host that installed talker without chatter.
+  it("completes a parameterless flow without loading the engine", async () => {
+    const engineLoader = mock(() =>
+      Promise.reject(new Error("Cannot find package '@diegoaltoworks/chatter'")),
+    ) as unknown as FlowEngineLoader;
+    const registry = makeRegistry(
+      { success: true, say: "TRANSFERRING" },
+      { definition: parameterlessDefinition, engineLoader },
+    );
+    const deps = makeDeps(makeFailingClient());
+
+    const result = await processFlow(deps, registry, "+15551234574", "get me a human", "call");
+
+    expect(result.response).toBe("TRANSFERRING");
+    expect(result.flowCompleted).toBe(true);
+    expect(result.error).toBeUndefined();
+    expect(engineLoader).not.toHaveBeenCalled();
+  });
+
+  it("delivers the error phrase when a parameterised flow cannot load the engine", async () => {
+    const engineLoader = (() =>
+      Promise.reject(
+        new Error("Cannot find package '@diegoaltoworks/chatter'"),
+      )) as FlowEngineLoader;
+    const registry = makeRegistry({ success: true, say: "UNUSED" }, { engineLoader });
+    const deps = makeDeps();
+    const phoneNumber = "+15551234575";
+
+    getOrCreateContext(phoneNumber);
+    setActiveFlow(phoneNumber, "testFlow", {});
+
+    const result = await processFlow(deps, registry, phoneNumber, "hello", "sms");
+
+    expect(result.error).toBe(true);
+    expect(result.response).toBe(getFlowPhrase("en", "error"));
+    expect(getActiveFlow(phoneNumber)).toBeFalsy();
+  });
+});
+
 describe("processFlow cancel and error outcomes", () => {
   beforeEach(() => {
     clearAllContexts();
@@ -156,7 +219,8 @@ describe("processFlow cancel and error outcomes", () => {
     const stub = {
       getFlow: () => undefined,
       matchFlow: async () => undefined,
-    } satisfies Pick<FlowRegistry, "getFlow" | "matchFlow">;
+      getEngine: loadFlowEngine,
+    } satisfies Pick<FlowRegistry, "getFlow" | "matchFlow" | "getEngine">;
     const registry = stub as unknown as FlowRegistry;
     const deps = makeDeps();
     const phoneNumber = "+15551234571";

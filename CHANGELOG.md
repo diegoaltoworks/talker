@@ -7,7 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Optional peer dependencies are no longer load-bearing at import. Top-level
+  value imports of `@diegoaltoworks/chatter/flows` (flow manager and registry)
+  and `@libsql/client` (database client) made
+  `import "@diegoaltoworks/talker"` throw for a host that installed only
+  `hono`, breaking both the standalone quick start and voice-only usage. Both
+  are now loaded at first use, and a missing peer produces an error naming the
+  package and the fix instead of a module-resolution failure. Flow intent
+  detection degrades to "no flow matched" without the peer; the
+  critical-keyword human handoff keeps working, since neither the keyword match
+  nor a parameterless flow needs the engine.
+- A flow that declares no parameters no longer makes a parameter-extraction
+  call. There was nothing to extract from an empty schema, so this only removes
+  an LLM round trip — and it is what keeps the keyword-triggered handoff alive
+  when the flow engine is unavailable.
+
 ### Changed
+
+- **Breaking:** `initDbClient()` is now `async` and must be awaited — an
+  unawaited call leaves `getDbClient()` returning `null` on the next line, and
+  its rejection unhandled. It rejects with an actionable error when
+  `@libsql/client` cannot be loaded; other connection failures keep the
+  previous behavior (logged, persistence disabled). Callers change from
+  `initDbClient(url, token)` to `await initDbClient(url, token)`.
+- `FlowRegistry` takes an optional second constructor argument, the flow-engine
+  loader, so the peer-absent path is testable. It defaults to the real loader;
+  existing `new FlowRegistry(dir)` calls are unaffected.
+- The optional-peer guard test walks the whole `src` tree against every peer
+  marked optional in the manifest, statement-based so multi-line
+  `import type` declarations are not misread. It previously scanned only
+  `src/voice` for `openai`. A packed-tarball smoke test
+  (`bun run test:packaged`, run in CI) installs the built artifact into a
+  project holding only `hono` and imports it.
 
 - `FlowRegistry` and `processFlow` now source LLM intent detection and
   parameter extraction from chatter's flow engine

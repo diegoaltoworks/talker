@@ -4,7 +4,14 @@
  * Resolves a chat response using the first available method:
  * 1. chatFn (custom function override)
  * 2. chatbot config (remote HTTP API — standalone mode)
- * 3. chatter RAG pipeline (plugin mode), via chatter's prepareChat
+ * 3. chatter RAG pipeline (plugin mode), via chatter's prepareChat + answerOnce
+ *
+ * All three paths are guarded: a throw anywhere along the chain is logged and
+ * answered with a generic apology reply rather than propagating, so a
+ * failure in one hook can't take down the whole request differently
+ * depending on which branch was active. Path 1 and 3 share the
+ * GENERIC_ERROR_REPLY constant below; path 2 (chatbot.ts) guards itself with
+ * its own copy of the same literal, since it's a standalone module.
  */
 
 import type { Channel, TalkerDependencies } from "../types";
@@ -24,6 +31,8 @@ const CHANNEL_HINTS: Record<Channel, string> = {
   whatsapp: "This reply will be sent as a WhatsApp message.",
 };
 
+const GENERIC_ERROR_REPLY = "Sorry, I encountered an error processing your question.";
+
 /**
  * Get a chat response
  */
@@ -33,9 +42,16 @@ export async function chat(
   message: string,
   channel: Channel,
 ): Promise<string> {
-  // 1. Custom chat function (highest priority)
+  // 1. Custom chat function (highest priority). Guarded like every other
+  // hook: an override that throws must not behave differently from one that
+  // fails inside the built-in pipeline below.
   if (deps.config.chatFn) {
-    return deps.config.chatFn(phoneNumber, message);
+    try {
+      return await deps.config.chatFn(phoneNumber, message);
+    } catch (error) {
+      logger.error("chatFn error", { phoneNumber, error: getErrorMessage(error) });
+      return GENERIC_ERROR_REPLY;
+    }
   }
 
   // 2. Remote chatbot API via HTTP (standalone mode)
@@ -45,7 +61,7 @@ export async function chat(
 
   // 3. Chatter RAG pipeline (plugin mode)
   try {
-    const { completeOnce, prepareChat, resolveBuckets } = await import("@diegoaltoworks/chatter");
+    const { answerOnce, prepareChat, resolveBuckets } = await import("@diegoaltoworks/chatter");
     const { client, store, prompts, config: chatterConfig } = deps.chatter;
 
     // Optional persona swap: replaces the public persona layer only - base
@@ -66,7 +82,8 @@ export async function chat(
     // configured). Undefined leaves the pipeline's mode defaults in place.
     // "unknown" is the sentinel talker's channels use when Twilio omits a
     // sender (see redactPhone in ./logger) - treat it as anonymous so the
-    // hook's per-sender ceiling still applies.
+    // hook's per-sender ceiling still applies. The same sender identity is
+    // handed to answerFn below, so a host's brain sees who is asking.
     const sender = phoneNumber && phoneNumber !== "unknown" ? phoneNumber : undefined;
     const buckets = await resolveBuckets({
       mode: "public",
@@ -84,11 +101,22 @@ export async function chat(
       buckets,
     });
 
-    const result = await completeOnce({ client, system, messages });
+    // Routed through answerOnce (not completeOnce directly) so a host's
+    // chatter-level answerFn - an agent framework, a graph runtime - answers
+    // telephony turns exactly like every other chatter surface. With no
+    // answerFn configured this is the same built-in completion as before.
+    const result = await answerOnce({
+      answerFn: chatterConfig.answerFn,
+      client,
+      system,
+      messages,
+      mode: "public",
+      sender,
+    });
 
     return result.content;
   } catch (error) {
     logger.error("chat error", { phoneNumber, error: getErrorMessage(error) });
-    return "Sorry, I encountered an error processing your question.";
+    return GENERIC_ERROR_REPLY;
   }
 }

@@ -182,6 +182,8 @@ interface TalkerConfig {
 
   // Callback invoked when a Twilio delivery status update is received for
   // an SMS/WhatsApp message you sent (queued, sent, delivered, failed...).
+  // Fire-and-forget: a throwing or slow handler is logged and never delays
+  // the webhook's 200 response to Twilio.
   onMessageStatus?: (event: MessageStatusEvent) => void | Promise<void>;
 
   // Fired for every inbound message and every outbound reply on all
@@ -216,7 +218,36 @@ In plugin mode, a message is answered by the first of:
    (call/sms/whatsapp), then retrieved context. Retrieval scope honours
    chatter's own `bucketsFor` hook (set on the chatter server config, not
    here) for per-sender role-gated knowledge; an unidentified caller is
-   always clamped to the channel's default buckets.
+   always clamped to the channel's default buckets. The assembled prompt is
+   answered via chatter's `answerOnce`, so a chatter-level `answerFn` (an
+   agent framework, a graph runtime — set on the chatter server config, not
+   here) answers telephony turns exactly like every other chatter surface;
+   with no `answerFn` configured this is the same built-in OpenAI completion
+   as always. The caller's phone number is passed as `sender` (omitted for
+   the "unknown" sentinel Twilio uses when it doesn't supply one).
+
+### Hook error semantics
+
+These hooks sit on the request path. Each fails differently by design — a
+config-time override (`chatFn`) has nowhere else to fall back to, while an
+enrichment hook (`personaFn`, `greetingFn`) degrades to a sane default, and an
+observability tap (`onMessage`, `onMessageStatus`) must never affect delivery
+at all:
+
+| Hook | Purpose | On throw/reject |
+|---|---|---|
+| `chatFn` | Full chat override | Logged; caller gets a generic apology reply (no fall-through to `chatbot`/chatter — the host asked to own this path) |
+| `personaFn` | Per-interaction persona swap | Logged; chatter's default persona layer is used instead |
+| `greetingFn` | Per-caller dynamic greeting | Logged; the phrase-file greeting is used instead |
+| `onMessage` | Inbound/outbound message tap | Logged; fire-and-forget, never delays or affects the reply |
+| `onMessageStatus` | Twilio delivery status tap | Logged; fire-and-forget, never delays the webhook's 200 |
+
+`onMessage` and `onMessageStatus` are fire-and-forget: the handler is scheduled
+after the response is already decided, so it may still be running (or not yet
+started) when the webhook's 200 is sent. On a runtime that freezes execution
+once a response is returned (serverless platforms in particular), a handler
+doing further async work can be cut off mid-flight. Neither hook is a
+guarantee of completion — only of non-blocking, logged-on-failure delivery.
 
 ## Twilio Setup
 

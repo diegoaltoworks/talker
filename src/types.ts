@@ -195,7 +195,12 @@ export interface TalkerConfig {
   /** Maximum input length for speech/SMS messages in characters. Default: 1000 */
   maxInputLength?: number;
 
-  /** Chat function override. By default, talker queries chatter's RAG pipeline directly */
+  /**
+   * Chat function override. By default, talker queries chatter's RAG
+   * pipeline directly. A throw is logged and answered with a generic
+   * apology reply - there is no fall-through to `chatbot`/chatter, since
+   * configuring `chatFn` means the host owns this path entirely.
+   */
   chatFn?: (phoneNumber: string, message: string) => Promise<string>;
 
   /**
@@ -228,6 +233,11 @@ export interface TalkerConfig {
   /**
    * Callback invoked when a message delivery status update is received.
    * Called for both SMS and WhatsApp status callbacks.
+   * Fire-and-forget: a throwing or slow handler is logged and never delays
+   * the webhook's 200 response to Twilio - but that also means completion
+   * isn't guaranteed, since the handler may still be starting or running
+   * after the response is sent. On a runtime that freezes execution once a
+   * response returns, async work here can be cut off mid-flight.
    */
   onMessageStatus?: (event: MessageStatusEvent) => void | Promise<void>;
 

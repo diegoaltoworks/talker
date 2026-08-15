@@ -8,6 +8,7 @@
 
 import type { MessageTapEvent, TalkerConfig } from "../types";
 import { getErrorMessage } from "./errors";
+import { fireAndForget } from "./fire-and-forget";
 import { logger } from "./logger";
 
 export function emitMessageTap(
@@ -18,13 +19,14 @@ export function emitMessageTap(
   if (!handler) return;
 
   const fullEvent: MessageTapEvent = { ...event, timestamp: Date.now() };
-  Promise.resolve()
-    .then(() => handler(fullEvent))
-    .catch((error) => {
+  fireAndForget(
+    () => handler(fullEvent),
+    (error) => {
       logger.error("onMessage tap error", {
         direction: fullEvent.direction,
         channel: fullEvent.channel,
         error: getErrorMessage(error),
       });
-    });
+    },
+  );
 }

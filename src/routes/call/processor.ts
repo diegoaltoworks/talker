@@ -12,8 +12,6 @@ import { emitMessageTap } from "../../core/message-tap";
 import { getFarewellPhrase, getPhrase } from "../../core/phrases";
 import { processIncoming, processOutgoing } from "../../core/processing";
 import { farewellTwiml, gatherTwiml, transferTwiml } from "../../core/twiml";
-import { getVoiceConfig } from "../../core/voice";
-import { escapeXml } from "../../core/xml";
 import { persistFinalSession, persistSession } from "../../db/persist";
 import { processFlow } from "../../flows/manager";
 import type { FlowRegistry } from "../../flows/registry";
@@ -87,30 +85,18 @@ export async function processCall(
 
     // If flow completed but failed, transfer to human
     if (flowResult.flowCompleted && flowResult.flowSuccess === false) {
-      const { voice, language: lang } = getVoiceConfig(
-        incoming.detectedLanguage,
-        deps.config.voices,
-      );
-      const transferNumber = deps.config.transferNumber || "";
-      const escapedFlowResponse = escapeXml(flowResult.response);
       tapOutbound(flowResult.response);
-      return `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say voice="${voice}" language="${lang}">${escapedFlowResponse}</Say>
-    <Dial>${transferNumber}</Dial>
-</Response>`;
+      return transferTwiml(incoming.detectedLanguage, deps.config, flowResult.response);
     }
 
-    const escapedResponse = escapeXml(flowResult.response);
     tapOutbound(flowResult.response);
-    return gatherTwiml(escapedResponse, incoming.detectedLanguage, deps.config, phoneNumber);
+    return gatherTwiml(flowResult.response, incoming.detectedLanguage, deps.config, phoneNumber);
   }
 
   // Get chatbot response
   const botResponse = await chat(deps, phoneNumber, incoming.processedMessage, "call");
   const phoneResponse = await processOutgoing(deps, phoneNumber, botResponse, "call");
-  const escapedResponse = escapeXml(phoneResponse);
 
   tapOutbound(phoneResponse);
-  return gatherTwiml(escapedResponse, incoming.detectedLanguage, deps.config, phoneNumber);
+  return gatherTwiml(phoneResponse, incoming.detectedLanguage, deps.config, phoneNumber);
 }

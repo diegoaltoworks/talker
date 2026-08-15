@@ -174,6 +174,7 @@ interface TalkerConfig {
 
   // Fired for every inbound message and every outbound reply on all
   // channels (call, sms, whatsapp) - a live feed without parsing TwiML.
+  // `body` is the plain text delivered, never XML-escaped.
   // Fire-and-forget: a throwing or slow handler is logged and never affects
   // message delivery. `from`/`to` flip with direction (outbound `from` is
   // your Twilio number); `to` is "" when Twilio omits it. Fires when the

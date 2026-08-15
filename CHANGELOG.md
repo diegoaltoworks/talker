@@ -20,6 +20,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- TwiML helpers now escape every value they interpolate. `gatherTwiml`,
+  `sayTwiml`, `transferTwiml`, `acknowledgmentTwiml` and `farewellTwiml`
+  embedded text verbatim, so an `&`, `<` or `>` in a greeting, phrase, flow
+  response or bot reply produced invalid XML — Twilio answered with error
+  12100 and dropped the call. The hand-rolled TwiML in the initial-call
+  handler escapes its greeting too. Callers must now pass plain text:
+  pre-escaped input would be escaped twice and read out as entities.
+  `escapeXml` also escapes apostrophes (`&apos;`), completing the five XML
+  predefined entities.
+
+- The last prompt stored for the no-speech retry ladder is now the unescaped
+  text. The call processor used to escape before handing the prompt to
+  `gatherTwiml`, so a retry concatenated escaped and unescaped copies and the
+  `onMessage` tap reported bodies containing `&amp;` entities instead of what
+  the caller heard.
+
 - Twilio signature validation no longer drops the query string when `publicUrl`
   is configured. Twilio signs the full URL it called, so a webhook configured
   with query parameters failed validation and was rejected as forged.

@@ -2,6 +2,10 @@
  * TwiML Generation Utilities
  *
  * Generates Twilio Markup Language (TwiML) XML for voice and SMS responses.
+ *
+ * Every helper escapes what it interpolates. Callers pass plain text and
+ * never pre-escape: an already-escaped string would be double-escaped here
+ * and read out as "ampersand a m p semicolon".
  */
 
 import type { TalkerConfig } from "../types";
@@ -11,7 +15,10 @@ import { getVoiceConfig } from "./voice";
 import { escapeXml } from "./xml";
 
 /**
- * Generate TwiML for a speech gather with response
+ * Generate TwiML for a speech gather with response.
+ *
+ * `prompt` is stored unescaped as the last prompt so the no-speech retry can
+ * re-speak it (and re-escape it) without stacking entities.
  */
 export function gatherTwiml(
   prompt: string,
@@ -20,7 +27,7 @@ export function gatherTwiml(
   phoneNumber?: string,
 ): string {
   const { voice, language: lang } = getVoiceConfig(language, config.voices);
-  const prefix = config.routePrefix || "";
+  const prefix = escapeXml(config.routePrefix || "");
 
   if (phoneNumber) {
     setLastPrompt(phoneNumber, prompt);
@@ -28,8 +35,8 @@ export function gatherTwiml(
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="${voice}" language="${lang}">${prompt}</Say>
-    <Gather input="speech" action="${prefix}/call/respond" method="POST" speechTimeout="auto" language="${lang}">
+    <Say voice="${escapeXml(voice)}" language="${escapeXml(lang)}">${escapeXml(prompt)}</Say>
+    <Gather input="speech" action="${prefix}/call/respond" method="POST" speechTimeout="auto" language="${escapeXml(lang)}">
     </Gather>
     <Redirect method="POST">${prefix}/call/no-speech</Redirect>
 </Response>`;
@@ -42,7 +49,7 @@ export function sayTwiml(message: string, language: string, config: TalkerConfig
   const { voice, language: lang } = getVoiceConfig(language, config.voices);
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="${voice}" language="${lang}">${message}</Say>
+    <Say voice="${escapeXml(voice)}" language="${escapeXml(lang)}">${escapeXml(message)}</Say>
 </Response>`;
 }
 
@@ -58,8 +65,8 @@ export function transferTwiml(language: string, config: TalkerConfig, message?: 
   const transferNumber = config.transferNumber || "";
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="${voice}" language="${lang}">${resolvedMessage}</Say>
-    <Dial>${transferNumber}</Dial>
+    <Say voice="${escapeXml(voice)}" language="${escapeXml(lang)}">${escapeXml(resolvedMessage)}</Say>
+    <Dial>${escapeXml(transferNumber)}</Dial>
 </Response>`;
 }
 
@@ -74,10 +81,10 @@ export function acknowledgmentTwiml(
 ): string {
   const { voice, language: lang } = getVoiceConfig(language, config.voices);
   const resolvedMessage = message ?? getPhrase(language, "acknowledgment", config.languageDir);
-  const prefix = config.routePrefix || "";
+  const prefix = escapeXml(config.routePrefix || "");
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="${voice}" language="${lang}">${resolvedMessage}</Say>
+    <Say voice="${escapeXml(voice)}" language="${escapeXml(lang)}">${escapeXml(resolvedMessage)}</Say>
     <Redirect method="POST">${prefix}/call/answer</Redirect>
 </Response>`;
 }
@@ -91,7 +98,7 @@ export function farewellTwiml(language: string, config: TalkerConfig, message?: 
   const resolvedMessage = message ?? getFarewellPhrase(language, config.languageDir);
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="${voice}" language="${lang}">${resolvedMessage}</Say>
+    <Say voice="${escapeXml(voice)}" language="${escapeXml(lang)}">${escapeXml(resolvedMessage)}</Say>
     <Hangup/>
 </Response>`;
 }
@@ -100,9 +107,8 @@ export function farewellTwiml(language: string, config: TalkerConfig, message?: 
  * Generate TwiML for an SMS response
  */
 export function messageTwiml(message: string): string {
-  const escapedMessage = escapeXml(message);
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Message>${escapedMessage}</Message>
+    <Message>${escapeXml(message)}</Message>
 </Response>`;
 }

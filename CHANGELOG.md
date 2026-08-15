@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The `@diegoaltoworks/chatter` peer range is now `>=0.32.0 <1` instead of
+  `^0.32.0`. A caret on a `0.x` version resolves to `>=0.32.0 <0.33.0`, so
+  every chatter minor after 0.32 fell outside the range; installing the latest
+  of both packages produced a peer conflict for a combination that works. CI
+  now runs typecheck and the suite against `chatter@latest` in a dedicated job,
+  alongside the existing job that pins the bottom of the range.
 - Optional peer dependencies are no longer load-bearing at import. Top-level
   value imports of `@diegoaltoworks/chatter/flows` (flow manager and registry)
   and `@libsql/client` (database client) made

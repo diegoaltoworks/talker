@@ -32,6 +32,14 @@ function optionalPeers(): string[] {
     .map(([name]) => name);
 }
 
+/** Declared peer ranges, keyed by package name. */
+function peerRanges(): Record<string, string> {
+  const manifest = JSON.parse(readFileSync(join(SRC, "..", "package.json"), "utf8")) as {
+    peerDependencies?: Record<string, string>;
+  };
+  return manifest.peerDependencies ?? {};
+}
+
 /** Every non-test .ts file under src/, recursively. */
 function sourceFiles(dir: string): string[] {
   const files: string[] = [];
@@ -130,5 +138,35 @@ describe("optional peer dependencies", () => {
   it("matches subpath imports of a peer", () => {
     expect(importsPeer("@diegoaltoworks/chatter/flows", "@diegoaltoworks/chatter")).toBe(true);
     expect(importsPeer("@diegoaltoworks/chatter-extras", "@diegoaltoworks/chatter")).toBe(false);
+  });
+});
+
+/**
+ * Peer ranges must admit the versions their packages actually ship.
+ *
+ * Under semver, `^0.32.0` means `>=0.32.0 <0.33.0` — a caret on a 0.x version
+ * pins one minor, because every 0.x minor is treated as a breaking major. Peers
+ * that release minors faster than this package does therefore fall out of range
+ * within days, and a host installing latest-of-both gets a peer conflict for a
+ * combination that works fine. Pre-1.0 peers get an explicit `>=x.y.z <1`.
+ */
+describe("peer dependency ranges", () => {
+  const peers = peerRanges();
+
+  it("reads the ranges it is about to police", () => {
+    expect(Object.keys(peers).sort()).toEqual([
+      "@diegoaltoworks/chatter",
+      "@libsql/client",
+      "hono",
+      "openai",
+    ]);
+  });
+
+  it.each(Object.entries(peers))("does not caret-pin %s to a single 0.x minor", (_peer, range) => {
+    expect(range.match(/\^\s*0\./g)).toBeNull();
+  });
+
+  it("admits chatter minors published after this release", () => {
+    expect(peers["@diegoaltoworks/chatter"]).toBe(">=0.32.0 <1");
   });
 });

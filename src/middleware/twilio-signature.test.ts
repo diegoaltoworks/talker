@@ -1,5 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { computeTwilioSignature, validateTwilioSignature } from "./twilio-signature";
+import { Hono } from "hono";
+import {
+  computeTwilioSignature,
+  signedRequestUrl,
+  twilioSignatureMiddleware,
+  validateTwilioSignature,
+} from "./twilio-signature";
 
 describe("Twilio Signature Validation", () => {
   const authToken = "test-auth-token-12345";
@@ -74,6 +80,117 @@ describe("Twilio Signature Validation", () => {
       const params = { From: "+15551234567" };
       const sig = computeTwilioSignature(authToken, url, params);
       expect(validateTwilioSignature("wrong-token", sig, url, params)).toBe(false);
+    });
+  });
+
+  describe("signedRequestUrl", () => {
+    it("should use the request URL as-is when no base URL is configured", () => {
+      expect(signedRequestUrl("http://localhost/sms?tenant=acme", "/sms")).toBe(
+        "http://localhost/sms?tenant=acme",
+      );
+    });
+
+    it("should preserve the query string when a base URL is configured", () => {
+      expect(
+        signedRequestUrl(
+          "http://localhost/sms?tenant=acme&lang=fr",
+          "/sms",
+          "https://bot.example.com",
+        ),
+      ).toBe("https://bot.example.com/sms?tenant=acme&lang=fr");
+    });
+
+    it("should not append a question mark when there is no query string", () => {
+      expect(signedRequestUrl("http://localhost/sms", "/sms", "https://bot.example.com")).toBe(
+        "https://bot.example.com/sms",
+      );
+    });
+
+    it("should strip a trailing slash from the base URL", () => {
+      expect(signedRequestUrl("http://localhost/sms", "/sms", "https://bot.example.com/")).toBe(
+        "https://bot.example.com/sms",
+      );
+    });
+  });
+
+  describe("twilioSignatureMiddleware", () => {
+    const params = { Body: "hello", From: "+15551234567" };
+
+    function createApp(token?: string, baseUrl?: string, options?: { allowUnsigned?: boolean }) {
+      const app = new Hono();
+      app.post("/sms", twilioSignatureMiddleware(token, baseUrl, options));
+      app.post("/sms", (c) => c.text("handled"));
+      return app;
+    }
+
+    function post(app: Hono, path: string, signature?: string) {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/x-www-form-urlencoded",
+      };
+      if (signature) headers["x-twilio-signature"] = signature;
+      return app.fetch(
+        new Request(`http://localhost${path}`, {
+          method: "POST",
+          headers,
+          body: new URLSearchParams(params).toString(),
+        }),
+      );
+    }
+
+    it("should reject every request when no auth token is configured", async () => {
+      const res = await post(createApp(undefined), "/sms");
+      expect(res.status).toBe(403);
+    });
+
+    it("should reject signed requests when no token is configured", async () => {
+      const sig = computeTwilioSignature(authToken, "http://localhost/sms", params);
+      const res = await post(createApp(undefined), "/sms", sig);
+      expect(res.status).toBe(403);
+    });
+
+    it("should pass through without a token only when allowUnsigned is set", async () => {
+      const res = await post(createApp(undefined, undefined, { allowUnsigned: true }), "/sms");
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe("handled");
+    });
+
+    it("should reject a request with no signature header", async () => {
+      const res = await post(createApp(authToken), "/sms");
+      expect(res.status).toBe(403);
+    });
+
+    it("should accept a correctly signed request", async () => {
+      const sig = computeTwilioSignature(authToken, "http://localhost/sms", params);
+      const res = await post(createApp(authToken), "/sms", sig);
+      expect(res.status).toBe(200);
+    });
+
+    it("should validate a query-string webhook against the configured public URL", async () => {
+      const signed = computeTwilioSignature(
+        authToken,
+        "https://bot.example.com/sms?tenant=acme",
+        params,
+      );
+      const res = await post(
+        createApp(authToken, "https://bot.example.com"),
+        "/sms?tenant=acme",
+        signed,
+      );
+      expect(res.status).toBe(200);
+    });
+
+    it("should reject when the query string is not the one Twilio signed", async () => {
+      const signed = computeTwilioSignature(
+        authToken,
+        "https://bot.example.com/sms?tenant=acme",
+        params,
+      );
+      const res = await post(
+        createApp(authToken, "https://bot.example.com"),
+        "/sms?tenant=evil",
+        signed,
+      );
+      expect(res.status).toBe(403);
     });
   });
 });

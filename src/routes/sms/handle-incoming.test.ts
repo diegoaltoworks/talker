@@ -19,6 +19,8 @@ function createTestDeps(
   return {
     chatter: {} as ServerDependencies,
     config: {
+      // Unsigned test traffic: no Twilio auth token in these fixtures.
+      allowUnsignedWebhooks: true,
       transferNumber: "+441234567890",
       chatFn: chatFn || (async (_phone, msg) => `Echo: ${msg}`),
       ...configOverrides,

@@ -30,6 +30,8 @@ function createTestDeps(
   return {
     chatter: {} as ServerDependencies,
     config: {
+      // Unsigned test traffic: no Twilio auth token in these fixtures.
+      allowUnsignedWebhooks: true,
       transferNumber: "+441234567890",
       chatFn: chatFn || (async (_phone, msg) => `Echo: ${msg}`),
     },
@@ -230,12 +232,36 @@ describe("Standalone Server", () => {
       try {
         const app = await createStandaloneServer({
           openaiApiKey: "test-key",
+          allowUnsignedWebhooks: true,
           flowsDir,
         });
         expect(app).toBeDefined();
       } finally {
         rmSync(flowsDir, { recursive: true, force: true });
       }
+    });
+
+    it("refuses to start without a Twilio auth token", async () => {
+      await expect(createStandaloneServer({ openaiApiKey: "test-key" })).rejects.toThrow(
+        "Twilio auth token missing",
+      );
+    });
+
+    it("starts when a Twilio auth token is configured", async () => {
+      const app = await createStandaloneServer({
+        openaiApiKey: "test-key",
+        twilio: { authToken: "test-auth-token" },
+      });
+
+      // Signature validation is live: unsigned webhook traffic is refused
+      const res = await app.fetch(
+        new Request("http://localhost/sms", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ From: "+15551234567", Body: "hi" }).toString(),
+        }),
+      );
+      expect(res.status).toBe(403);
     });
   });
 });

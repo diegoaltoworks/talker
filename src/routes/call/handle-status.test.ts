@@ -16,6 +16,8 @@ function createTestDeps(): TalkerDependencies {
   return {
     chatter: {} as ServerDependencies,
     config: {
+      // Unsigned test traffic: no Twilio auth token in these fixtures.
+      allowUnsignedWebhooks: true,
       chatFn: async (_phone, msg) => `Echo: ${msg}`,
     },
     openaiApiKey: "test-key",

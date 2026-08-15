@@ -20,7 +20,8 @@ async function start() {
       apiKey: process.env.CHATBOT_API_KEY,
     },
 
-    // Twilio credentials (optional — only needed for outbound SMS)
+    // Twilio credentials. authToken is required: it validates the webhook
+    // signature, and mounting refuses to start without it.
     twilio: {
       accountSid: process.env.TWILIO_ACCOUNT_SID,
       authToken: process.env.TWILIO_AUTH_TOKEN,

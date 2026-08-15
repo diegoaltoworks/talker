@@ -31,6 +31,7 @@ import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import { Hono } from "hono";
 import { startCleanup } from "./core/context";
 import { logger } from "./core/logger";
+import { assertWebhookSecurity } from "./core/webhook-security";
 import { initDbClient } from "./db/client";
 import { runMigrations } from "./db/migrate";
 import { FlowRegistry } from "./flows/registry";
@@ -62,6 +63,8 @@ export async function createStandaloneServer(config: StandaloneConfig) {
   if (!config.openaiApiKey) {
     throw new Error("openaiApiKey is required for standalone mode");
   }
+
+  assertWebhookSecurity(config);
 
   // Build a minimal ServerDependencies stub for standalone mode.
   // Only the fields talker actually needs are populated.

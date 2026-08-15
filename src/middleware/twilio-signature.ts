@@ -55,16 +55,52 @@ export function validateTwilioSignature(
 }
 
 /**
+ * Options for {@link twilioSignatureMiddleware}.
+ */
+export interface TwilioSignatureOptions {
+  /**
+   * Accept requests when no auth token is configured, i.e. run with signature
+   * validation switched off. Development and local testing only — with this on,
+   * anyone who can reach the webhook can impersonate Twilio. Default: false.
+   */
+  allowUnsigned?: boolean;
+}
+
+/**
+ * Build the URL Twilio used when it computed its signature.
+ *
+ * Twilio signs the full request URL *including* the query string, so a
+ * webhook configured with query parameters (`/sms?tenant=acme`) only
+ * validates when they are preserved here.
+ */
+export function signedRequestUrl(requestUrl: string, path: string, baseUrl?: string): string {
+  if (!baseUrl) return requestUrl;
+  const queryIndex = requestUrl.indexOf("?");
+  const query = queryIndex === -1 ? "" : requestUrl.slice(queryIndex);
+  return `${baseUrl.replace(/\/$/, "")}${path}${query}`;
+}
+
+/**
  * Hono middleware factory for Twilio signature validation.
  *
- * When authToken is provided, rejects any request without a valid
- * X-Twilio-Signature header. When authToken is not configured,
- * the middleware is a pass-through (allows development/testing without Twilio).
+ * Fails closed: without an auth token there is no way to tell a genuine Twilio
+ * request from a forged one, so every request is rejected with 403 unless
+ * `allowUnsigned` is explicitly set.
  */
-export function twilioSignatureMiddleware(authToken?: string, baseUrl?: string) {
+export function twilioSignatureMiddleware(
+  authToken?: string,
+  baseUrl?: string,
+  options: TwilioSignatureOptions = {},
+) {
   return async (c: Context, next: Next) => {
     if (!authToken) {
-      return next();
+      if (options.allowUnsigned) {
+        return next();
+      }
+      logger.warn("rejected request: no Twilio auth token configured to validate the signature", {
+        path: c.req.path,
+      });
+      return c.text("", 403);
     }
 
     const signature = c.req.header("x-twilio-signature");
@@ -75,8 +111,7 @@ export function twilioSignatureMiddleware(authToken?: string, baseUrl?: string) 
       return c.text("", 403);
     }
 
-    // Build the full URL Twilio used to compute its signature
-    const requestUrl = baseUrl ? `${baseUrl.replace(/\/$/, "")}${c.req.path}` : c.req.url;
+    const requestUrl = signedRequestUrl(c.req.url, c.req.path, baseUrl);
 
     // Parse the POST body params for signature computation
     const body = await c.req.parseBody();

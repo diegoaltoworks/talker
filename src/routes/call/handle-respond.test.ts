@@ -17,6 +17,8 @@ function createTestDeps(overrides?: Partial<TalkerDependencies["config"]>): Talk
   return {
     chatter: {} as ServerDependencies,
     config: {
+      // Unsigned test traffic: no Twilio auth token in these fixtures.
+      allowUnsignedWebhooks: true,
       transferNumber: "+441234567890",
       chatFn: async (_phone, msg) => `Echo: ${msg}`,
       ...overrides,

@@ -18,7 +18,9 @@ import { escapeXml } from "./xml";
  * Generate TwiML for a speech gather with response.
  *
  * `prompt` is stored unescaped as the last prompt so the no-speech retry can
- * re-speak it (and re-escape it) without stacking entities.
+ * re-speak it (and re-escape it) without stacking entities. `Say` is nested
+ * inside `Gather` so speech recognition starts as soon as the prompt begins
+ * playing, letting a caller barge in instead of waiting it out.
  */
 export function gatherTwiml(
   prompt: string,
@@ -35,8 +37,8 @@ export function gatherTwiml(
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="${escapeXml(voice)}" language="${escapeXml(lang)}">${escapeXml(prompt)}</Say>
     <Gather input="speech" action="${prefix}/call/respond" method="POST" speechTimeout="auto" language="${escapeXml(lang)}">
+        <Say voice="${escapeXml(voice)}" language="${escapeXml(lang)}">${escapeXml(prompt)}</Say>
     </Gather>
     <Redirect method="POST">${prefix}/call/no-speech</Redirect>
 </Response>`;

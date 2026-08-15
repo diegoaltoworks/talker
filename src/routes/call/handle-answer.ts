@@ -14,6 +14,10 @@ import { gatherTwiml, sayTwiml } from "../../core/twiml";
 import type { TalkerConfig } from "../../types";
 import { deletePending, getPending } from "./pending";
 
+// Twilio gives up on a webhook response after ~15s; staying well under that
+// means our own timeout phrase is actually spoken instead of Twilio's error.
+const DEFAULT_ANSWER_BUDGET_MS = 8000;
+
 export async function handleAnswer(c: Context, config: TalkerConfig): Promise<Response> {
   const body = await c.req.parseBody();
   const phoneNumber = ((body.From as string) || "unknown").trim();
@@ -34,18 +38,17 @@ export async function handleAnswer(c: Context, config: TalkerConfig): Promise<Re
     return c.text(twiml, 200, { "Content-Type": "text/xml" });
   }
 
+  const budgetMs = config.callAnswerBudgetMs ?? DEFAULT_ANSWER_BUDGET_MS;
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<{ twiml: string }>((_, reject) => {
+    timeoutHandle = setTimeout(() => reject(new Error("Processing timeout")), budgetMs);
+  });
+
   try {
-    const timeoutPromise = new Promise<{ twiml: string }>((_, reject) => {
-      setTimeout(() => reject(new Error("Processing timeout")), 30000);
-    });
-
     const result = await Promise.race([pending.promise, timeoutPromise]);
-    deletePending(phoneNumber);
-
     return c.text(result.twiml, 200, { "Content-Type": "text/xml" });
   } catch (error) {
     logger.error("answer error", { phoneNumber, error: getErrorMessage(error) });
-    deletePending(phoneNumber);
     const message = getPhrase("en", "timeout", config.languageDir);
     emitMessageTap(config, {
       direction: "outbound",
@@ -56,5 +59,8 @@ export async function handleAnswer(c: Context, config: TalkerConfig): Promise<Re
     });
     const twiml = sayTwiml(message, "en", config);
     return c.text(twiml, 200, { "Content-Type": "text/xml" });
+  } finally {
+    clearTimeout(timeoutHandle);
+    deletePending(phoneNumber);
   }
 }

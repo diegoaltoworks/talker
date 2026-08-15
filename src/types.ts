@@ -181,6 +181,25 @@ export interface TalkerConfig {
   /** Context cleanup interval in milliseconds. Default: 300000 (5 minutes) */
   cleanupIntervalMs?: number;
 
+  /**
+   * How long an unresolved /call/answer acknowledgment entry is kept before
+   * the cleanup sweep discards it (e.g. the caller hangs up before Twilio
+   * requests /call/answer). Checked once per `cleanupIntervalMs` tick, so
+   * actual lifetime is this value rounded up to the next sweep, not a hard
+   * deadline. Keep it comfortably above `callAnswerBudgetMs` - too low and
+   * the sweep can delete an entry a still-racing /call/answer needs, which
+   * silently downgrades a real answer to the timeout phrase.
+   * Default: 60000 (1 minute)
+   */
+  pendingQueryTtlMs?: number;
+
+  /**
+   * Budget for background call processing before /call/answer gives up and
+   * speaks a timeout phrase. Must stay well under Twilio's ~15s webhook
+   * timeout so the phrase is actually deliverable. Default: 8000 (8 seconds)
+   */
+  callAnswerBudgetMs?: number;
+
   /** Maximum no-speech retries before ending call. Default: 3 */
   maxNoSpeechRetries?: number;
 
@@ -407,6 +426,7 @@ export type PhraseValue = string | string[];
 export interface Phrases {
   greeting: PhraseValue;
   didNotCatch: PhraseValue;
+  /** Unused by the no-speech ladder, which speaks didNotHearRetry/didNotHearFinal instead. Kept for backward compatibility. */
   didNotHear: PhraseValue;
   didNotHearRetry: PhraseValue;
   didNotHearFinal: PhraseValue;

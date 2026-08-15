@@ -29,6 +29,9 @@ describe("TwiML Generation", () => {
       expect(result).toContain('<Gather input="speech"');
       expect(result).toContain('action="/call/respond"');
       expect(result).toContain('<Redirect method="POST">/call/no-speech</Redirect>');
+      // Say nested inside Gather so speech recognition starts immediately
+      // (barge-in), instead of the caller having to wait out the prompt.
+      expect(result).toMatch(/<Gather[^>]*>\s*<Say/);
     });
 
     it("should use correct voice for language", () => {

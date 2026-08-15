@@ -7,7 +7,13 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import { Hono } from "hono";
-import { clearAllContexts, getContext, stopCleanup } from "../../core/context";
+import {
+  addMessage,
+  clearAllContexts,
+  getContext,
+  setActiveFlow,
+  stopCleanup,
+} from "../../core/context";
 import { FlowRegistry } from "../../flows/registry";
 import { resetRateLimitStore } from "../../middleware/rate-limit";
 import type { MessageTapEvent, TalkerDependencies } from "../../types";
@@ -47,6 +53,17 @@ function postCall(app: ReturnType<typeof createApp>, fields: Record<string, stri
   );
 }
 
+function postNoSpeech(app: ReturnType<typeof createApp>, fields: Record<string, string>) {
+  const form = new URLSearchParams(fields);
+  return app.fetch(
+    new Request("http://localhost/call/no-speech", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: form.toString(),
+    }),
+  );
+}
+
 describe("handleInitialCall", () => {
   afterEach(() => {
     clearAllContexts();
@@ -54,7 +71,7 @@ describe("handleInitialCall", () => {
     stopCleanup();
   });
 
-  it("should return TwiML with greeting, Gather, and didNotHear fallback", async () => {
+  it("should return TwiML with the greeting nested in Gather, and a no-speech redirect", async () => {
     const app = createApp();
     const res = await postCall(app, { From: "+15551234567" });
 
@@ -69,26 +86,36 @@ describe("handleInitialCall", () => {
     expect(text).toContain('input="speech"');
     expect(text).toContain('action="/call/respond"');
     expect(text).toContain("</Response>");
+    // Say nested inside Gather (barge-in) so the caller can speak over the greeting.
+    expect(text).toMatch(/<Gather[^>]*>\s*<Say/);
+    // First-turn silence engages the same no-speech retry ladder as every other turn.
+    expect(text).toContain('<Redirect method="POST">/call/no-speech</Redirect>');
   });
 
-  it("should include two Say elements — greeting and didNotHear", async () => {
+  it("should include exactly one Say element for the greeting", async () => {
     const app = createApp();
     const res = await postCall(app, { From: "+15551234567" });
     const text = await res.text();
 
-    // Count <Say elements — should be 2 (greeting + didNotHear fallback)
     const sayMatches = text.match(/<Say /g);
-    expect(sayMatches?.length).toBe(2);
+    expect(sayMatches?.length).toBe(1);
   });
 
-  it("should clear previous context for the phone number", async () => {
+  it("should clear previous conversation state for the phone number", async () => {
     const app = createApp();
 
-    // First call creates context
+    // Seed state from an earlier call.
+    addMessage("+15551234567", "user", "leftover from an earlier call");
+    setActiveFlow("+15551234567", "some-flow");
+
     await postCall(app, { From: "+15551234567" });
-    // Context should be cleared by the handler
+
+    // gatherTwiml stores the greeting as lastPrompt for the no-speech ladder,
+    // so a fresh context now exists — but carries none of the prior state.
     const context = getContext("+15551234567");
-    expect(context).toBeUndefined();
+    expect(context?.messageHistory).toEqual([]);
+    expect(context?.activeFlow).toBeNull();
+    expect(context?.noSpeechRetries).toBe(0);
   });
 
   it("should apply route prefix to Gather action URL", async () => {
@@ -143,6 +170,29 @@ describe("handleInitialCall", () => {
     await Promise.resolve();
 
     expect(events[0]?.body).toBe("Ben & Jerry's");
+  });
+
+  it("engages the no-speech retry ladder starting from the very first turn", async () => {
+    // Before this fix, handleInitialCall never touched the context store, so
+    // incrementNoSpeechRetries (context.ts) always returned 0 for a phone
+    // number that had never spoken - first-turn silence had no retry ladder
+    // to fall into and the call would dead-end.
+    const app = createApp();
+    const phoneNumber = "+15559990097";
+
+    await postCall(app, { From: phoneNumber });
+
+    for (let i = 0; i < 3; i++) {
+      const res = await postNoSpeech(app, { From: phoneNumber });
+      const text = await res.text();
+      expect(text).toContain("<Gather");
+    }
+
+    // One more silence exceeds the default max (3) and ends the call.
+    const finalRes = await postNoSpeech(app, { From: phoneNumber });
+    const finalText = await finalRes.text();
+    expect(finalText).not.toContain("<Gather");
+    expect(finalText).toContain("<Say");
   });
 
   it("fires an outbound onMessage event for the greeting", async () => {

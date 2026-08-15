@@ -5,7 +5,7 @@
  */
 
 import { afterEach, describe, expect, it } from "bun:test";
-import { deletePending, getPending, setPending } from "./pending";
+import { deletePending, getPending, setPending, sweepPending } from "./pending";
 
 describe("Pending Queries", () => {
   afterEach(() => {
@@ -77,5 +77,49 @@ describe("Pending Queries", () => {
     });
 
     expect(getPending("+1111")?.speechResult).toBe("new");
+  });
+
+  it("should stamp a createdAt on set", () => {
+    const before = Date.now();
+    setPending("+1111", {
+      speechResult: "test",
+      promise: Promise.resolve({ twiml: "" }),
+      resolve: () => {},
+    });
+
+    expect(getPending("+1111")?.createdAt).toBeGreaterThanOrEqual(before);
+  });
+
+  it("should sweep entries older than the given TTL", async () => {
+    setPending("+1111", {
+      speechResult: "stale",
+      promise: Promise.resolve({ twiml: "" }),
+      resolve: () => {},
+    });
+
+    await new Promise((r) => setTimeout(r, 15));
+
+    setPending("+2222", {
+      speechResult: "fresh",
+      promise: Promise.resolve({ twiml: "" }),
+      resolve: () => {},
+    });
+
+    sweepPending(10);
+
+    expect(getPending("+1111")).toBeUndefined();
+    expect(getPending("+2222")).toBeDefined();
+  });
+
+  it("should not sweep entries within the TTL", () => {
+    setPending("+1111", {
+      speechResult: "test",
+      promise: Promise.resolve({ twiml: "" }),
+      resolve: () => {},
+    });
+
+    sweepPending(60_000);
+
+    expect(getPending("+1111")).toBeDefined();
   });
 });

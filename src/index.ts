@@ -68,6 +68,7 @@ export { DEFAULT_LANGUAGE, isValidLanguageCode, normalizeLanguage } from "./core
 // Logger
 export { logger, redactPhone } from "./core/logger";
 export {
+  getCancellationKeywords,
   getChannelPhrase,
   getFarewellPhrase,
   getFlowPhrase,

@@ -469,6 +469,15 @@ export interface Phrases {
   flow: {
     cancelled: PhraseValue;
     error: PhraseValue;
+    /** Asked when the engine fills some parameters but returns no prompt of its own. */
+    needMoreDetails: PhraseValue;
+    /**
+     * Words and phrases that end an in-progress flow in this language. A list,
+     * not a rotation: every entry is matched, none is spoken. Matching is
+     * whole-word, case-insensitive and accent-insensitive, so ASCII entries
+     * still match accented speech-to-text output.
+     */
+    cancellationKeywords: PhraseValue;
   };
   sms: {
     greeting: PhraseValue;

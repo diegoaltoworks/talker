@@ -100,6 +100,22 @@ function applyWhatsappSmsFallback(merged: Phrases, raw: unknown, language: strin
 
 const phrasesCache: Record<string, Phrases> = {};
 
+/**
+ * The built-in cancellation list, named so the blank-list fallback in
+ * `getCancellationKeywords` can reach it without casting back off `Phrases`.
+ * Whole words only, and no form that a caller commonly negates: "don't
+ * cancel" is rare, but a list containing "forget" would end a flow on "don't
+ * forget my room number". The translated lists follow the same rule.
+ */
+const BUILTIN_CANCELLATION_KEYWORDS = [
+  "cancel",
+  "nevermind",
+  "never mind",
+  "stop",
+  "forget it",
+  "quit",
+];
+
 /** Built-in English fallback — always available even when language files can't be resolved */
 const ENGLISH_FALLBACK: Phrases = {
   greeting: "Hello! I'm your voice assistant. How can I help you today?",
@@ -121,6 +137,8 @@ const ENGLISH_FALLBACK: Phrases = {
   flow: {
     cancelled: "No problem! I've cancelled that. What else would you like to know?",
     error: "Sorry, something went wrong with that. Let's start over - what would you like to know?",
+    needMoreDetails: "Could you provide more details?",
+    cancellationKeywords: BUILTIN_CANCELLATION_KEYWORDS,
   },
   sms: {
     greeting: "Hi! I'm your voice assistant. Ask me anything!",
@@ -243,19 +261,48 @@ export function getFarewellPhrase(language: string, languageDir?: string): strin
 }
 
 /**
+ * Every `flow` key that is a phrase to speak. `cancellationKeywords` is a
+ * list to match against, so picking one at random would be meaningless;
+ * `getCancellationKeywords` reads it instead.
+ */
+type FlowPhraseKey = Exclude<keyof Phrases["flow"], "cancellationKeywords">;
+
+/**
  * Get a flow-related phrase.
  * `loadPhrases` merges every language file over the built-in English
  * fallback at load time, so a phrase file that predates a given `flow` key
  * (e.g. `error` added after `cancelled`) already resolves to the English
  * copy for the missing key - no per-call fallback needed here.
  */
-export function getFlowPhrase(
-  language: string,
-  key: keyof Phrases["flow"],
-  languageDir?: string,
-): string {
+export function getFlowPhrase(language: string, key: FlowPhraseKey, languageDir?: string): string {
   const phrases = loadPhrases(language, languageDir);
   return pick(phrases.flow[key]);
+}
+
+/**
+ * Get the cancellation keywords for a language.
+ *
+ * Returns the whole list rather than one entry: these are matched against
+ * what the caller said, never spoken back. A language file may provide a
+ * lone string for a single keyword; it is normalized to a one-entry list so
+ * callers always get an array, and a fresh one, since the cached phrase tree
+ * must not be mutable through this accessor.
+ *
+ * Blank entries are dropped and an all-blank list falls back to the built-in
+ * English one. The load-time merge already rejects a missing or empty
+ * `cancellationKeywords`, but not a `""` inside it, and an empty keyword
+ * compiles to a pattern that matches nearly every message - which would end
+ * every flow on its first turn.
+ */
+export function getCancellationKeywords(language: string, languageDir?: string): string[] {
+  const value = loadPhrases(language, languageDir).flow.cancellationKeywords;
+  const keywords = (Array.isArray(value) ? value : [value]).filter(
+    (keyword) => keyword.trim().length > 0,
+  );
+  if (keywords.length > 0) return keywords;
+
+  logger.warn("no usable cancellation keywords, falling back to built-in English", { language });
+  return [...BUILTIN_CANCELLATION_KEYWORDS];
 }
 
 /**

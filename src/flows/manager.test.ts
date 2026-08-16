@@ -13,6 +13,7 @@ import {
   getActiveFlow,
   getOrCreateContext,
   setActiveFlow,
+  setDetectedLanguage,
 } from "../core/context";
 import { getFlowPhrase } from "../core/phrases";
 import type { FlowDefinition, FlowHandlerResult, LoadedFlow, TalkerDependencies } from "../types";
@@ -29,6 +30,12 @@ const definition: FlowDefinition = {
   description: "test",
   triggerKeywords: ["test"],
   schema: { type: "object", properties: { detail: { type: "string" } }, required: [] },
+};
+
+/** A flow with a required parameter, so a turn can leave it unfilled. */
+const requiredParamDefinition: FlowDefinition = {
+  ...definition,
+  schema: { type: "object", properties: { detail: { type: "string" } }, required: ["detail"] },
 };
 
 /** A parameterless flow, like the keyword-triggered human handoff. */
@@ -189,6 +196,71 @@ describe("processFlow without the flow-engine peer", () => {
 
     expect(result.error).toBe(true);
     expect(result.response).toBe(getFlowPhrase("en", "error"));
+    expect(getActiveFlow(phoneNumber)).toBeFalsy();
+  });
+});
+
+describe("processFlow speaks the caller's language", () => {
+  beforeEach(() => {
+    clearAllContexts();
+  });
+
+  /** An engine that fills nothing and offers no prompt of its own. */
+  const silentEngine = (() =>
+    Promise.resolve({
+      extractParameters: async () => ({ extractedParams: {}, allParamsFilled: false }),
+      detectIntent: async () => null,
+    })) as unknown as FlowEngineLoader;
+
+  it("asks for more details in the caller's language when the engine offers no prompt", async () => {
+    const registry = makeRegistry(
+      { success: true, say: "UNUSED" },
+      { definition: requiredParamDefinition, engineLoader: silentEngine },
+    );
+    const deps = makeDeps();
+    const phoneNumber = "+15551234576";
+
+    getOrCreateContext(phoneNumber);
+    setDetectedLanguage(phoneNumber, "fr");
+    setActiveFlow(phoneNumber, "testFlow", {});
+
+    const result = await processFlow(deps, registry, phoneNumber, "bonjour", "call");
+
+    expect(result.isFlowActive).toBe(true);
+    expect(result.response).toBe(getFlowPhrase("fr", "needMoreDetails"));
+    expect(result.response).not.toBe(getFlowPhrase("en", "needMoreDetails"));
+  });
+
+  it("asks for more details in the caller's language on the turn that starts the flow", async () => {
+    const registry = makeRegistry(
+      { success: true, say: "UNUSED" },
+      { definition: requiredParamDefinition, engineLoader: silentEngine },
+    );
+    const deps = makeDeps();
+    const phoneNumber = "+15551234577";
+
+    getOrCreateContext(phoneNumber);
+    setDetectedLanguage(phoneNumber, "es");
+
+    const result = await processFlow(deps, registry, phoneNumber, "hola", "sms");
+
+    expect(result.isFlowActive).toBe(true);
+    expect(result.response).toBe(getFlowPhrase("es", "needMoreDetails"));
+  });
+
+  it("cancels on a keyword spoken in the caller's language, not only in English", async () => {
+    const registry = makeRegistry({ success: true, say: "UNUSED" });
+    const deps = makeDeps();
+    const phoneNumber = "+15551234578";
+
+    getOrCreateContext(phoneNumber);
+    setDetectedLanguage(phoneNumber, "fr");
+    setActiveFlow(phoneNumber, "testFlow", {});
+
+    const result = await processFlow(deps, registry, phoneNumber, "annuler", "call");
+
+    expect(result.cancelled).toBe(true);
+    expect(result.response).toBe(getFlowPhrase("fr", "cancelled"));
     expect(getActiveFlow(phoneNumber)).toBeFalsy();
   });
 });

@@ -15,6 +15,31 @@ breaking changes, grouped under the version they actually shipped in.
 
 ## [Unreleased]
 
+### Fixed
+
+- Flows spoke English to non-English callers: `src/flows/manager.ts` hardcoded
+  "Could you provide more details?" and the cancellation keywords were English
+  only, so a French caller mid-flow got an English prompt and could not leave
+  the flow in their own language. Both now come from the phrase files
+  (`flow.needMoreDetails`, `flow.cancellationKeywords`) in the caller's
+  detected language, and keyword matching ignores accents so plain-ASCII
+  phrase entries match accented speech-to-text output.
+
+### Added
+
+- `getCancellationKeywords(language, languageDir?)` and an optional
+  `language`/`languageDir` on `shouldExitFlow`, for hosts that want the
+  cancellation vocabulary of a given language or their own list via
+  `languageDir`. Existing one-argument `shouldExitFlow` calls are unchanged:
+  the default language's built-in list is the previous hardcoded one.
+
+### Changed
+
+- The `Phrases` type gained `flow.needMoreDetails` and
+  `flow.cancellationKeywords`. Phrase *files* are unaffected (any missing key
+  still falls back to the built-in English copy), but code that constructs a
+  complete `Phrases` object now has two more required keys.
+
 ## [0.43.0] - 2026-08-16
 
 ### Fixed

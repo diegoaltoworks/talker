@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  getCancellationKeywords,
   getFarewellPhrase,
   getFlowPhrase,
   getPhrase,
@@ -103,7 +104,7 @@ describe("Phrases", () => {
 
     it("should return every flow phrase key for all supported languages", () => {
       for (const lang of ["en", "fr", "de", "nl", "es", "pt"]) {
-        for (const key of ["cancelled", "error"] as const) {
+        for (const key of ["cancelled", "error", "needMoreDetails"] as const) {
           const phrase = getFlowPhrase(lang, key);
           expect(typeof phrase).toBe("string");
           expect(phrase.length).toBeGreaterThan(0);
@@ -148,6 +149,61 @@ describe("Phrases", () => {
 
       expect(getFlowPhrase("de", "error", dir)).toBe(getFlowPhrase("en", "error"));
       expect(getFlowPhrase("de", "cancelled", dir)).toBe("Abgebrochen.");
+    });
+  });
+
+  describe("getCancellationKeywords", () => {
+    it("should return a non-empty keyword list for every supported language", () => {
+      for (const lang of ["en", "fr", "de", "nl", "es", "pt"]) {
+        const keywords = getCancellationKeywords(lang);
+        expect(Array.isArray(keywords)).toBe(true);
+        expect(keywords.length).toBeGreaterThan(0);
+        for (const keyword of keywords) {
+          expect(typeof keyword).toBe("string");
+          expect(keyword.trim().length).toBeGreaterThan(0);
+        }
+      }
+    });
+
+    it("should give each language its own list rather than the English one", () => {
+      // Shared loanwords ("stop", "cancel") are expected; a list that is
+      // wholly English means that language file never got translated.
+      for (const lang of ["fr", "de", "nl", "es", "pt"]) {
+        const english = new Set(getCancellationKeywords("en"));
+        const translated = getCancellationKeywords(lang).filter((word) => !english.has(word));
+        expect(translated.length).toBeGreaterThan(0);
+      }
+    });
+
+    it("should fall back to the built-in English list for an unknown language", () => {
+      expect(getCancellationKeywords("xx")).toEqual(getCancellationKeywords("en"));
+    });
+
+    it("should hand out a fresh list, not the cached phrase tree's own array", () => {
+      getCancellationKeywords("en").push("banana");
+      expect(getCancellationKeywords("en")).not.toContain("banana");
+    });
+
+    it("should drop blank entries and fall back to English when none survive", () => {
+      const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      writeFileSync(
+        join(dir, "en.json"),
+        JSON.stringify({ flow: { cancellationKeywords: ["cancel", "   "] } }),
+      );
+      writeFileSync(join(dir, "fr.json"), JSON.stringify({ flow: { cancellationKeywords: [""] } }));
+
+      expect(getCancellationKeywords("en", dir)).toEqual(["cancel"]);
+      expect(getCancellationKeywords("fr", dir)).toEqual(getCancellationKeywords("en"));
+    });
+
+    it("should normalize a lone string into a single-entry list", () => {
+      const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      writeFileSync(
+        join(dir, "en.json"),
+        JSON.stringify({ flow: { cancellationKeywords: "abort" } }),
+      );
+
+      expect(getCancellationKeywords("en", dir)).toEqual(["abort"]);
     });
   });
 

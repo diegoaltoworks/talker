@@ -16,7 +16,20 @@
   "lostQuestion": "Lo siento, perdi el hilo de su pregunta. Podria repetir?",
   "flow": {
     "cancelled": "No hay problema! He cancelado eso. En que mas puedo ayudar?",
-    "error": "Lo siento, algo salio mal con eso. Empecemos de nuevo - en que puedo ayudar?"
+    "error": "Lo siento, algo salio mal con eso. Empecemos de nuevo - en que puedo ayudar?",
+    "needMoreDetails": "Podria darme mas detalles?",
+    "cancellationKeywords": [
+      "cancelar",
+      "cancela",
+      "cancelalo",
+      "olvidalo",
+      "olvidate",
+      "dejalo",
+      "dejelo",
+      "detente",
+      "stop",
+      "cancel"
+    ]
   },
   "sms": {
     "greeting": "Hola! Soy su asistente de voz. Como puedo ayudarle?",

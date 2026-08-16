@@ -419,7 +419,10 @@ discard `say`/`sms`/`whatsapp` and substitute a generic error phrase, and a voic
 validation error) should still return `success: true`.
 
 If the user cancels an in-progress flow (a cancellation keyword like "cancel" or "nevermind"), every
-channel delivers `phrases.flow.cancelled`. If flow processing itself fails - parameter extraction throws,
+channel delivers `phrases.flow.cancelled`. The keywords come from `phrases.flow.cancellationKeywords`
+in the caller's detected language, so a French caller can say "annuler" and a `languageDir` of your own
+can replace the list. Matching is whole-word and ignores case and accents, so entries are written
+without accents ("annule" matches "annulé"). If flow processing itself fails - parameter extraction throws,
 the flow can't be found, or a freshly-triggered flow fails to initialize - every channel delivers
 `phrases.flow.error` instead of silently falling through to a full chatbot turn.
 

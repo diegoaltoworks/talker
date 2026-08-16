@@ -16,7 +16,19 @@
   "lostQuestion": "Je suis desole, j'ai perdu le fil de votre question. Pourriez-vous repeter?",
   "flow": {
     "cancelled": "Pas de probleme! J'ai annule ca. Comment puis-je vous aider?",
-    "error": "Desole, quelque chose s'est mal passe. Recommencons - comment puis-je vous aider?"
+    "error": "Desole, quelque chose s'est mal passe. Recommencons - comment puis-je vous aider?",
+    "needMoreDetails": "Pourriez-vous me donner plus de details?",
+    "cancellationKeywords": [
+      "annuler",
+      "annule",
+      "annulez",
+      "laisse tomber",
+      "laissez tomber",
+      "arrete",
+      "arretez",
+      "stop",
+      "cancel"
+    ]
   },
   "sms": {
     "greeting": "Bonjour! Je suis votre assistant vocal. Comment puis-je vous aider?",

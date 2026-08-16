@@ -422,6 +422,14 @@ may be partial - any missing key falls back to this language's own `sms`
 copy where applicable (for `whatsapp`), then to the built-in English phrase,
 so a file only needs to override what it wants to change.
 
+Language codes are validated before they are used as a filename or a voice-map
+key: only `xx` / `xxx`, optionally with a region (`pt-BR`), are accepted, and
+anything else loads English instead. The active language is detected by the
+model from what the caller says, so this keeps caller-influenced text out of
+path and object lookups. `isValidLanguageCode(code)` and
+`normalizeLanguage(code, where)` are exported if you resolve languages
+yourself.
+
 ### Custom Prompts
 
 Override the pre/post-processing system prompts:

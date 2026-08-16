@@ -14,6 +14,7 @@ import {
   setDetectedLanguage,
 } from "../context";
 import { getErrorMessage } from "../errors";
+import { DEFAULT_LANGUAGE, normalizeLanguage } from "../language";
 import { logger } from "../logger";
 import { callOpenAI } from "./openai";
 import { getIncomingPrompt } from "./prompts";
@@ -63,9 +64,11 @@ export async function processIncoming(
       processedMessage?: string;
     };
 
-    const detectedLang = parsed.detectedLanguage || "en";
+    // The model is asked for a two-letter code but is free-form enough to
+    // return anything; normalize before it is stored for the session TTL.
+    const detectedLang = normalizeLanguage(parsed.detectedLanguage, "processIncoming");
     setDetectedLanguage(phoneNumber, detectedLang);
-    const storedLanguage = getDetectedLanguage(phoneNumber) || "en";
+    const storedLanguage = getDetectedLanguage(phoneNumber) || DEFAULT_LANGUAGE;
 
     logger.info("INCOMING", {
       phoneNumber,
@@ -91,7 +94,7 @@ export async function processIncoming(
     return {
       shouldTransfer: false,
       shouldEndCall: false,
-      detectedLanguage: getDetectedLanguage(phoneNumber) || "en",
+      detectedLanguage: getDetectedLanguage(phoneNumber) || DEFAULT_LANGUAGE,
       processedMessage: userMessage,
     };
   }

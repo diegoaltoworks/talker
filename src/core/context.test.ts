@@ -80,6 +80,24 @@ describe("Context Store", () => {
     it("should return null for unknown phone", () => {
       expect(getDetectedLanguage("+9999999999")).toBeNull();
     });
+
+    it("should not store a malformed language code", () => {
+      for (const bad of ["constructor", "__proto__", "../package", "en.json", "EN"]) {
+        setDetectedLanguage("+1234567890", bad);
+        expect(getDetectedLanguage("+1234567890")).toBeNull();
+      }
+    });
+
+    it("should leave the slot open for a later valid detection", () => {
+      setDetectedLanguage("+1234567890", "../package");
+      setDetectedLanguage("+1234567890", "fr");
+      expect(getDetectedLanguage("+1234567890")).toBe("fr");
+    });
+
+    it("should accept a code with a region subtag", () => {
+      setDetectedLanguage("+1234567890", "pt-BR");
+      expect(getDetectedLanguage("+1234567890")).toBe("pt-BR");
+    });
   });
 
   describe("message history", () => {

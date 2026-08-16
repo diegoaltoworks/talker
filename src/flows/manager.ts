@@ -17,6 +17,7 @@ import {
   updateFlowParams,
 } from "../core/context";
 import { getErrorMessage } from "../core/errors";
+import { DEFAULT_LANGUAGE } from "../core/language";
 import { logger } from "../core/logger";
 import { getFlowPhrase } from "../core/phrases";
 import type {
@@ -74,12 +75,14 @@ export async function processFlow(
   channel: Channel,
 ): Promise<FlowResult> {
   const activeFlow = getActiveFlow(phoneNumber);
+  // Resolved once, up front: it selects the cancellation keywords the caller
+  // is checked against as well as every phrase this function can return.
+  const language = getDetectedLanguage(phoneNumber) || DEFAULT_LANGUAGE;
 
   // Check if user wants to exit flow
-  if (activeFlow && checkExitFlow(userMessage)) {
+  if (activeFlow && checkExitFlow(userMessage, language, deps.config.languageDir)) {
     logger.info("flow cancelled", { phoneNumber, flow: activeFlow.flowName });
     clearActiveFlow(phoneNumber);
-    const language = getDetectedLanguage(phoneNumber) || "en";
     return {
       isFlowActive: false,
       response: getExitMessage(language, deps.config.languageDir),
@@ -97,7 +100,6 @@ export async function processFlow(
         flowName: activeFlow.flowName,
       });
       clearActiveFlow(phoneNumber);
-      const language = getDetectedLanguage(phoneNumber) || "en";
       return {
         isFlowActive: false,
         response: getFlowPhrase(language, "error", deps.config.languageDir),
@@ -155,7 +157,9 @@ export async function processFlow(
 
       return {
         isFlowActive: true,
-        response: extraction.nextPrompt || "Could you provide more details?",
+        response:
+          extraction.nextPrompt ||
+          getFlowPhrase(language, "needMoreDetails", deps.config.languageDir),
         flowCompleted: false,
       };
     } catch (error) {
@@ -165,7 +169,6 @@ export async function processFlow(
         error: getErrorMessage(error),
       });
       clearActiveFlow(phoneNumber);
-      const language = getDetectedLanguage(phoneNumber) || "en";
       return {
         isFlowActive: false,
         response: getFlowPhrase(language, "error", deps.config.languageDir),
@@ -238,7 +241,9 @@ export async function processFlow(
 
       return {
         isFlowActive: true,
-        response: extraction.nextPrompt || "Could you provide more details?",
+        response:
+          extraction.nextPrompt ||
+          getFlowPhrase(language, "needMoreDetails", deps.config.languageDir),
         flowCompleted: false,
       };
     } catch (error) {
@@ -248,7 +253,6 @@ export async function processFlow(
         error: getErrorMessage(error),
       });
       clearActiveFlow(phoneNumber);
-      const language = getDetectedLanguage(phoneNumber) || "en";
       return {
         isFlowActive: false,
         response: getFlowPhrase(language, "error", deps.config.languageDir),

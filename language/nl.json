@@ -16,7 +16,16 @@
   "lostQuestion": "Sorry, ik ben uw vraag kwijt. Kunt u het herhalen?",
   "flow": {
     "cancelled": "Geen probleem! Ik heb dat geannuleerd. Waarmee kan ik je helpen?",
-    "error": "Sorry, daar ging iets mis. Laten we opnieuw beginnen - waarmee kan ik je helpen?"
+    "error": "Sorry, daar ging iets mis. Laten we opnieuw beginnen - waarmee kan ik je helpen?",
+    "needMoreDetails": "Kunt u meer details geven?",
+    "cancellationKeywords": [
+      "annuleren",
+      "annuleer",
+      "stoppen",
+      "stop",
+      "laat maar zitten",
+      "cancel"
+    ]
   },
   "sms": {
     "greeting": "Hallo! Ik ben uw spraakassistent. Hoe kan ik u helpen?",

@@ -57,12 +57,27 @@ processing code. This is what makes the package usable in a caller's
 language and lets a host override copy without forking code. Any phrase
 entry may be a single string or a rotating array.
 
-- Implementation: `src/core/phrases.ts`
+The rule covers text the package matches *against* the caller too, not only
+text it speaks: flow cancellation keywords live in `flow.cancellationKeywords`
+per language, so a caller can leave a flow in the language they are speaking
+and a host can extend the list without forking. Matching is whole-word,
+case-insensitive and accent-insensitive, which is why the shipped keyword
+lists are plain ASCII while real speech-to-text output is not. Those lists
+hold unambiguous cancellation forms only: a form that flips meaning under
+negation ("don't forget my room number") is left out on purpose, because a
+wrongly cancelled flow throws away everything the caller has said.
+
+- Implementation: `src/core/phrases.ts`, `src/flows/utils.ts` (cancellation
+  keywords)
 - Test: `src/core/phrases.test.ts`, `src/core/phrasesRotation.test.ts` cover
-  the loader (`getPhrase`, fallbacks, path traversal). The "never a
-  hardcoded string in route code" half is convention, not a gate - there is
-  no automated check for a raw string literal reaching a caller; watch for
-  it in review the way you'd watch for a stray `console.log`.
+  the loader (`getPhrase`, fallbacks, path traversal);
+  `src/flows/utils.test.ts` covers cancelling in every shipped language.
+  "Never a hardcoded string" is a gate inside `src/flows/` only
+  (`src/flows/phrase-guard.test.ts`: no flow `response`, `smsContent` or
+  `whatsappContent` may be written as a string literal). It catches the easy
+  mistake, not every shape of it - a literal hoisted into a named `const`
+  still passes. Everywhere else it stays convention - watch for it in review
+  the way you'd watch for a stray `console.log`.
 
 ### Injected clients
 
@@ -148,7 +163,7 @@ examples worth copying the shape of:
 
 ## CI grep-gates
 
-Three invariants are enforced structurally - by scanning source or a built
+Some invariants are enforced structurally - by scanning source or a built
 artifact for a call site in the wrong place - rather than by exercising
 behavior and checking a return value:
 
@@ -156,12 +171,13 @@ behavior and checking a return value:
 |---|---|---|
 | No `process.env` outside config seams | Capability modules stay injectable; env reads are confined to the few places that are explicitly about reading configuration | `src/seam-guards.test.ts` |
 | No raw `fetch`/URL literal to `api.openai.com` outside the OpenAI client module | Every outbound OpenAI call goes through the one place that honors a configurable base URL and abort/timeout | `src/seam-guards.test.ts` |
+| No hardcoded caller-facing `response`/`smsContent`/`whatsappContent` in `src/flows/` | Flow replies come from the phrase files, so a caller mid-flow hears their own language rather than an English default | `src/flows/phrase-guard.test.ts` |
 | Every `package.json` `exports` key resolves under both `import` and `require`, ships its declared types, and carries no test/map declarations | A subpath the build doesn't produce can't reach a consumer silently | `scripts/smoke-packed-install.sh`, run via `bun run test:packaged` |
 
-The first two are `bun test` files, so `bun run check` (which runs
+All but the last are `bun test` files, so `bun run check` (which runs
 `bun test`) fails on a violation the same way it fails on a broken test. The
-third is not part of `bun run check` - it builds and packs a tarball, which
-is too slow for the inner dev loop - so it runs as its own CI job ("Packed
-tarball imports and resolves every exports key"). Run it locally with
-`bun run test:packaged` before a release-shaped change to `package.json`'s
+packed-tarball gate is not part of `bun run check` - it builds and packs a
+tarball, which is too slow for the inner dev loop - so it runs as its own CI
+job ("Packed tarball imports and resolves every exports key"). Run it
+locally with `bun run test:packaged` before a release-shaped change to `package.json`'s
 `exports` or `files`.

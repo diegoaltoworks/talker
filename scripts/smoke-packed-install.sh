@@ -124,6 +124,35 @@ const twilio = await import("@diegoaltoworks/talker/twilio");
 assert(typeof twilio.sendSMS === "function", "subpath exports sendSMS");
 assert(typeof twilio.sendWhatsApp === "function", "subpath exports sendWhatsApp");
 
+// The packaged language/ and prompts/ directories are located relative to the
+// running module, and that resolution is the one thing that genuinely differs
+// between source, the ESM bundle and the CJS bundle. Resolving an export only
+// proves the module loaded, so exercise a real lookup of each asset kind in
+// both bundles and compare it against the shipped file: a bundle that cannot
+// reach its assets answers with the inlined defaults instead of failing loudly.
+const french = JSON.parse(fs.readFileSync(path.join(pkgDir, "language/fr.json"), "utf8"));
+const incoming = fs.readFileSync(path.join(pkgDir, "prompts/incoming.md"), "utf8");
+const outgoing = fs.readFileSync(path.join(pkgDir, "prompts/outgoing.md"), "utf8");
+
+for (const [format, mod] of [["esm", talker], ["cjs", req("@diegoaltoworks/talker")]]) {
+  assert(
+    mod.loadPhrases("fr").greeting === french.greeting,
+    `${format}: loadPhrases reads the packaged language file`,
+  );
+  assert(
+    mod.getPhrase("fr", "transfer") === french.transfer,
+    `${format}: getPhrase resolves through the packaged language file`,
+  );
+  assert(
+    mod.getIncomingPrompt({ config: {} }) === incoming,
+    `${format}: getIncomingPrompt reads the packaged prompt file`,
+  );
+  assert(
+    mod.getOutgoingPrompt({ config: {} }) === outgoing,
+    `${format}: getOutgoingPrompt reads the packaged prompt file`,
+  );
+}
+
 // Test scaffolding and declaration maps are build fallout, not API: the maps
 // point at sources this package does not publish.
 const stray = [];

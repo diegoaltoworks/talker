@@ -74,7 +74,12 @@ export {
 } from "./core/phrases";
 
 // Core modules (for advanced customization)
-export { processIncoming, processOutgoing } from "./core/processing";
+export {
+  getIncomingPrompt,
+  getOutgoingPrompt,
+  processIncoming,
+  processOutgoing,
+} from "./core/processing";
 // TwiML generators
 export {
   acknowledgmentTwiml,

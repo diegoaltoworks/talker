@@ -8,6 +8,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Phrases, PhraseValue } from "../types";
+import { resolvePackagedDir } from "./assets";
 import { logger } from "./logger";
 
 /** A phrase file as read off disk, before validation - any key may be missing or malformed. */
@@ -147,22 +148,10 @@ const ENGLISH_FALLBACK: Phrases = {
 
 /**
  * Resolve the built-in language directory path.
- * Works both in source (src/core/) and in npm package (dist/).
+ * Works in source (src/core/) and in both published bundles.
  */
 function resolveBuiltinLanguageDir(): string | undefined {
-  // Try common locations relative to this file
-  const candidates = [
-    join(__dirname, "../../language"), // source: src/core/ -> language/
-    join(__dirname, "../language"), // dist: dist/ -> language/
-  ];
-
-  for (const dir of candidates) {
-    if (existsSync(dir)) {
-      return dir;
-    }
-  }
-
-  return undefined;
+  return resolvePackagedDir("language");
 }
 
 /**

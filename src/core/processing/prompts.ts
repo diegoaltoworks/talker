@@ -8,6 +8,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { TalkerDependencies } from "../../types";
+import { resolvePackagedDir } from "../assets";
 import { logger } from "../logger";
 
 let incomingPrompt: string | null = null;
@@ -20,20 +21,14 @@ function loadPromptFile(filename: string, customPath?: string): string | undefin
     return readFileSync(customPath, "utf-8");
   }
 
-  // Try common locations relative to this file
-  const candidates = [
-    join(__dirname, "../../../prompts", filename), // source: src/core/processing/ -> prompts/
-    join(__dirname, "../../prompts", filename), // dist: dist/ -> prompts/
-    join(__dirname, "../prompts", filename), // flat dist
-  ];
-
-  for (const path of candidates) {
-    if (existsSync(path)) {
-      return readFileSync(path, "utf-8");
-    }
+  // Then the prompts/ directory that ships with the package
+  const builtinDir = resolvePackagedDir("prompts");
+  if (!builtinDir) {
+    return undefined;
   }
 
-  return undefined;
+  const path = join(builtinDir, filename);
+  return existsSync(path) ? readFileSync(path, "utf-8") : undefined;
 }
 
 const DEFAULT_INCOMING_PROMPT = `# Incoming Message Processor

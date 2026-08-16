@@ -8,7 +8,9 @@
 import type { Channel, TalkerDependencies } from "../../types";
 import { addMessage, resolveLanguage } from "../context";
 import { getErrorMessage } from "../errors";
+import { resolveReplyLanguage } from "../language";
 import { logger } from "../logger";
+import { getPhrase } from "../phrases";
 import { callOpenAI } from "./openai";
 import { getOutgoingPrompt } from "./prompts";
 
@@ -22,9 +24,16 @@ export async function processOutgoing(
   channel: Channel = "call",
 ): Promise<string> {
   try {
-    const language = resolveLanguage(phoneNumber);
+    const detectedLanguage = resolveLanguage(phoneNumber);
+    const { replyLanguage, mismatch } = resolveReplyLanguage(
+      detectedLanguage,
+      deps.config.replyLanguages,
+    );
     const prompt = getOutgoingPrompt(deps);
-    const promptWithContext = `${prompt}\n\n---\nChannel: ${channel}\nRespond in: ${language}`;
+    const mismatchInstruction = mismatch
+      ? `\n${getPhrase(replyLanguage, "replyLanguageMismatch", deps.config.languageDir)}`
+      : "";
+    const promptWithContext = `${prompt}\n\n---\nChannel: ${channel}\nRespond in: ${replyLanguage}${mismatchInstruction}`;
 
     const result = await callOpenAI(deps, promptWithContext, botResponse, {
       phoneNumber,
@@ -38,7 +47,8 @@ export async function processOutgoing(
       channel,
       in: botResponse,
       out: result,
-      lang: language,
+      lang: replyLanguage,
+      ...(mismatch ? { detectedLang: detectedLanguage } : {}),
     });
 
     return result || botResponse;

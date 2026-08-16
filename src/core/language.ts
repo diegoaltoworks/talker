@@ -36,3 +36,39 @@ export function normalizeLanguage(language: unknown, where: string): string {
   }
   return DEFAULT_LANGUAGE;
 }
+
+/** Which language to reply in, and whether that differs from what was detected. */
+export interface ReplyLanguageResolution {
+  replyLanguage: string;
+  mismatch: boolean;
+}
+
+/**
+ * Narrow a detected language down to one `processOutgoing` is willing to
+ * reply in, per `TalkerConfig.replyLanguages`.
+ *
+ * Detection stays unrestricted regardless of this config - a caller in any
+ * language is still understood - this only picks the reply language.
+ * `replyLanguages` unset or empty: unrestricted, the detected language
+ * passes through untouched and `mismatch` is always false, so unconfigured
+ * behavior is unchanged. Set: an exact match replies in kind; anything else
+ * falls back to the list's first (default) entry with `mismatch: true`, so
+ * the caller hosting the reply can prepend a short acknowledgment.
+ *
+ * Matching is exact, so `replyLanguages` entries must be the lowercase
+ * codes detection actually emits (`en`, `pt-BR`, ...), the same shape
+ * `isValidLanguageCode` accepts - `'EN'` or a casing mismatch never matches
+ * and silently narrows every reply.
+ */
+export function resolveReplyLanguage(
+  detectedLanguage: string,
+  replyLanguages?: string[],
+): ReplyLanguageResolution {
+  if (!replyLanguages || replyLanguages.length === 0) {
+    return { replyLanguage: detectedLanguage, mismatch: false };
+  }
+  if (replyLanguages.includes(detectedLanguage)) {
+    return { replyLanguage: detectedLanguage, mismatch: false };
+  }
+  return { replyLanguage: replyLanguages[0] as string, mismatch: true };
+}

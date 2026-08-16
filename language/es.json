@@ -16,6 +16,7 @@
   "lostQuestion": "Lo siento, perdi el hilo de su pregunta. Podria repetir?",
   "rateLimited": "Por favor, intentelo de nuevo en un momento.",
   "chatError": "Lo siento, encontre un error al procesar su pregunta.",
+  "replyLanguageMismatch": "Reconozca de forma breve y educada que no puede responder en el idioma de quien llama, luego continue su respuesta en el idioma especificado arriba.",
   "flow": {
     "cancelled": "No hay problema! He cancelado eso. En que mas puedo ayudar?",
     "error": "Lo siento, algo salio mal con eso. Empecemos de nuevo - en que puedo ayudar?",

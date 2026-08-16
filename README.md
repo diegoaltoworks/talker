@@ -160,6 +160,12 @@ interface TalkerConfig {
   // Custom language phrase files directory
   languageDir?: string;
 
+  // Languages processOutgoing is willing to reply in. Detection stays
+  // unrestricted either way; unset (default) replies in whatever was
+  // detected. Set: an exact match replies in kind, anything else replies
+  // in the list's first entry with a brief acknowledgment.
+  replyLanguages?: string[];
+
   // Processing pipeline (pre/post-processing with OpenAI)
   processing?: {
     model?: string;              // Default: "gpt-4o-mini"
@@ -475,6 +481,49 @@ that language's voice. The first turn of a call is the one exception: the
 context has just been cleared and the caller has not spoken yet, so the
 greeting uses the default language. `resolveLanguage(phoneNumber)` is
 exported if you need the same answer in your own handlers.
+
+### Restricting Reply Languages
+
+`languageDir` above overrides *phrase copy* per language; the language
+*detected* is a separate, fixed list (English, French, Dutch, German,
+Spanish, Portuguese today - see [prompts/incoming.md](./prompts/incoming.md)).
+`replyLanguages` is narrower still: it only controls which of those detected
+languages the OpenAI-generated reply text (`processOutgoing`) is willing to
+come back in. Detection is unaffected either way. Useful when an operator can
+only staff replies in a subset of the languages they can be reached in - for
+example, an operator who reads and writes English and Portuguese, but wants
+callers and texters in the other supported languages still understood rather
+than met with silence or a wrong-language reply:
+
+```typescript
+createTelephonyRoutes(app, deps, {
+  replyLanguages: ['en', 'pt'],
+});
+```
+
+With this set, a caller speaking French, Dutch, German or Spanish is still
+understood normally (language detection is unaffected), but the reply text
+lands in English or Portuguese (English here, since it is listed first) and
+opens with a brief acknowledgment that it can't continue in the caller's
+language, before answering the question. A caller in English or Portuguese -
+languages already in the list - gets a reply in kind, no acknowledgment.
+Leaving `replyLanguages` unset keeps today's behavior: the reply always
+matches the detected language.
+
+This narrows the LLM-generated reply text only. On a voice call, the TTS
+voice and the `<Gather>` speech-recognition language are still driven by the
+caller's actual detected language (see "Custom Voices" below) - narrowing
+`replyLanguages` does not change which voice reads the reply back, and every
+other phrase (retries, errors, farewells) still speaks the detected
+language, not the narrowed one. `replyLanguages` entries must be the
+lowercase codes detection emits (`en`, `pt-BR`, not `EN`).
+
+The acknowledgment text comes from `phrases.replyLanguageMismatch` in
+`language/<replyLanguage>.json`, so it can be translated and overridden the
+same way as every other phrase (see "Custom Language Files" above). It is
+worded without naming a specific language, since a language file that
+doesn't override this key falls back to the built-in English copy - naming
+"English" there would contradict a reply narrowed to another language.
 
 ### Custom Prompts
 

@@ -3,6 +3,16 @@
  *
  * Tracks multi-turn conversation history per phone number for the HTTP chatbot client.
  * Only used in standalone mode (plugin mode uses chatter's own conversation handling).
+ *
+ * Module-level singleton, single-process only - see docs/ARCHITECTURE.md's
+ * "Single-process state caveat". Unlike the other maps that section lists,
+ * this one has no TTL sweep, so an entry lives until `clearConversation` is
+ * called or the process restarts; nothing in src/routes/ calls it today.
+ * `conversationId` is minted locally (`crypto.randomUUID()`) purely for
+ * log/DB correlation - it is never sent to the remote chatbot API and does
+ * not change across calls from the same number, so read
+ * `talker_sessions.conversation_id` as "which in-process chatbot
+ * conversation produced this row," not as a per-call identifier.
  */
 
 import { logger } from "../logger";

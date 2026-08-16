@@ -5,6 +5,7 @@
  * All operations are graceful — they return false/skip when the database is not configured.
  */
 
+import { getErrorMessage } from "../core/errors";
 import { logger } from "../core/logger";
 import type { Channel } from "../types";
 import { getDbClient } from "./client";
@@ -94,7 +95,7 @@ export async function upsertSession(session: SessionRecord): Promise<boolean> {
   } catch (error) {
     logger.error("failed to upsert session", {
       sessionId: session.id,
-      error: error instanceof Error ? error.message : "Unknown",
+      error: getErrorMessage(error),
     });
     return false;
   }
@@ -117,7 +118,7 @@ export async function insertMessage(message: MessageRecord): Promise<boolean> {
   } catch (error) {
     logger.error("failed to insert message", {
       messageId: message.id,
-      error: error instanceof Error ? error.message : "Unknown",
+      error: getErrorMessage(error),
     });
     return false;
   }
@@ -194,7 +195,7 @@ export async function updateSessionIncremental(
   } catch (error) {
     logger.error("failed to update session incrementally", {
       phoneNumber,
-      error: error instanceof Error ? error.message : "Unknown",
+      error: getErrorMessage(error),
     });
     return false;
   }
@@ -254,7 +255,7 @@ export async function upsertMessageStatus(record: MessageStatusRecord): Promise<
   } catch (error) {
     logger.error("failed to upsert message status", {
       messageSid: record.messageSid,
-      error: error instanceof Error ? error.message : "Unknown",
+      error: getErrorMessage(error),
     });
     return false;
   }

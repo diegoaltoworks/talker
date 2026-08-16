@@ -29,6 +29,7 @@
 
 import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { startCleanup } from "./core/context";
 import {
   DEFAULT_CLEANUP_INTERVAL_MS,
@@ -112,6 +113,10 @@ export async function createStandaloneServer(config: StandaloneConfig) {
 
   // Create Hono app
   const app = new Hono();
+
+  if (config.cors !== false) {
+    app.use("*", cors());
+  }
 
   // Health check
   app.get("/healthz", (c) => c.text("ok"));

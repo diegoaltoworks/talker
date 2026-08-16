@@ -5,6 +5,7 @@
  * Safe to run multiple times (uses IF NOT EXISTS).
  */
 
+import { getErrorMessage } from "../core/errors";
 import { logger } from "../core/logger";
 import { getDbClient } from "./client";
 
@@ -69,7 +70,7 @@ export async function runMigrations(): Promise<void> {
     logger.info("database migrations completed");
   } catch (error) {
     logger.error("database migration failed", {
-      error: error instanceof Error ? error.message : "Unknown",
+      error: getErrorMessage(error),
     });
     throw error;
   }

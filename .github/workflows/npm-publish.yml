@@ -6,6 +6,16 @@ on:
     types: [completed]
   workflow_dispatch:
 
+# Two publish runs racing would both read the same latest tag, compute the
+# same next version, and one would lose the tag push - or worse, both could
+# succeed against different tags and publish out of order. Serializing here
+# (never cancelling one publish mid-flight for the next) is what makes the
+# tag-collision retry in "Bump version" a rare edge case instead of the
+# common path.
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
 jobs:
   # A human is in the loop on every release, either by authoring the commit that
   # lands on main or by dispatching this workflow. Dependency bumps do not
@@ -49,7 +59,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@f4d14e03ff726c06358e5557344e1da148b56cf7 # v1.2.2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.3.14
 
@@ -88,7 +98,8 @@ jobs:
 
       # The bump type is derived from every commit since the last release tag
       # (not just the triggering one), so a chore/fix/docs merge ships a patch
-      # and only a feat merge ships a minor. See scripts/next-version.ts.
+      # and a feat merge (or any commit with a BREAKING CHANGE: footer) ships
+      # a minor. See scripts/next-version.ts.
       - name: Bump version
         id: bump
         run: |
@@ -101,10 +112,16 @@ jobs:
             BASE_VERSION=$(node -p "require('./package.json').version")
           fi
           RANGE="${LATEST_TAG:+${LATEST_TAG}..}HEAD"
-          BUMP=$(git log "$RANGE" --format='%s' | bun scripts/next-version.ts bump)
+          BUMP=$(git log "$RANGE" --format='%B%x00' | bun scripts/next-version.ts bump)
           NEW_VERSION=$(bun scripts/next-version.ts apply "$BASE_VERSION" "$BUMP")
+          # A collision means the tag this run wants already exists - most
+          # often a concurrent or re-run publish beat this one to it. Retrying
+          # with the original bump would skip straight to the next minor and
+          # leave the whole patch range in between untagged; retrying with
+          # patch instead fills the gap one version at a time until a free
+          # tag is found.
           while git rev-parse --verify --quiet "refs/tags/v${NEW_VERSION}" >/dev/null; do
-            NEW_VERSION=$(bun scripts/next-version.ts apply "$NEW_VERSION" "$BUMP")
+            NEW_VERSION=$(bun scripts/next-version.ts apply "$NEW_VERSION" "patch")
           done
           npm version "$NEW_VERSION" --no-git-tag-version >/dev/null
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT

@@ -26,6 +26,9 @@ trap 'rm -rf "$work"' EXIT
 echo "==> Building dist"
 (cd "$repo" && bun run build >/dev/null)
 
+echo "==> Checking bundle size budgets"
+(cd "$repo" && bun run check:bundle-budgets)
+
 echo "==> Packing tarball"
 tarball="$(cd "$repo" && npm pack --silent --pack-destination "$work")"
 tarball="$work/$tarball"
@@ -187,7 +190,72 @@ walk(path.join(pkgDir, "dist"));
 assert(stray.length === 0, `no test or map declarations shipped (found ${stray.length})`);
 '
 
-echo "==> Type-checking a hono-only host against the packaged .d.ts graph"
+echo "==> Booting the packed artifact and serving one real request over the network"
+# Everything above proves the package imports and resolves - it never proves the
+# built server actually boots and answers a request the way a deployed host
+# would receive one. This starts a real Node HTTP listener wrapping the packed
+# artifact's Hono app, sends a real fetch() over a real socket, and checks the
+# response - the boot-check a static import assertion cannot stand in for.
+node --input-type=module -e '
+import http from "node:http";
+
+const assert = (ok, message) => {
+  if (!ok) {
+    console.error(`FAIL: ${message}`);
+    process.exit(1);
+  }
+  console.log(`ok - ${message}`);
+};
+
+const talker = await import("@diegoaltoworks/talker");
+const app = await talker.createStandaloneServer({
+  openaiApiKey: "test-key",
+  twilio: { authToken: "test-auth-token" },
+});
+
+const server = http.createServer(async (req, res) => {
+  const hasBody = req.method !== "GET" && req.method !== "HEAD";
+  const response = await app.fetch(
+    new Request(`http://localhost${req.url}`, {
+      method: req.method,
+      headers: req.headers,
+      body: hasBody ? req : undefined,
+      duplex: hasBody ? "half" : undefined,
+    }),
+  );
+  res.writeHead(response.status, Object.fromEntries(response.headers));
+  res.end(Buffer.from(await response.arrayBuffer()));
+});
+
+await new Promise((resolve) => server.listen(0, resolve));
+const { port } = server.address();
+
+try {
+  const res = await fetch(`http://localhost:${port}/healthz`, {
+    headers: { Origin: "https://example.com" },
+  });
+  assert(res.status === 200, "packed artifact answers a real request over a real socket");
+  assert((await res.text()) === "ok", "the real request reaches the actual route handler");
+  assert(
+    res.headers.get("access-control-allow-origin") === "*",
+    "the bundled hono/cors wiring is live in the packed artifact, not just in source",
+  );
+
+  const callRes = await fetch(`http://localhost:${port}/call`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ From: "+15551234567" }).toString(),
+  });
+  assert(
+    callRes.status === 403,
+    "unsigned webhook traffic is refused by the mounted route tree, not just /healthz",
+  );
+} finally {
+  server.close();
+}
+'
+
+echo "==> Proving a hono-only host type-checks against the packaged .d.ts graph with skipLibCheck: true"
 # The .d.ts graph re-exports types from every optional peer's own type
 # declarations (chatter, @libsql/client, openai) for consumers that DO have
 # them installed. A host that doesn't still needs the whole graph to resolve

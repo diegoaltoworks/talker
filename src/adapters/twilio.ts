@@ -5,6 +5,7 @@
  * TwiML generation is handled by src/core/twiml.ts.
  */
 
+import { getErrorMessage } from "../core/errors";
 import { logger } from "../core/logger";
 import type { TwilioConfig } from "../types";
 
@@ -111,7 +112,7 @@ export async function sendSMS(
   } catch (error) {
     logger.error("SMS send error", {
       phoneNumber: to,
-      error: error instanceof Error ? error.message : "Unknown",
+      error: getErrorMessage(error),
     });
     return false;
   }
@@ -168,7 +169,7 @@ export async function sendWhatsApp(
   } catch (error) {
     logger.error("WhatsApp send error", {
       phoneNumber: to,
-      error: error instanceof Error ? error.message : "Unknown",
+      error: getErrorMessage(error),
     });
     return false;
   }

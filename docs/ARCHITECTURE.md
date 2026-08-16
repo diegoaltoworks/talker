@@ -110,12 +110,26 @@ is a deliberate scope boundary, not an oversight - call it out in any change
 that adds new in-process state, and prefer the existing `db/` persistence
 layer when state must survive a restart or be shared across instances.
 
+`src/core/chatbot/conversations.ts` (the standalone HTTP chatbot client's
+per-phone-number history, keyed the same way) is the same shape but has no
+`setInterval` sweep at all, so it is not just single-process but genuinely
+unbounded for a caller who never triggers `clearConversation` - nothing
+calls it in `src/routes/`. Its `conversationId` is a `crypto.randomUUID()`
+minted locally for log/DB correlation; it is never sent to the remote
+chatbot and is not cleared when a call or message session ends, so two
+calls from the same number reuse the same id until the process restarts.
+`talker_sessions.conversation_id` (see `src/db/persist.ts`) should be read
+as "which in-process chatbot conversation produced this row," not as a
+per-call or per-session identifier.
+
 - Implementation: `src/middleware/rate-limit.ts`, `src/routes/call/pending.ts`,
-  `src/core/context.ts` (see the "module-level singleton" doc comments in
-  each)
+  `src/core/context.ts`, `src/core/chatbot/conversations.ts` (see the
+  "module-level singleton" doc comments in each)
 - Test: `src/middleware/rate-limit.test.ts`, `src/core/context.test.ts`
   cover the single-process behavior directly; there is intentionally no
-  multi-process test, because there is no multi-process guarantee to prove
+  multi-process test, because there is no multi-process guarantee to prove.
+  `src/core/chatbot/conversations.ts` has no dedicated test file yet - its
+  `conversationId` behavior is covered indirectly via `src/db/persist.test.ts`
 
 ## No-untested-numbers rule
 
@@ -173,11 +187,14 @@ behavior and checking a return value:
 | No raw `fetch`/URL literal to `api.openai.com` outside `openai-request.ts` | Every outbound OpenAI call resolves its URL through the one place that honors a configurable base URL, rather than a call site bypassing it with the public default | `src/seam-guards.test.ts` |
 | No hardcoded caller-facing `response`/`smsContent`/`whatsappContent` in `src/flows/` | Flow replies come from the phrase files, so a caller mid-flow hears their own language rather than an English default | `src/flows/phrase-guard.test.ts` |
 | Every `package.json` `exports` key resolves under both `import` and `require`, ships its declared types, and carries no test/map declarations | A subpath the build doesn't produce can't reach a consumer silently | `scripts/smoke-packed-install.sh`, run via `bun run test:packaged` |
+| Every emitted `dist/**/*.{js,mjs}` bundle stays under its budget in `scripts/bundle-budgets.ts`, and every emitted bundle has a budget entry | Bundle-size creep (a new dependency pulled in, an accidental non-external import) is a build failure, not a silent regression discovered later | `scripts/bundle-budgets.ts`, run via `bun run check:bundle-budgets` |
 
-All but the last are `bun test` files, so `bun run check` (which runs
+The first three are `bun test` files, so `bun run check` (which runs
 `bun test`) fails on a violation the same way it fails on a broken test. The
-packed-tarball gate is not part of `bun run check` - it builds and packs a
-tarball, which is too slow for the inner dev loop - so it runs as its own CI
-job ("Packed tarball imports and resolves every exports key"). Run it
-locally with `bun run test:packaged` before a release-shaped change to `package.json`'s
-`exports` or `files`.
+last two build `dist/` first (a packed tarball for the exports gate, plain
+`esbuild` output for the bundle-budget gate) - too slow for the inner dev
+loop - so they run as their own CI steps inside the "Packed tarball imports
+and resolves every exports key" job, which already builds before testing.
+Run them locally with `bun run test:packaged` (covers both) before a
+release-shaped change to `package.json`'s `exports`/`files` or to a build
+entry point.

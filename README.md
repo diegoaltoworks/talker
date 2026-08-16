@@ -64,7 +64,7 @@ Bun.serve({ port: 8181, fetch: app.fetch });
 import { createStandaloneServer } from '@diegoaltoworks/talker';
 
 const app = await createStandaloneServer({
-  openaiApiKey: process.env.OPENAI_CHATGPT_KEY || '',
+  openaiApiKey: process.env.OPENAI_API_KEY || '',
   // Required: webhooks refuse to mount without it (see Webhook signature validation)
   twilio: { authToken: process.env.TWILIO_AUTH_TOKEN },
   chatbot: {
@@ -86,6 +86,17 @@ them for types only and loads them on first use, so importing the package never
 fails because one is missing, and installing one you don't need is never
 necessary. A feature whose peer is absent says so — naming the package and the
 fix — at the point of use rather than at import.
+
+That guarantee is about `import`, not `tsc`: talker's `.d.ts` graph still
+references each optional peer's own type declarations (for the consumers that
+do have them installed), and TypeScript must resolve that whole graph to bind
+the package's shape even for a host using none of those features. Set
+`"skipLibCheck": true` in your `tsconfig.json` — already the effective default
+for most bundler-generated configs (Vite, Next.js, etc.) and the standard
+recommendation for any project depending on third-party packages — and this is
+a non-issue; without it, a hono-only host's `tsc` run fails to resolve
+`@diegoaltoworks/chatter`, `@libsql/client` and `openai` even though none of
+them are installed or needed.
 
 | Package | Needed for | Without it |
 | --- | --- | --- |
@@ -375,6 +386,11 @@ config/flows/addNumbers/
   }
 }
 ```
+
+An optional `"contractVersion"` (integer) pins `flow.json` to a version of
+this shape; omit it and talker treats the flow as version 1, the only version
+that currently exists. A flow naming a version this build does not understand
+is skipped with a logged error rather than loaded and misinterpreted.
 
 **handler.ts:**
 ```typescript

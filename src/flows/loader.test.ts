@@ -126,4 +126,102 @@ describe("loadFlowsFromDirectory", () => {
 
     expect(flows.has("arrayprops")).toBe(false);
   });
+
+  it("defaults contractVersion to 1 when flow.json omits it", async () => {
+    writeFlow(flowsDir, "unversioned", {
+      id: "unversioned",
+      name: "Unversioned",
+      description: "No contractVersion field",
+      triggerKeywords: ["unversioned"],
+      schema: { type: "object", properties: {}, required: [] },
+    });
+
+    const flows = await loadFlowsFromDirectory(flowsDir);
+
+    expect(flows.get("unversioned")?.definition.contractVersion).toBe(1);
+  });
+
+  it("loads a flow with an explicit, supported contractVersion", async () => {
+    writeFlow(flowsDir, "versioned", {
+      id: "versioned",
+      name: "Versioned",
+      description: "Explicit contractVersion",
+      triggerKeywords: ["versioned"],
+      schema: { type: "object", properties: {}, required: [] },
+      contractVersion: 1,
+    });
+
+    const flows = await loadFlowsFromDirectory(flowsDir);
+
+    expect(flows.get("versioned")?.definition.contractVersion).toBe(1);
+  });
+
+  it("skips a flow whose contractVersion is newer than this loader understands", async () => {
+    writeFlow(flowsDir, "future", {
+      id: "future",
+      name: "Future",
+      description: "Contract from the future",
+      triggerKeywords: ["future"],
+      schema: { type: "object", properties: {}, required: [] },
+      contractVersion: 99,
+    });
+
+    const flows = await loadFlowsFromDirectory(flowsDir);
+
+    expect(flows.has("future")).toBe(false);
+  });
+
+  it("skips a flow whose contractVersion is not a positive integer", async () => {
+    writeFlow(flowsDir, "fractional", {
+      id: "fractional",
+      name: "Fractional",
+      description: "Non-integer contractVersion",
+      triggerKeywords: ["fractional"],
+      schema: { type: "object", properties: {}, required: [] },
+      contractVersion: 1.5,
+    });
+
+    const flows = await loadFlowsFromDirectory(flowsDir);
+
+    expect(flows.has("fractional")).toBe(false);
+  });
+
+  it("skips a flow whose contractVersion is zero or negative", async () => {
+    writeFlow(flowsDir, "zeroed", {
+      id: "zeroed",
+      name: "Zeroed",
+      description: "Non-positive contractVersion",
+      triggerKeywords: ["zeroed"],
+      schema: { type: "object", properties: {}, required: [] },
+      contractVersion: 0,
+    });
+    writeFlow(flowsDir, "negative", {
+      id: "negative",
+      name: "Negative",
+      description: "Negative contractVersion",
+      triggerKeywords: ["negative"],
+      schema: { type: "object", properties: {}, required: [] },
+      contractVersion: -1,
+    });
+
+    const flows = await loadFlowsFromDirectory(flowsDir);
+
+    expect(flows.has("zeroed")).toBe(false);
+    expect(flows.has("negative")).toBe(false);
+  });
+
+  it("skips a flow whose contractVersion is a string, not a number", async () => {
+    writeFlow(flowsDir, "stringed", {
+      id: "stringed",
+      name: "Stringed",
+      description: "contractVersion given as a JSON string",
+      triggerKeywords: ["stringed"],
+      schema: { type: "object", properties: {}, required: [] },
+      contractVersion: "1",
+    });
+
+    const flows = await loadFlowsFromDirectory(flowsDir);
+
+    expect(flows.has("stringed")).toBe(false);
+  });
 });

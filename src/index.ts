@@ -40,6 +40,10 @@
 export type { SendMessageOptions } from "./adapters/twilio";
 // Twilio adapter
 export { sendSMS, sendWhatsApp, stripWhatsAppPrefix } from "./adapters/twilio";
+// clearAllContexts, incrementNoSpeechRetries and resetNoSpeechRetries are
+// internal helpers of ./core/context (see their @deprecated tags there)
+// re-exported here only because this barrel re-exports the whole module;
+// they are candidates for removal from this barrel in a future release.
 export {
   addMessage,
   clearActiveFlow,
@@ -150,6 +154,7 @@ export type {
   TwilioConfig,
   VoiceConfig,
 } from "./types";
+export { CURRENT_FLOW_CONTRACT_VERSION } from "./types";
 // Voice capabilities (STT, TTS, Ogg/Opus inspection, daily spend guards).
 // Channel-agnostic factories with injected clients — see src/voice/index.ts.
 export type {

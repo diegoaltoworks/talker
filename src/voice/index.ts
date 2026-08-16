@@ -19,6 +19,10 @@ export type {
   VoiceLimitsEnv,
   VoiceLimitsStore,
 } from "./limits";
+// GLOBAL_LIMIT_KEY, pickDailyLimit and utcDayKey are internal helpers of
+// ./limits (see their @deprecated tags there) re-exported here only because
+// this barrel re-exports the whole module; they are candidates for removal
+// from this barrel in a future release.
 export {
   createVoiceLimiter,
   DEFAULT_GLOBAL_DAILY_LIMIT,

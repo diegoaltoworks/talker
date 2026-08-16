@@ -12,7 +12,7 @@ import { createStandaloneServer } from "../src";
 async function start() {
   const app = await createStandaloneServer({
     // Required: OpenAI key for the pre/post-processing pipeline
-    openaiApiKey: process.env.OPENAI_CHATGPT_KEY || "",
+    openaiApiKey: process.env.OPENAI_API_KEY || "",
 
     // Remote chatbot API (e.g., a chatter instance)
     chatbot: {

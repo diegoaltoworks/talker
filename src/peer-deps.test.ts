@@ -59,6 +59,68 @@ function sourceFiles(dir: string): string[] {
 }
 
 /**
+ * True when a `from`-clause imports nothing but types, so it compiles away
+ * entirely and cannot be load-bearing at runtime.
+ *
+ * `import type { ... }` (clause starts with the `type` keyword) is the
+ * common case, but TS also allows an inline modifier on individual named
+ * imports — `import { type Foo } from "openai"` — which is equally
+ * type-only even though the clause itself does not start with `type`. A
+ * clause is type-only either way, or when every entry in a brace-delimited
+ * named-import list carries the inline modifier.
+ */
+function isTypeOnlyClause(clause: string): boolean {
+  if (/^type\b/.test(clause)) return true;
+  const braces = clause.match(/^\{([^}]*)\}$/);
+  if (!braces) return false;
+  const entries = braces[1]
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  return entries.length > 0 && entries.every((entry) => /^type\b/.test(entry));
+}
+
+/**
+ * Blanks out comments and string/template literals, preserving line breaks
+ * and the length of everything else, so a later scan for code shapes (an
+ * `import(` call, a brace) cannot match text that only *looks* like code
+ * because it sits inside a comment or a string. Line/column positions of
+ * real matches are unaffected, which matters because the scope check below
+ * walks the surrounding source by character offset.
+ */
+function stripCommentsAndStrings(source: string): string {
+  return source.replace(
+    /\/\/[^\n]*|\/\*[\s\S]*?\*\/|`(?:\\.|[^`\\])*`|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g,
+    (match) => match.replace(/[^\n]/g, " "),
+  );
+}
+
+/**
+ * True when the character at `index` sits outside every enclosing `{...}`
+ * block — i.e. is not inside a function body (deferred until called), an
+ * `if`/`try`/`for` block, or any other braced construct — and is not the
+ * body of a brace-less arrow function (`() => import(...)`), which is how a
+ * lazy loader reads when short enough that the formatter keeps it on one
+ * line. `source` must already be comment/string-stripped so brace counting
+ * only sees real code.
+ *
+ * This is a heuristic, not a parser: it cannot distinguish a function body
+ * from a non-function block at the same brace depth (see the "known
+ * limitation" case in the test below), but it does correctly admit the
+ * deferred, in-function form every first-use loader in this codebase uses,
+ * while catching a bare top-level call with no wrapping at all.
+ */
+function isInsideDeferredScope(source: string, index: number): boolean {
+  let depth = 0;
+  for (let i = 0; i < index; i++) {
+    if (source[i] === "{") depth++;
+    else if (source[i] === "}") depth--;
+  }
+  if (depth > 0) return true;
+  return /=>\s*$/.test(source.slice(0, index));
+}
+
+/**
  * Specifiers of every top-level import that survives to runtime.
  *
  * Statement-based rather than line-based: a multi-line `import type { ... }
@@ -66,11 +128,23 @@ function sourceFiles(dir: string): string[] {
  * a per-line check reports it as a value import. `export ... from "x"` counts
  * too — a re-export loads the module exactly like an import does, and this
  * package's entry point is built almost entirely from re-export lines.
- * Side-effect imports (`import "x"`) count as value imports; `import type` and
- * `export type` do not.
+ * Side-effect imports (`import "x"`) count as value imports; `import type`,
+ * `export type` and an all-`type`-modifier named-import list do not.
  *
  * The clause cannot contain `;`, which stops the lazy match from running past
  * the end of a preceding statement and misreading two statements as one.
+ *
+ * `^` is anchored at column 0, not merely start-of-line, deliberately: every
+ * static `import`/`export` declaration in valid ESM is a top-level statement
+ * (the parser hoists them; they cannot legally appear indented inside a
+ * block), so column 0 is where a real one always lands.
+ *
+ * A *dynamic* `import()` call is a different shape: it is an expression, not
+ * a declaration, so it can legally appear anywhere — including deferred
+ * inside a function, which is how every sanctioned first-use loader in this
+ * codebase defers its peer import. A bare top-level `await import(...)` is
+ * just as load-bearing as a static import, though, so it is scanned
+ * separately with `isInsideDeferredScope` rather than the column-0 anchor.
  */
 function runtimeImportSpecifiers(source: string): string[] {
   const specifiers: string[] = [];
@@ -78,12 +152,27 @@ function runtimeImportSpecifiers(source: string): string[] {
   const declarations = /^(?:import|export)\s+(?<clause>[^;]*?)\s*from\s*["'](?<spec>[^"']+)["']/gm;
   for (const match of source.matchAll(declarations)) {
     const { clause, spec } = match.groups as { clause: string; spec: string };
-    if (!/^type\b/.test(clause)) specifiers.push(spec);
+    if (!isTypeOnlyClause(clause)) specifiers.push(spec);
   }
 
   const sideEffects = /^import\s*["'](?<spec>[^"']+)["']/gm;
   for (const match of source.matchAll(sideEffects)) {
     specifiers.push((match.groups as { spec: string }).spec);
+  }
+
+  const stripped = stripCommentsAndStrings(source);
+  // Matched against the ORIGINAL source, not the stripped one, so a real
+  // call's specifier text survives (stripping blanks string contents too,
+  // which would erase the very specifier this is trying to read). `stripped`
+  // is instead used to confirm the match itself is real code — not text that
+  // merely looks like a call inside a comment or a string literal — and to
+  // count brace depth without braces that live inside a string throwing it off.
+  const dynamicImports = /\bimport\s*\(\s*["'](?<spec>[^"']+)["']/g;
+  for (const match of source.matchAll(dynamicImports)) {
+    const isRealCode = stripped.startsWith("import", match.index);
+    if (isRealCode && !isInsideDeferredScope(stripped, match.index)) {
+      specifiers.push((match.groups as { spec: string }).spec);
+    }
   }
 
   return specifiers;
@@ -128,6 +217,33 @@ describe("optional peer dependencies", () => {
       ['export * from "openai";\n', ["openai"]],
       // The clause must not run past the end of the statement before it.
       ['import "./instrument";\nimport type { Client } from "@libsql/client";\n', ["./instrument"]],
+      // An inline `type` modifier on every named import is type-only even
+      // though the clause itself does not start with the `type` keyword.
+      ['import { type Client } from "@libsql/client";\n', []],
+      // A mix of type and value entries is still a value import.
+      ['import { type Client, createClient } from "@libsql/client";\n', ["@libsql/client"]],
+      // A bare top-level dynamic import runs at module load, exactly like a
+      // static import — unlike the deferred form every sanctioned first-use
+      // loader in this codebase uses.
+      ['await import("openai");\n', ["openai"]],
+      ['import("openai");\n', ["openai"]],
+      // The deferred form is the sanctioned first-use-loader pattern and
+      // must not be flagged, whether wrapped in a braced function body or
+      // written as a brace-less arrow (both shapes appear in this codebase,
+      // the latter whenever the call is short enough that the formatter
+      // keeps it on one line instead of wrapping it under `=>`).
+      ['export function load() {\n  return import("openai");\n}\n', []],
+      ['export const load = () => import("openai");\n', []],
+      ['export const load = () =>\n  import("openai");\n', []],
+      // Code-shaped text inside a comment or a string is not code.
+      ['// a deferred import("openai") is fine\n', []],
+      ['const msg = "call import(\\"openai\\") yourself";\n', []],
+      // Known limitation: a dynamic import wrapped in a non-function block
+      // at true module scope (not deferred — this runs immediately, same as
+      // the bare form above) shares its brace depth with a function body and
+      // is not distinguished from one. Not currently caught; documented here
+      // rather than left silently unverified.
+      ['if (needsOpenAI) {\n  await import("openai");\n}\n', []],
     ];
 
     for (const [source, expected] of cases) {

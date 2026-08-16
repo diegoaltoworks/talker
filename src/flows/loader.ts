@@ -13,6 +13,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { logger } from "../core/logger";
 import type { FlowDefinition, FlowHandler, FlowPrefill, LoadedFlow } from "../types";
+import { CURRENT_FLOW_CONTRACT_VERSION } from "../types";
 
 /**
  * Load all flows from a directory
@@ -92,6 +93,17 @@ async function loadFlow(flowsDir: string, flowName: string): Promise<LoadedFlow>
     // TypeError deep in the flow pipeline instead of a clear error here.
     throw new Error(`Flow ${flowName} has no schema.properties`);
   }
+
+  if (definition.contractVersion !== undefined) {
+    const version = definition.contractVersion;
+    if (!Number.isInteger(version) || version < 1 || version > CURRENT_FLOW_CONTRACT_VERSION) {
+      throw new Error(
+        `Flow ${flowName}: "contractVersion" ${JSON.stringify(version)} is not supported ` +
+          `(this loader understands versions 1 through ${CURRENT_FLOW_CONTRACT_VERSION})`,
+      );
+    }
+  }
+  definition.contractVersion ??= CURRENT_FLOW_CONTRACT_VERSION;
 
   const handlerModule = await import(handlerPath);
   const handler = handlerModule.execute as FlowHandler;

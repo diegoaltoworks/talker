@@ -7,8 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Several `src/core/context.ts` log calls interpolated the caller's phone
+  number straight into the log message string (e.g. `` `context created for
+  ${phoneNumber}` ``), which bypassed `logger`'s field-based redaction — that
+  only redacts values under keys named `phoneNumber`/`phone`, not text baked
+  into the message itself. Phone numbers now go through as a data field on
+  every call, so they get redacted like everywhere else.
+- The flow loader's schema check (`src/flows/loader.ts`) verified that
+  `flow.json`'s `schema` object was non-empty, not that it had a `properties`
+  key — a schema missing `properties` entirely passed validation here and
+  then threw a `TypeError` deep inside parameter extraction instead of a
+  clear load-time error. The check now validates `schema.properties`
+  directly, which is also the exact shape a zero-parameter flow needs to keep
+  working (this loader's reason for not delegating to chatter's loader).
+
 ### Changed
 
+- The `sanitizedPhone`/`sanitized` locals in `src/db/persist.ts` and
+  `src/db/sessions.ts` are renamed to `normalizedPhone`/`normalized` — they
+  strip formatting characters for session-id stability, not for privacy; the
+  number is stored as plaintext in `talker_sessions.phone_number` either way.
+  No behavior change.
 - SMS and WhatsApp routing collapsed into a single parameterized
   `src/routes/messaging/` factory (`messagingRoutes(deps, registry, channel)`)
   instead of two near-identical route trees. `smsRoutes` and `whatsappRoutes`

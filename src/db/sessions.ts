@@ -34,9 +34,16 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
+/**
+ * Strips formatting (+, spaces, dashes) so the same caller always produces
+ * the same session id regardless of how Twilio punctuated the number this
+ * time. Digits-only, not a privacy measure - the number is stored as
+ * plaintext in `talker_sessions.phone_number` by design; log redaction is a
+ * separate concern handled in ../core/logger.ts.
+ */
 export function generateSessionId(phoneNumber: string, startTime: number): string {
-  const sanitized = phoneNumber.replace(/[^0-9]/g, "");
-  return `${sanitized}-${startTime}`;
+  const normalized = phoneNumber.replace(/[^0-9]/g, "");
+  return `${normalized}-${startTime}`;
 }
 
 /**
@@ -156,13 +163,13 @@ export async function updateSessionIncremental(
   if (!client || messages.length === 0) return false;
 
   try {
-    const sanitizedPhone = phoneNumber.replace(/[^0-9]/g, "");
+    const normalizedPhone = phoneNumber.replace(/[^0-9]/g, "");
     const sessionId = generateSessionId(phoneNumber, context.createdAt);
     const now = Date.now();
 
     await upsertSession({
       id: sessionId,
-      phoneNumber: sanitizedPhone,
+      phoneNumber: normalizedPhone,
       channel,
       reason: "ended",
       language,

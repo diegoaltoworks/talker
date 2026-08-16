@@ -63,12 +63,14 @@ export async function sendSMS(
   options?: SendMessageOptions,
 ): Promise<boolean> {
   if (!config.accountSid || !config.authToken) {
-    logger.warn("Twilio credentials not configured, skipping SMS send", { to });
+    logger.warn("Twilio credentials not configured, skipping SMS send", { phoneNumber: to });
     return false;
   }
 
   if (!config.phoneNumber && !config.messagingServiceSid) {
-    logger.warn("No phone number or messaging service configured, skipping SMS send", { to });
+    logger.warn("No phone number or messaging service configured, skipping SMS send", {
+      phoneNumber: to,
+    });
     return false;
   }
 
@@ -89,16 +91,16 @@ export async function sendSMS(
 
     if (!response.ok) {
       const error = await response.text();
-      logger.error("SMS send failed", { to, status: response.status, error });
+      logger.error("SMS send failed", { phoneNumber: to, status: response.status, error });
       return false;
     }
 
     const data = (await response.json()) as { sid: string };
-    logger.info("SMS sent successfully", { to, messageSid: data.sid });
+    logger.info("SMS sent successfully", { phoneNumber: to, messageSid: data.sid });
     return true;
   } catch (error) {
     logger.error("SMS send error", {
-      to,
+      phoneNumber: to,
       error: error instanceof Error ? error.message : "Unknown",
     });
     return false;
@@ -118,12 +120,14 @@ export async function sendWhatsApp(
   options?: SendMessageOptions,
 ): Promise<boolean> {
   if (!config.accountSid || !config.authToken) {
-    logger.warn("Twilio credentials not configured, skipping WhatsApp send", { to });
+    logger.warn("Twilio credentials not configured, skipping WhatsApp send", { phoneNumber: to });
     return false;
   }
 
   if (!config.phoneNumber && !config.messagingServiceSid) {
-    logger.warn("No phone number or messaging service configured, skipping WhatsApp send", { to });
+    logger.warn("No phone number or messaging service configured, skipping WhatsApp send", {
+      phoneNumber: to,
+    });
     return false;
   }
 
@@ -164,16 +168,16 @@ export async function sendWhatsApp(
 
     if (!response.ok) {
       const error = await response.text();
-      logger.error("WhatsApp send failed", { to, status: response.status, error });
+      logger.error("WhatsApp send failed", { phoneNumber: to, status: response.status, error });
       return false;
     }
 
     const data = (await response.json()) as { sid: string };
-    logger.info("WhatsApp message sent successfully", { to, messageSid: data.sid });
+    logger.info("WhatsApp message sent successfully", { phoneNumber: to, messageSid: data.sid });
     return true;
   } catch (error) {
     logger.error("WhatsApp send error", {
-      to,
+      phoneNumber: to,
       error: error instanceof Error ? error.message : "Unknown",
     });
     return false;

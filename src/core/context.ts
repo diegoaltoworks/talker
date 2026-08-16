@@ -26,7 +26,7 @@ export function startCleanup(ttlMs: number, intervalMs: number, onTick?: () => v
     for (const [phoneNumber, context] of contexts) {
       if (now - context.lastActivity > ttlMs) {
         contexts.delete(phoneNumber);
-        logger.info(`context expired for ${phoneNumber}`);
+        logger.info("context expired", { phoneNumber });
       }
     }
     try {
@@ -69,7 +69,7 @@ export function getOrCreateContext(
       lastActivity: Date.now(),
     };
     contexts.set(phoneNumber, context);
-    logger.info(`context created for ${phoneNumber} (${channel})`);
+    logger.info("context created", { phoneNumber, channel });
   }
 
   context.lastActivity = Date.now();
@@ -90,7 +90,7 @@ export function setDetectedLanguage(phoneNumber: string, language: string): void
   const context = getOrCreateContext(phoneNumber);
   if (!context.detectedLanguage) {
     context.detectedLanguage = language;
-    logger.info(`detected language for ${phoneNumber}: ${language}`);
+    logger.info("detected language", { phoneNumber, language });
   }
 }
 
@@ -151,7 +151,7 @@ export function setActiveFlow(
     attempts: 0,
     startedAt: Date.now(),
   };
-  logger.info(`flow activated for ${phoneNumber}: ${flowName}`);
+  logger.info("flow activated", { phoneNumber, flowName });
 }
 
 export function getActiveFlow(phoneNumber: string): FlowState | null {
@@ -170,7 +170,7 @@ export function clearActiveFlow(phoneNumber: string): void {
   const context = contexts.get(phoneNumber);
   if (!context) return;
 
-  logger.info(`flow cleared for ${phoneNumber}: ${context.activeFlow?.flowName}`);
+  logger.info("flow cleared", { phoneNumber, flowName: context.activeFlow?.flowName });
   context.activeFlow = null;
 }
 

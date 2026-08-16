@@ -117,19 +117,15 @@ wasteful rather than wrong.
 
 ```typescript
 interface TalkerConfig {
-  // Remote chatbot API (standalone mode — not needed in plugin mode)
-  chatbot?: {
-    url: string;               // e.g., "https://bot.example.com/api/public/chat"
-    apiKey?: string;           // Sent as x-api-key header
-    systemMessage?: string;    // Override default system prompt
-  };
-
   // Twilio credentials. `authToken` is required to mount the webhooks:
   // it is what validates the X-Twilio-Signature header.
   twilio?: {
     accountSid?: string;
     authToken?: string;
     phoneNumber?: string;
+    // Twilio Messaging Service SID. When set, outbound messages use
+    // MessagingServiceSid instead of From (sender pool, sticky sender, compliance).
+    messagingServiceSid?: string;
   };
 
   // Public URL webhooks are received on (e.g. "https://bot.example.com").
@@ -165,6 +161,20 @@ interface TalkerConfig {
     thinkingAcknowledgmentEnabled?: boolean; // "One moment please" pattern
   };
 
+  // Remote chatbot API (standalone mode — not needed in plugin mode)
+  chatbot?: {
+    url: string;               // e.g., "https://bot.example.com/api/public/chat"
+    apiKey?: string;           // Sent as x-api-key header
+    systemMessage?: string;    // Override default system prompt
+  };
+
+  // Database config for session persistence. In plugin mode, falls back to
+  // chatter's database config.
+  database?: {
+    url: string;       // Turso/libSQL database URL
+    authToken: string; // Turso auth token
+  };
+
   // Override OpenAI key (falls back to chatter's key in plugin mode)
   openaiApiKey?: string;
 
@@ -173,6 +183,9 @@ interface TalkerConfig {
 
   // Conversation TTL. Default: 30 minutes
   contextTtlMs?: number;
+
+  // Context cleanup interval. Default: 5 minutes
+  cleanupIntervalMs?: number;
 
   // How long an unresolved /call/answer acknowledgment is kept before the
   // cleanup sweep discards it. Checked once per cleanupIntervalMs tick, not
@@ -187,8 +200,33 @@ interface TalkerConfig {
   // Max silence retries before ending call. Default: 3
   maxNoSpeechRetries?: number;
 
-  // Custom chat function (overrides chatbot config and chatter RAG)
+  // Rate limiting, per phone number
+  rateLimit?: {
+    maxRequests?: number; // Default: 30
+    windowMs?: number;    // Default: 1 minute
+  };
+
+  // Max characters accepted from speech/SMS input before it's clamped. Default: 1000
+  maxInputLength?: number;
+
+  // Custom chat function (overrides chatbot config and chatter RAG). A throw is
+  // logged and answered with a generic apology - no fall-through to chatbot/chatter.
   chatFn?: (phoneNumber: string, message: string) => Promise<string>;
+
+  // Per-interaction persona resolver for the plugin-mode chat pipeline. Replaces
+  // chatter's default persona layer (base rules and RAG context are kept); return
+  // null/undefined to use the default. Errors are logged and fall back to the default.
+  personaFn?: (
+    phoneNumber: string,
+    message: string,
+  ) => Promise<string | null | undefined> | string | null | undefined;
+
+  // Dynamic per-caller greeting, called before any phrase lookup. Return
+  // null/undefined to fall back to the phrase-file greeting; errors also fall back.
+  greetingFn?: (
+    phoneNumber: string,
+    channel: "call" | "sms" | "whatsapp",
+  ) => Promise<string | null | undefined> | string | null | undefined;
 
   // Callback invoked when a Twilio delivery status update is received for
   // an SMS/WhatsApp message you sent (queued, sent, delivered, failed...).
@@ -267,8 +305,18 @@ guarantee of completion — only of non-blocking, logged-on-failure delivery.
 | Webhook | URL | Method |
 |---|---|---|
 | Voice | `https://your-server.com/call` | HTTP POST |
+| Voice status callback | `https://your-server.com/call/status` | HTTP POST |
 | SMS | `https://your-server.com/sms` | HTTP POST |
-| Status Callback | `https://your-server.com/call/status` | HTTP POST |
+| SMS fallback | `https://your-server.com/sms/fallback` | HTTP POST |
+| SMS status callback | `https://your-server.com/sms/status` | HTTP POST |
+| WhatsApp | `https://your-server.com/whatsapp` | HTTP POST |
+| WhatsApp fallback | `https://your-server.com/whatsapp/fallback` | HTTP POST |
+| WhatsApp status callback | `https://your-server.com/whatsapp/status` | HTTP POST |
+
+Fallback URLs are only consulted by Twilio when the primary webhook errors or
+times out; status callback URLs receive delivery status updates after a
+message is sent (see `onMessageStatus` below). Both are optional in the
+Twilio console but recommended.
 
 ### Webhook signature validation
 
@@ -551,7 +599,7 @@ Phone Call / SMS
 
 ```bash
 bun install
-bun test                # Run all tests (66 tests)
+bun test                # Run all tests
 bun run test:unit       # Unit tests only
 bun run test:integration # Integration tests (some require OPENAI_API_KEY)
 bun run typecheck       # Type checking

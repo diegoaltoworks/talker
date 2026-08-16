@@ -28,13 +28,13 @@ export function persistSession(
   if (!context || messages.length === 0) return;
   if (!getDbClient()) return;
 
-  const sanitizedPhone = phoneNumber.replace(/[^0-9]/g, "");
+  const normalizedPhone = phoneNumber.replace(/[^0-9]/g, "");
   const sessionId = generateSessionId(phoneNumber, context.createdAt);
   const now = Date.now();
 
   upsertSession({
     id: sessionId,
-    phoneNumber: sanitizedPhone,
+    phoneNumber: normalizedPhone,
     channel,
     reason: "ended",
     language,
@@ -76,13 +76,13 @@ export function persistFinalSession(
   if (!context) return;
   if (!getDbClient()) return;
 
-  const sanitizedPhone = phoneNumber.replace(/[^0-9]/g, "");
+  const normalizedPhone = phoneNumber.replace(/[^0-9]/g, "");
   const sessionId = generateSessionId(phoneNumber, context.createdAt);
   const now = Date.now();
 
   upsertSession({
     id: sessionId,
-    phoneNumber: sanitizedPhone,
+    phoneNumber: normalizedPhone,
     channel,
     reason,
     language,

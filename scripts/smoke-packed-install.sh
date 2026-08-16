@@ -287,4 +287,61 @@ EOF
 (cd tsc-host && npx --no-install tsc -p tsconfig.json)
 echo "ok - hono-only host type-checks with the documented skipLibCheck: true"
 
+echo "==> Proving a host can co-install the packed tarball with chatter 1.0.0"
+# The declared peer range is a promise npm enforces, and it enforces it on
+# optional peers too: `peerDependenciesMeta.optional` only stops npm
+# auto-installing an ABSENT peer, so a host that installs chatter itself gets a
+# hard ERESOLVE the moment the installed version falls outside the range. The
+# assertions above all run with chatter absent, which is exactly the case that
+# cannot catch this. chatter has not tagged 1.0 yet, so the version that has to
+# resolve does not exist to install - it is stood up here as a stub whose only
+# meaningful content is its version number, because npm reads the range against
+# the manifest and never loads the code.
+stub="$work/chatter-stub"
+mkdir -p "$stub"
+cat > "$stub/package.json" <<'EOF'
+{
+  "name": "@diegoaltoworks/chatter",
+  "version": "1.0.0",
+  "description": "Version-only stub. Peer-range resolution reads the manifest, never the code.",
+  "main": "index.js"
+}
+EOF
+echo 'module.exports = {};' > "$stub/index.js"
+chatter_tarball="$stub/$(cd "$stub" && npm pack --silent --pack-destination "$stub")"
+
+mkdir -p "$work/coinstall"
+cd "$work/coinstall"
+npm init -y >/dev/null
+# No --legacy-peer-deps and no --force: the point is that default npm, which is
+# what a host runs, resolves this pair without being told to ignore a conflict.
+if ! npm install --silent --no-audit --no-fund hono "$chatter_tarball" "$tarball"; then
+  echo "FAIL: npm refused to co-install the packed tarball with chatter 1.0.0"
+  echo "      the @diegoaltoworks/chatter peer range does not admit 1.x"
+  exit 1
+fi
+node --input-type=module -e '
+const assert = (ok, message) => {
+  if (!ok) {
+    console.error(`FAIL: ${message}`);
+    process.exit(1);
+  }
+  console.log(`ok - ${message}`);
+};
+
+const { createRequire } = await import("node:module");
+const path = await import("node:path");
+const req = createRequire(path.join(process.cwd(), "resolve.cjs"));
+
+assert(
+  req("@diegoaltoworks/chatter/package.json").version === "1.0.0",
+  "chatter 1.0.0 is the version npm actually left installed, not a downgrade",
+);
+assert(
+  typeof (await import("@diegoaltoworks/talker")).createTelephonyRoutes === "function",
+  "talker still imports with a 1.x chatter present",
+);
+'
+cd "$work"
+
 echo "==> Packed install smoke test passed"

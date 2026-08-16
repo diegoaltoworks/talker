@@ -369,7 +369,10 @@ createTelephonyRoutes(app, deps, {
 });
 ```
 
-See [language/en.json](./language/en.json) for the expected structure.
+See [language/en.json](./language/en.json) for the expected structure. Files
+may be partial - any missing key falls back to this language's own `sms`
+copy where applicable (for `whatsapp`), then to the built-in English phrase,
+so a file only needs to override what it wants to change.
 
 ### Custom Prompts
 

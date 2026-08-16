@@ -16,6 +16,7 @@ import { getChannelPhrase } from "../../core/phrases";
 import { messageTwiml } from "../../core/twiml";
 import { persistSession } from "../../db/persist";
 import type { FlowRegistry } from "../../flows/registry";
+import { getSanitizedBody } from "../../middleware/input-sanitize";
 import type { TalkerDependencies } from "../../types";
 import { type MessagingChannel, processMessage } from "./processor";
 
@@ -25,7 +26,7 @@ export async function handleIncomingMessage(
   registry: FlowRegistry,
   channel: MessagingChannel,
 ): Promise<Response> {
-  const body = await c.req.parseBody();
+  const body = await getSanitizedBody(c);
   const phoneNumber = stripWhatsAppPrefix(((body.From as string) || "unknown").trim());
   const to = stripWhatsAppPrefix((body.To as string) || "");
   const messageBody = (body.Body as string) || "";

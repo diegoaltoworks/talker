@@ -16,6 +16,7 @@ import { logger } from "../../core/logger";
 import { emitMessageTap } from "../../core/message-tap";
 import { getChannelPhrase } from "../../core/phrases";
 import { messageTwiml } from "../../core/twiml";
+import { getSanitizedBody } from "../../middleware/input-sanitize";
 import type { TalkerDependencies } from "../../types";
 
 /**
@@ -28,7 +29,7 @@ export async function handleFallback(
   deps: TalkerDependencies,
   channel: "sms" | "whatsapp",
 ): Promise<Response> {
-  const body = await c.req.parseBody();
+  const body = await getSanitizedBody(c);
 
   const rawFrom = (body.From as string) || "unknown";
   const rawTo = (body.To as string) || "";

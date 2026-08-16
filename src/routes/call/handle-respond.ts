@@ -14,6 +14,7 @@ import { getPhrase } from "../../core/phrases";
 import { acknowledgmentTwiml, gatherTwiml, sayTwiml } from "../../core/twiml";
 import { persistSession } from "../../db/persist";
 import type { FlowRegistry } from "../../flows/registry";
+import { getSanitizedBody } from "../../middleware/input-sanitize";
 import type { TalkerDependencies } from "../../types";
 import { getPending, setPending } from "./pending";
 import { processCall } from "./processor";
@@ -23,7 +24,7 @@ export async function handleRespond(
   deps: TalkerDependencies,
   registry: FlowRegistry,
 ): Promise<Response> {
-  const body = await c.req.parseBody();
+  const body = await getSanitizedBody(c);
   const phoneNumber = ((body.From as string) || "unknown").trim();
   const to = (body.To as string) || "";
   const speechResult = body.SpeechResult as string;

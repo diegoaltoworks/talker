@@ -4,14 +4,53 @@
  * Tests for POST /call/respond — speech detection handling.
  */
 
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, mock } from "bun:test";
 import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import { Hono } from "hono";
 import { clearAllContexts, getOrCreateContext, stopCleanup } from "../../core/context";
 import { FlowRegistry } from "../../flows/registry";
 import { resetRateLimitStore } from "../../middleware/rate-limit";
 import type { MessageTapEvent, TalkerDependencies } from "../../types";
-import { callRoutes } from "./index";
+
+// processIncoming/processOutgoing call OpenAI directly (not through chatFn) -
+// mock it so these route tests never hit the network. Incoming echoes the
+// message back unprocessed; outgoing passes the bot response through as-is,
+// matching this pipeline's own error-fallback behavior.
+const callOpenAI = mock(
+  async (
+    _deps: TalkerDependencies,
+    _systemPrompt: string,
+    userMessage: string,
+    context: { phoneNumber: string; stage: "incoming" | "outgoing" },
+  ) => {
+    if (context.stage === "incoming") {
+      return JSON.stringify({
+        shouldTransfer: false,
+        shouldEndCall: false,
+        detectedLanguage: "en",
+        processedMessage: userMessage,
+      });
+    }
+    return userMessage;
+  },
+);
+mock.module("../../core/processing/openai", () => ({ callOpenAI }));
+
+// mock.module is process-global, not scoped to this file - another test
+// file's mock.module("../../flows/manager", ...) call would otherwise
+// silently outlive its own file and decide what "no active flow" means
+// here. Pin it explicitly rather than relying on the real FlowRegistry("")
+// resolving the same way regardless of load order.
+const processFlow = mock(async () => ({
+  isFlowActive: false,
+  flowCompleted: false,
+  response: "",
+}));
+mock.module("../../flows/manager", () => ({ processFlow }));
+
+// Dynamic import so it resolves after the mock.module() calls above - a
+// static import of ./index would be hoisted ahead of the mock registration.
+const { callRoutes } = await import("./index");
 
 function createTestDeps(overrides?: Partial<TalkerDependencies["config"]>): TalkerDependencies {
   return {
@@ -79,7 +118,7 @@ describe("handleRespond", () => {
     expect(text).toContain("<Gather");
   });
 
-  it("should return 200 with TwiML when processing speech (sync flow)", async () => {
+  it("should deliver the chatFn response as spoken TwiML (sync flow)", async () => {
     const app = createApp();
     getOrCreateContext("+15551234567", "call");
 
@@ -92,13 +131,22 @@ describe("handleRespond", () => {
     expect(res.headers.get("Content-Type")).toContain("text/xml");
     const text = await res.text();
     expect(text).toContain("<Response>");
-    // Either a processed response or error TwiML — both valid
-    expect(text).toContain("<Say");
+    // processIncoming primes the transcript with the current turn before
+    // checking for prior history, so even a first message is wrapped in a
+    // CONVERSATION HISTORY block - asserted here as one joined string so a
+    // reply split across unrelated tags can't satisfy this by accident.
+    expect(text).toContain(
+      "Echo: CONVERSATION HISTORY:\nCustomer: What time do you open?\n\nCURRENT MESSAGE:\nWhat time do you open?",
+    );
   });
 
-  it("should return error TwiML when processing throws", async () => {
-    // processCall will fail because OpenAI will reject with a test key
-    const app = createApp();
+  it("should return the error TwiML when chatFn throws", async () => {
+    const deps = createTestDeps({
+      chatFn: async () => {
+        throw new Error("downstream failure");
+      },
+    });
+    const app = createApp(deps);
     getOrCreateContext("+15551234567", "call");
 
     const res = await postRespond(app, {
@@ -109,7 +157,7 @@ describe("handleRespond", () => {
     expect(res.status).toBe(200);
     const text = await res.text();
     expect(text).toContain("<Response>");
-    expect(text).toContain("<Say");
+    expect(text).toContain("Sorry, I encountered an error processing your question.");
   });
 
   it("should return acknowledgment TwiML when async ack is enabled for first message", async () => {
@@ -129,6 +177,26 @@ describe("handleRespond", () => {
     expect(text).toContain("<Response>");
     // Acknowledgment includes a redirect to /call/answer
     expect(text).toContain("/call/answer");
+  });
+
+  it("clamps an oversized SpeechResult to maxInputLength before processing", async () => {
+    const events: MessageTapEvent[] = [];
+    const deps = createTestDeps({
+      maxInputLength: 20,
+      onMessage: (event) => void events.push(event),
+    });
+    const app = createApp(deps);
+    getOrCreateContext("+15559990005", "call");
+
+    await postRespond(app, {
+      From: "+15559990005",
+      SpeechResult: "a".repeat(200),
+    });
+    await Promise.resolve();
+
+    const inbound = events.find((e) => e.direction === "inbound");
+    expect(inbound?.body.length).toBe(20);
+    expect(inbound?.body).toBe("a".repeat(20));
   });
 
   describe("onMessage tap", () => {

@@ -8,10 +8,92 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Phrases, PhraseValue } from "../types";
+import { logger } from "./logger";
+
+/** A phrase file as read off disk, before validation - any key may be missing or malformed. */
+type RawPhrases = {
+  [K in keyof Phrases]?: Phrases[K] extends PhraseValue
+    ? unknown
+    : Partial<Record<string, unknown>>;
+};
 
 /** Resolve a phrase entry: arrays rotate - a random variant per use. */
 function pick(value: PhraseValue): string {
   return Array.isArray(value) ? (value[Math.floor(Math.random() * value.length)] as string) : value;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isPhraseValue(value: unknown): value is PhraseValue {
+  if (typeof value === "string") return true;
+  return (
+    Array.isArray(value) && value.length > 0 && value.every((entry) => typeof entry === "string")
+  );
+}
+
+/**
+ * Merge a raw, unvalidated phrase file over the English fallback, key by
+ * key and at every depth. Any key that's missing or malformed (wrong type,
+ * empty array) falls back to the built-in English copy for that key, with a
+ * warning - this is the single fallback policy for the whole phrase tree, so
+ * a partial or stale language file can never surface `undefined` to a caller
+ * or throw when a handler reaches into a namespace it assumes is complete.
+ * Walks the fallback's own keys only, so any key in the raw file that isn't
+ * part of the `Phrases` shape is silently dropped - it was equally unused
+ * before this merge existed, since every reader here indexes by a known key.
+ */
+function mergeWithFallback<T>(raw: unknown, fallback: T, language: string, path: string): T {
+  if (isPlainObject(fallback)) {
+    const rawObj = isPlainObject(raw) ? raw : {};
+    const result = {} as Record<string, unknown>;
+    for (const key of Object.keys(fallback)) {
+      result[key] = mergeWithFallback(
+        rawObj[key],
+        (fallback as Record<string, unknown>)[key],
+        language,
+        path ? `${path}.${key}` : key,
+      );
+    }
+    return result as T;
+  }
+
+  if (isPhraseValue(raw)) return raw as T;
+
+  logger.warn("phrase key missing or invalid, falling back to built-in English", {
+    language,
+    key: path,
+  });
+  return fallback;
+}
+
+/**
+ * WhatsApp phrases fall back to this language's own `sms` copy before
+ * falling all the way back to English - a language file with sms text but no
+ * whatsapp block still speaks that language on WhatsApp. `mergeWithFallback`
+ * already resolved `merged.whatsapp` down to English for any key the raw
+ * file didn't provide directly; this patches those keys back to the raw
+ * file's own sms translation where one exists.
+ */
+function applyWhatsappSmsFallback(merged: Phrases, raw: unknown, language: string): Phrases {
+  const rawWhatsapp = isPlainObject(raw) && isPlainObject(raw.whatsapp) ? raw.whatsapp : undefined;
+  const rawSms = isPlainObject(raw) && isPlainObject(raw.sms) ? raw.sms : undefined;
+  if (!rawSms) return merged;
+
+  const whatsapp = { ...merged.whatsapp };
+  for (const key of Object.keys(merged.whatsapp) as Array<keyof Phrases["whatsapp"]>) {
+    if (isPhraseValue(rawWhatsapp?.[key])) continue; // the file's own whatsapp block already won
+    const rawSmsValue = rawSms[key];
+    if (isPhraseValue(rawSmsValue)) {
+      whatsapp[key] = rawSmsValue;
+      logger.info("whatsapp phrase missing, using this language's sms copy instead of English", {
+        language,
+        key: `whatsapp.${key}`,
+      });
+    }
+  }
+  return { ...merged, whatsapp };
 }
 
 const phrasesCache: Record<string, Phrases> = {};
@@ -101,7 +183,17 @@ export function loadPhrases(language: string, languageDir?: string): Phrases {
     if (existsSync(filePath)) {
       try {
         const content = readFileSync(filePath, "utf-8");
-        phrasesCache[cacheKey] = JSON.parse(content);
+        const raw = JSON.parse(content) as RawPhrases;
+        if (!isPlainObject(raw)) {
+          logger.warn("phrase file is not a JSON object, falling back to built-in English", {
+            language,
+            filePath,
+          });
+          phrasesCache[cacheKey] = ENGLISH_FALLBACK;
+          return phrasesCache[cacheKey];
+        }
+        const merged = mergeWithFallback(raw, ENGLISH_FALLBACK, language, "");
+        phrasesCache[cacheKey] = applyWhatsappSmsFallback(merged, raw, language);
         return phrasesCache[cacheKey];
       } catch {
         // Continue to next directory
@@ -157,9 +249,10 @@ export function getFarewellPhrase(language: string, languageDir?: string): strin
 
 /**
  * Get a flow-related phrase.
- * Falls back to the built-in English flow phrases for languages whose
- * phrase file predates a given `flow` key (e.g. `error` added after
- * `cancelled`).
+ * `loadPhrases` merges every language file over the built-in English
+ * fallback at load time, so a phrase file that predates a given `flow` key
+ * (e.g. `error` added after `cancelled`) already resolves to the English
+ * copy for the missing key - no per-call fallback needed here.
  */
 export function getFlowPhrase(
   language: string,
@@ -167,14 +260,15 @@ export function getFlowPhrase(
   languageDir?: string,
 ): string {
   const phrases = loadPhrases(language, languageDir);
-  const value = phrases.flow?.[key];
-  return value === undefined ? pick(ENGLISH_FALLBACK.flow[key]) : pick(value);
+  return pick(phrases.flow[key]);
 }
 
 /**
- * Get a phrase for a messaging channel (SMS or WhatsApp). WhatsApp falls
- * back to SMS phrases if whatsapp phrases are not defined in the language
- * file.
+ * Get a phrase for a messaging channel (SMS or WhatsApp).
+ * `loadPhrases` resolves each `whatsapp` key in this precedence: the
+ * language file's own `whatsapp` entry, then its `sms` entry (same
+ * language), then the built-in English `whatsapp` copy - so this reads the
+ * namespace directly.
  */
 export function getChannelPhrase(
   channel: "sms" | "whatsapp",
@@ -183,10 +277,7 @@ export function getChannelPhrase(
   languageDir?: string,
 ): string {
   const phrases = loadPhrases(language, languageDir);
-  if (channel === "whatsapp" && phrases.whatsapp) {
-    return pick(phrases.whatsapp[key]);
-  }
-  return pick(phrases.sms[key]);
+  return pick(phrases[channel][key]);
 }
 
 /**
@@ -202,7 +293,8 @@ export function getSmsPhrase(
 
 /**
  * Get a WhatsApp-specific phrase.
- * Falls back to SMS phrases if whatsapp phrases are not defined.
+ * Falls back to this language's sms copy, then to English - see
+ * `getChannelPhrase`.
  */
 export function getWhatsAppPhrase(
   language: string,
@@ -214,8 +306,9 @@ export function getWhatsAppPhrase(
 
 /**
  * Get a voice-reply-ladder phrase.
- * Falls back to the built-in English voice phrases for languages whose
- * phrase file predates the `voice` namespace.
+ * `loadPhrases` fills any language file's missing `voice` keys from the
+ * built-in English `voice` copy at load time, so this reads the namespace
+ * directly - including for files that predate the `voice` namespace.
  */
 export function getVoicePhrase(
   language: string,
@@ -223,8 +316,5 @@ export function getVoicePhrase(
   languageDir?: string,
 ): string {
   const phrases = loadPhrases(language, languageDir);
-  if (phrases.voice) {
-    return pick(phrases.voice[key]);
-  }
-  return pick(ENGLISH_FALLBACK.voice[key]);
+  return pick(phrases.voice[key]);
 }

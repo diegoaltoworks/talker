@@ -16,7 +16,30 @@ let flowResultToReturn: FlowResult = { isFlowActive: false, response: "", flowCo
 const processFlow = mock(async () => flowResultToReturn);
 mock.module("../../flows/manager", () => ({ processFlow }));
 
-// Dynamic import so it resolves after the mock.module() call above - a static
+// processIncoming/processOutgoing call OpenAI directly - mock it so these
+// tests never hit the network. Incoming echoes the message back unprocessed;
+// outgoing passes the bot response through as-is.
+const callOpenAI = mock(
+  async (
+    _deps: TalkerDependencies,
+    _systemPrompt: string,
+    userMessage: string,
+    context: { phoneNumber: string; stage: "incoming" | "outgoing" },
+  ) => {
+    if (context.stage === "incoming") {
+      return JSON.stringify({
+        shouldTransfer: false,
+        shouldEndCall: false,
+        detectedLanguage: "en",
+        processedMessage: userMessage,
+      });
+    }
+    return userMessage;
+  },
+);
+mock.module("../../core/processing/openai", () => ({ callOpenAI }));
+
+// Dynamic import so it resolves after the mock.module() calls above - a static
 // import of ./processor would be hoisted ahead of the mock registration.
 const { clearAllContexts, stopCleanup } = await import("../../core/context");
 const { FlowRegistry } = await import("../../flows/registry");

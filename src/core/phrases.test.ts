@@ -243,6 +243,72 @@ describe("Phrases", () => {
     });
   });
 
+  describe("load-time fallback merge", () => {
+    it("falls back to English for a top-level key missing from the raw file, without ever surfacing undefined", () => {
+      const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      writeFileSync(join(dir, "de.json"), JSON.stringify({ error: "Fehler." }));
+
+      const phrases = loadPhrases("de", dir);
+      expect(phrases.greeting).toBe(loadPhrases("en").greeting);
+      expect(getPhrase("de", "greeting", dir)).toBe(getPhrase("en", "greeting"));
+      // The one key the raw file did provide is preserved, not overridden.
+      expect(getPhrase("de", "error", dir)).toBe("Fehler.");
+    });
+
+    it("falls back to English when a leaf value has the wrong type", () => {
+      const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      writeFileSync(join(dir, "de.json"), JSON.stringify({ greeting: 12345 }));
+
+      expect(getPhrase("de", "greeting", dir)).toBe(getPhrase("en", "greeting"));
+    });
+
+    it("falls back to English for an empty rotation array instead of picking undefined", () => {
+      const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      writeFileSync(join(dir, "de.json"), JSON.stringify({ greeting: [] }));
+
+      expect(getPhrase("de", "greeting", dir)).toBe(getPhrase("en", "greeting"));
+    });
+
+    it("fills a missing nested namespace entirely from English without throwing", () => {
+      const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      writeFileSync(join(dir, "de.json"), JSON.stringify({ greeting: "Hallo" }));
+
+      expect(() => getSmsPhrase("de", "greeting", dir)).not.toThrow();
+      expect(getSmsPhrase("de", "greeting", dir)).toBe(getSmsPhrase("en", "greeting"));
+    });
+
+    it("prefers the file's own whatsapp entry, then its sms entry, then English - in that order", () => {
+      const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      writeFileSync(
+        join(dir, "de.json"),
+        JSON.stringify({
+          sms: { greeting: "SMS auf Deutsch", greetingShort: "Kurz auf Deutsch" },
+          whatsapp: { greeting: "WhatsApp auf Deutsch" },
+          // whatsapp.greetingShort is missing but sms.greetingShort is
+          // present - it should speak German (from sms), not English.
+          // whatsapp.callForHelp is missing from both - English is the
+          // only source left.
+        }),
+      );
+
+      // 1. the file's own whatsapp entry wins over its own sms entry
+      expect(getWhatsAppPhrase("de", "greeting", dir)).toBe("WhatsApp auf Deutsch");
+      // 2. missing from whatsapp, present in sms - same language, not English
+      expect(getWhatsAppPhrase("de", "greetingShort", dir)).toBe("Kurz auf Deutsch");
+      // 3. missing from both whatsapp and sms - final fallback is English
+      expect(getWhatsAppPhrase("de", "callForHelp", dir)).toBe(
+        getWhatsAppPhrase("en", "callForHelp"),
+      );
+    });
+
+    it("falls back all the way to English when the file has no sms block to borrow from either", () => {
+      const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      writeFileSync(join(dir, "de.json"), JSON.stringify({ greeting: "Hallo" }));
+
+      expect(getWhatsAppPhrase("de", "greeting", dir)).toBe(getWhatsAppPhrase("en", "greeting"));
+    });
+  });
+
   describe("getFarewellPhrase", () => {
     it("should return a farewell phrase for English", () => {
       const farewell = getFarewellPhrase("en");

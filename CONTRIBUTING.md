@@ -141,14 +141,40 @@ talker/
 
 ## Release Process
 
-Releases are automated via GitHub Actions:
+Releases are automated via GitHub Actions. `main` is protected, so every
+release starts from a reviewed pull request:
 
-1. Push to `main` branch
+1. Merge a PR into `main` (direct pushes are refused by the `main-protection`
+   ruleset)
 2. CI workflow runs all checks
 3. On CI success, the publish workflow:
-   - Bumps the minor version
-   - Publishes to NPM
-   - Creates a GitHub release with auto-generated notes
+   - Refuses to continue if an unreviewed dependency change is waiting to ship
+     (see below)
+   - Re-runs the same gates (`bun run check`), builds, and smoke-tests the
+     packed tarball
+   - Derives the version from the conventional-commit subjects since the last
+     release tag — any `feat:` ships a minor, anything else ships a patch
+   - Tags the release, publishes to NPM, and creates the GitHub release with
+     auto-generated notes
+
+The **tag is the record of what shipped**: it names a commit carrying the
+bumped `package.json`, so `git checkout v<x.y.z>` reads the published version.
+The `package.json` on `main` only tracks it when the optional `RELEASE_PAT`
+secret (a repo admin's token, which bypasses the ruleset) is configured;
+without it the checked-in version is a floor, not the latest release.
+
+### Dependency bumps
+
+Dependabot PRs auto-merge, so nobody reads the diff before CI goes green.
+`scripts/release-guard.ts` therefore blocks the automated publish when an
+unreleased dependabot commit touched anything beyond a manifest or lockfile —
+a workflow or Dockerfile bump changes what runs, and that needs a human.
+Manifest-only bumps ride along with the next release, so the guard can never
+wedge the release train against itself.
+
+To ship a blocked change: read it, then run the **Publish to NPM** workflow
+from the Actions tab. Dispatching is the approval, and it moves the release tag
+past the commit.
 
 ## Questions?
 

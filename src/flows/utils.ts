@@ -73,7 +73,8 @@ export function shouldExitFlow(
 }
 
 /**
- * Get exit message for a specific language
+ * Get exit message for a specific language.
+ * @deprecated Use `getFlowPhrase(language, "cancelled", languageDir)`.
  */
 export function getExitMessage(language: string, languageDir?: string): string {
   return getFlowPhrase(language, "cancelled", languageDir);

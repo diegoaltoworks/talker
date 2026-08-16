@@ -18,6 +18,7 @@
 import type { Channel, TalkerDependencies } from "../types";
 import { chatViaHTTP } from "./chatbot/client";
 import { resolveLanguage } from "./context";
+import { UNKNOWN_PHONE_NUMBER } from "./defaults";
 import { getErrorMessage } from "./errors";
 import { logger } from "./logger";
 import { getPhrase } from "./phrases";
@@ -89,11 +90,12 @@ export async function chat(
 
     // Per-sender retrieval scope, gated by the host's bucketsFor hook (if
     // configured). Undefined leaves the pipeline's mode defaults in place.
-    // "unknown" is the sentinel talker's channels use when Twilio omits a
-    // sender (see redactPhone in ./logger) - treat it as anonymous so the
-    // hook's per-sender ceiling still applies. The same sender identity is
-    // handed to answerFn below, so a host's brain sees who is asking.
-    const sender = phoneNumber && phoneNumber !== "unknown" ? phoneNumber : undefined;
+    // UNKNOWN_PHONE_NUMBER is the sentinel talker's channels use when
+    // Twilio omits a sender (see redactPhone in ./logger) - treat it as
+    // anonymous so the hook's per-sender ceiling still applies. The same
+    // sender identity is handed to answerFn below, so a host's brain sees
+    // who is asking.
+    const sender = phoneNumber && phoneNumber !== UNKNOWN_PHONE_NUMBER ? phoneNumber : undefined;
     const buckets = await resolveBuckets({
       mode: "public",
       sender,

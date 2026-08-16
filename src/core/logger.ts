@@ -11,11 +11,12 @@
  * still apply).
  */
 
+import { UNKNOWN_PHONE_NUMBER } from "./defaults";
 import { truncateGraphemeSafe } from "./text";
 
 type LogLevel = "info" | "warn" | "error";
 
-const PHONE_KEYS = new Set(["phoneNumber", "phone", "From", "To"]);
+const PHONE_KEYS = new Set(["phoneNumber", "phone", "From", "To", "from", "to"]);
 const REDACTED_PLACEHOLDER = "[redacted]";
 /** Diagnostic fields, not conversation content - never preview-truncated. */
 const UNTRUNCATED_KEYS = new Set(["error", "stack"]);
@@ -65,7 +66,7 @@ const timestamp = () => new Date().toISOString();
  * E.g. "+15551234567" -> "***4567"
  */
 export function redactPhone(phone: string): string {
-  if (!phone || phone === "unknown") return phone;
+  if (!phone || phone === UNKNOWN_PHONE_NUMBER) return phone;
   const digits = phone.replace(/\D/g, "");
   if (digits.length <= 4) return "***";
   return `***${digits.slice(-4)}`;
@@ -126,10 +127,13 @@ function redactValue(
 
 /**
  * Redact sensitive/verbose fields in log data, recursively.
- * Fields named "phoneNumber", "phone", "From" or "To" (at any depth,
- * including inside an array of raw phone strings) are phone-redacted;
+ * Fields named "phoneNumber", "phone", "From"/"from" or "To"/"to" (at any
+ * depth, including inside an array of raw phone strings) are phone-redacted;
  * fields named in TALKER_LOG_REDACT_KEYS are replaced outright; every other
- * string field is content-previewed.
+ * string field is content-previewed. "from"/"to" are generic enough that a
+ * non-phone value under either key (a short code, a language tag) still
+ * redacts to "***" with no warning - prefer a different key name for a
+ * "from"/"to" pair that is not a phone number.
  */
 function redactData(
   data: Record<string, unknown>,

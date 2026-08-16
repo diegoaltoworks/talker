@@ -7,14 +7,15 @@
 
 import type { Context } from "hono";
 import { getMessageHistory, resetNoSpeechRetries, resolveLanguage } from "../../core/context";
+import { UNKNOWN_PHONE_NUMBER } from "../../core/defaults";
 import { getErrorMessage } from "../../core/errors";
 import { logger } from "../../core/logger";
 import { emitMessageTap } from "../../core/message-tap";
 import { getPhrase } from "../../core/phrases";
-import { acknowledgmentTwiml, gatherTwiml, sayTwiml } from "../../core/twiml";
+import { acknowledgmentTwiml, gatherTwiml, sayTwiml, twimlResponse } from "../../core/twiml";
 import { persistSession } from "../../db/persist";
 import type { FlowRegistry } from "../../flows/registry";
-import { getSanitizedBody } from "../../middleware/input-sanitize";
+import { getTruncatedBody } from "../../middleware/input-sanitize";
 import type { TalkerDependencies } from "../../types";
 import { getPending, setPending } from "./pending";
 import { processCall } from "./processor";
@@ -24,8 +25,8 @@ export async function handleRespond(
   deps: TalkerDependencies,
   registry: FlowRegistry,
 ): Promise<Response> {
-  const body = await getSanitizedBody(c);
-  const phoneNumber = ((body.From as string) || "unknown").trim();
+  const body = await getTruncatedBody(c);
+  const phoneNumber = ((body.From as string) || UNKNOWN_PHONE_NUMBER).trim();
   const to = (body.To as string) || "";
   const speechResult = body.SpeechResult as string;
   const config = deps.config;
@@ -46,7 +47,7 @@ export async function handleRespond(
     const prompt = getPhrase(language, "didNotCatch", config.languageDir);
     tapOutbound(prompt);
     const twiml = gatherTwiml(prompt, language, config, phoneNumber);
-    return c.text(twiml, 200, { "Content-Type": "text/xml" });
+    return twimlResponse(c, twiml);
   }
 
   emitMessageTap(config, {
@@ -108,22 +109,20 @@ export async function handleRespond(
     const ackLanguage = resolveLanguage(phoneNumber);
     const ackMessage = getPhrase(ackLanguage, "acknowledgment", config.languageDir);
     tapOutbound(ackMessage);
-    return c.text(acknowledgmentTwiml(ackLanguage, config, ackMessage), 200, {
-      "Content-Type": "text/xml",
-    });
+    return twimlResponse(c, acknowledgmentTwiml(ackLanguage, config, ackMessage));
   }
 
   // Synchronous flow
   try {
     const twiml = await processCall(deps, registry, phoneNumber, speechResult, to);
     persistSession(phoneNumber, "call", deps.store);
-    return c.text(twiml, 200, { "Content-Type": "text/xml" });
+    return twimlResponse(c, twiml);
   } catch (error) {
     logger.error("call processing error", { error: getErrorMessage(error) });
     const language = resolveLanguage(phoneNumber);
     const errorMessage = getPhrase(language, "error", config.languageDir);
     tapOutbound(errorMessage);
     const twiml = sayTwiml(errorMessage, language, config);
-    return c.text(twiml, 200, { "Content-Type": "text/xml" });
+    return twimlResponse(c, twiml);
   }
 }

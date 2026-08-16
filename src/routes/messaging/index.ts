@@ -13,7 +13,7 @@
 
 import { Hono } from "hono";
 import type { FlowRegistry } from "../../flows/registry";
-import { inputSanitizeMiddleware } from "../../middleware/input-sanitize";
+import { truncateInputMiddleware } from "../../middleware/input-sanitize";
 import { rateLimitMiddleware } from "../../middleware/rate-limit";
 import { twilioSignatureMiddleware } from "../../middleware/twilio-signature";
 import type { TalkerDependencies } from "../../types";
@@ -44,11 +44,11 @@ export function messagingRoutes(
   // Security middleware stack for all POST endpoints
   app.post(path, twilioSignatureMiddleware(authToken, baseUrl, signatureOptions));
   app.post(path, rateLimitMiddleware(deps.config.rateLimit, deps.config));
-  app.post(path, inputSanitizeMiddleware(deps.config.maxInputLength));
+  app.post(path, truncateInputMiddleware(deps.config.maxInputLength));
 
   app.post(`${path}/fallback`, twilioSignatureMiddleware(authToken, baseUrl, signatureOptions));
   app.post(`${path}/fallback`, rateLimitMiddleware(deps.config.rateLimit, deps.config));
-  app.post(`${path}/fallback`, inputSanitizeMiddleware(deps.config.maxInputLength));
+  app.post(`${path}/fallback`, truncateInputMiddleware(deps.config.maxInputLength));
 
   app.post(`${path}/status`, twilioSignatureMiddleware(authToken, baseUrl, signatureOptions));
 

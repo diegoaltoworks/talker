@@ -167,6 +167,7 @@ interface TalkerConfig {
     outgoingPromptPath?: string; // Custom outgoing response prompt
     baseUrl?: string;            // Chat completions endpoint (Azure/gateway). Default: OpenAI's
     requestTimeoutMs?: number;   // Abort a hung request. Default: 5000 (webhooks must return in ~15s)
+    temperature?: number;        // Sampling temperature for these structured, single-answer calls. Default: 0.3
   };
 
   // Feature flags
@@ -494,6 +495,9 @@ deployment or a gateway instead. Each call aborts after
 `processing.requestTimeoutMs` (default 5s) so a hung upstream request can't
 hold a webhook open - `processIncoming` and `processOutgoing` each make one
 call per turn, and Twilio gives up on a webhook after ~15s.
+`processing.temperature` (default 0.3) controls how deterministic those
+calls are; the default favors consistent language detection and intent
+classification over varied phrasing.
 
 See [prompts/incoming.md](./prompts/incoming.md) and [prompts/outgoing.md](./prompts/outgoing.md) for the default prompts. `getIncomingPrompt(deps)` and `getOutgoingPrompt(deps)` return the prompt actually in force, custom path or packaged default.
 
@@ -737,9 +741,10 @@ starts, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and
 | `src/flows/` | Flow lifecycle and presentation - registry, session state, per-channel rendering (intent detection and parameter extraction live in `@diegoaltoworks/chatter/flows`) |
 | `src/routes/call/` | Individual Hono handlers for each Twilio voice webhook |
 | `src/routes/messaging/` | Hono handlers for SMS and WhatsApp webhooks, parameterized by channel |
+| `src/routes/shared/` | Handlers shared across channels - fallback webhook, delivery status callback |
 | `src/adapters/` | Twilio REST API client (outbound SMS) |
 | `src/db/` | Session persistence to Turso/libSQL (`talker_sessions`, `talker_messages`) |
-| `src/middleware/` | Twilio signature validation, rate limiting, input sanitization |
+| `src/middleware/` | Twilio signature validation, rate limiting, input truncation |
 | `examples/` | Ready-to-run examples for plugin, standalone, and custom flows |
 | `language/` | Built-in phrase files (en, fr, de, nl, es, pt) |
 | `prompts/` | Default system prompts for the processing pipeline |

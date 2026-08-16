@@ -12,7 +12,7 @@ import type {
   FlowHandler as ChatterFlowHandler,
   LoadedFlow as ChatterLoadedFlow,
 } from "@diegoaltoworks/chatter/flows";
-import type { LoadedFlow } from "../types";
+import type { LoadedFlow } from "./types";
 
 export function toChatterFlow(flow: LoadedFlow): ChatterLoadedFlow {
   return { ...flow, handler: flow.handler as unknown as ChatterFlowHandler };

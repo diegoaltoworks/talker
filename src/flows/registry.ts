@@ -14,10 +14,14 @@
 import { readFileSync } from "node:fs";
 import { getErrorMessage } from "../core/errors";
 import { logger } from "../core/logger";
-import type { LoadedFlow, TalkerDependencies } from "../types";
+import type { TalkerDependencies } from "../types";
 import { type FlowEngine, type FlowEngineLoader, loadFlowEngine } from "./engine";
 import { loadFlowsFromDirectory } from "./loader";
+import type { LoadedFlow } from "./types";
 import { toChatterFlow } from "./types-adapter";
+
+/** Minimum LLM intent-detection confidence to trigger a flow (see `matchFlow`). */
+const INTENT_CONFIDENCE_THRESHOLD = 0.7;
 
 const CRITICAL_KEYWORDS = ["human", "person", "agent", "representative", "operator"];
 // Word-bounded with an optional plural "s" - "person" must not fire on
@@ -142,7 +146,7 @@ export class FlowRegistry {
       reasoning: detection.reasoning,
     });
 
-    if (detection.confidence >= 0.7) {
+    if (detection.confidence >= INTENT_CONFIDENCE_THRESHOLD) {
       const flow = this.flows.get(detection.intent);
       if (flow) {
         logger.info("flow triggered (LLM detection)", {

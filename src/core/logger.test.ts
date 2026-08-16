@@ -102,6 +102,14 @@ describe("Logger", () => {
       expect(entry.To).toBe("***4321");
     });
 
+    it("redacts lowercase from and to fields the same way", () => {
+      const entry = loggedEntry(() =>
+        logger.info("outbound send", { from: "+15551234567", to: "+15557654321" }),
+      );
+      expect(entry.from).toBe("***4567");
+      expect(entry.to).toBe("***4321");
+    });
+
     it("previews a long string field by default and never logs it verbatim", () => {
       const longMessage = `${"a".repeat(200)} secret`;
       const entry = loggedEntry(() => logger.info("INCOMING", { in: longMessage }));

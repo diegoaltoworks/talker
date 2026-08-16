@@ -112,7 +112,11 @@ talker/
 - Semicolons required
 - Max line length: 100 characters
 - No em-dashes, in code, docs, commit messages, or PR text - use a plain
-  hyphen with spaces, a comma, a colon, or restructure the sentence
+  hyphen with spaces, a comma, a colon, or restructure the sentence.
+  Enforced as a ratchet by `bun run check:em-dashes`
+  (`scripts/check-em-dashes.ts`): it fails if the total grows past its
+  baseline, and the baseline should shrink whenever a touched file loses
+  one of the pre-existing occurrences it hasn't caught up to yet
 
 ### Testing
 

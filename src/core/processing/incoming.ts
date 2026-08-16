@@ -5,7 +5,7 @@
  * end-call detection, and STT artifact cleanup.
  */
 
-import type { Channel, IncomingResult, TalkerDependencies } from "../../types";
+import type { Channel, TalkerDependencies } from "../../types";
 import {
   addMessage,
   getDetectedLanguage,
@@ -18,6 +18,23 @@ import { DEFAULT_LANGUAGE, normalizeLanguage } from "../language";
 import { logger } from "../logger";
 import { callOpenAI } from "./openai";
 import { getIncomingPrompt } from "./prompts";
+
+/**
+ * Result from the incoming message pre-processor
+ */
+export interface IncomingResult {
+  /** Whether the caller should be transferred to a human */
+  shouldTransfer: boolean;
+  /** Whether the caller wants to end the conversation */
+  shouldEndCall: boolean;
+  /** Detected language code (ISO 639-1) */
+  detectedLanguage: string;
+  /** Cleaned and processed message */
+  processedMessage: string;
+}
+
+/** Turns of prior conversation included as context for language/intent detection. */
+const HISTORY_CONTEXT_WINDOW = 4;
 
 /**
  * Pre-process an incoming message
@@ -38,7 +55,7 @@ export async function processIncoming(
     // Build context-aware message
     let contextualMessage = userMessage;
     if (history.length > 0) {
-      const recentHistory = history.slice(-4);
+      const recentHistory = history.slice(-HISTORY_CONTEXT_WINDOW);
       const historyText = recentHistory
         .map((m) => `${m.role === "user" ? "Customer" : "Bot"}: ${m.content}`)
         .join("\n");

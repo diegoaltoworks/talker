@@ -53,8 +53,8 @@ export interface SynthesizerConfig {
 }
 
 export const DEFAULT_MAX_VOICE_TEXT_CHARS = 550;
-const DEFAULT_MODEL = "gpt-4o-mini-tts";
-const DEFAULT_VOICE = "ash";
+const DEFAULT_TTS_MODEL = "gpt-4o-mini-tts";
+const DEFAULT_TTS_VOICE = "ash";
 
 /** Synthesize text into a voice note, or null when it cannot be delivered. */
 export type Synthesizer = (text: string, options?: SynthesizeOptions) => Promise<VoiceNote | null>;
@@ -78,13 +78,13 @@ export function createSynthesizer(config: SynthesizerConfig): Synthesizer {
       const input = truncateGraphemeSafe(text.trim(), maxChars);
       if (!input) return null;
 
-      const voice = config.voiceFor?.(options.personaId) ?? DEFAULT_VOICE;
+      const voice = config.voiceFor?.(options.personaId) ?? DEFAULT_TTS_VOICE;
       const instructions = [config.baseInstructions ?? "", options.instructions ?? ""]
         .filter(Boolean)
         .join(" ");
 
       const response = await config.client().audio.speech.create({
-        model: config.model ?? DEFAULT_MODEL,
+        model: config.model ?? DEFAULT_TTS_MODEL,
         // The SDK types `voice` as a closed union of its own presets; the set
         // is host-configurable here, so widen through one of its members.
         voice: voice as "ash",

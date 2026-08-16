@@ -132,6 +132,13 @@ export interface ProcessingConfig {
    * by `src/core/processing/openai.test.ts`.
    */
   requestTimeoutMs?: number;
+  /**
+   * Sampling temperature for the pre/post-processing pipeline's OpenAI
+   * calls (language detection, transfer/end-call intent, message cleanup).
+   * Lower values keep those structured, single-answer tasks deterministic.
+   * Default: 0.3
+   */
+  temperature?: number;
 }
 
 /**
@@ -364,218 +371,40 @@ export interface TalkerDependencies {
 }
 
 /**
- * Result from the incoming message pre-processor
+ * Conversation context stored per phone number.
+ * Co-located with the store that owns it; re-exported here for compatibility.
+ * @deprecated Import from `./core/context` instead.
  */
-export interface IncomingResult {
-  /** Whether the caller should be transferred to a human */
-  shouldTransfer: boolean;
-  /** Whether the caller wants to end the conversation */
-  shouldEndCall: boolean;
-  /** Detected language code (ISO 639-1) */
-  detectedLanguage: string;
-  /** Cleaned and processed message */
-  processedMessage: string;
-}
-
+export type { TelephonyContext } from "./core/context";
 /**
- * Flow-related types
+ * Phrase file structure for each language, co-located with the loader that
+ * validates it; re-exported here for compatibility.
+ * @deprecated Import from `./core/phrases` instead.
  */
-
-export interface FlowSchemaProperty {
-  type: "string" | "number" | "boolean";
-  description?: string;
-}
-
-export interface FlowSchema {
-  type: "object";
-  properties: Record<string, FlowSchemaProperty>;
-  required: string[];
-}
-
+export type { Phrases, PhraseValue } from "./core/phrases";
 /**
- * Highest `contractVersion` the loader understands. A flow.json naming a
- * version above this one fails to load with an actionable error rather than
- * being silently misinterpreted. Kept numerically aligned with chatter's own
- * `CURRENT_FLOW_CONTRACT_VERSION` (src/flows/types.ts there) even though this
- * is talker's own loader fork.
+ * Result from the incoming message pre-processor.
+ * Co-located with its one producer; re-exported here for compatibility.
+ * @deprecated Import from `./core/processing/incoming` instead.
  */
-export const CURRENT_FLOW_CONTRACT_VERSION = 1;
-
+export type { IncomingResult } from "./core/processing/incoming";
 /**
- * Contract version assumed for a flow.json that omits `contractVersion`
- * entirely - every flow written before the field existed. Fixed at 1
- * forever: it names a point in this loader's history, not "whatever version
- * is current today". Filling an omitted field with {@link
- * CURRENT_FLOW_CONTRACT_VERSION} instead would relabel a pre-field flow as
- * compatible with a contract version it was never written against, the
- * moment `CURRENT_FLOW_CONTRACT_VERSION` is next bumped.
+ * Flow-related types, co-located with the flow presentation layer;
+ * re-exported here for compatibility.
+ * @deprecated Import from `./flows/types` instead.
  */
-export const LEGACY_FLOW_CONTRACT_VERSION = 1;
-
-export interface FlowDefinition {
-  id: string;
-  name: string;
-  description: string;
-  triggerKeywords: string[];
-  schema: FlowSchema;
-  /** Defaults to {@link LEGACY_FLOW_CONTRACT_VERSION} when omitted. */
-  contractVersion?: number;
-}
-
-export interface FlowState {
-  flowName: string;
-  params: Record<string, unknown>;
-  attempts: number;
-  startedAt: number;
-}
-
-export interface FlowHandlerResult {
-  /**
-   * Whether the flow itself completed successfully. When `false`, the SMS
-   * and WhatsApp processors discard `say`/`sms`/`whatsapp` entirely and
-   * substitute a generic, out-of-persona "processingError" phrase; a voice
-   * call instead speaks `say` and transfers to `transferNumber`. A handler
-   * that wants its own in-persona message to reach the caller for an
-   * expected failure (rate limit, validation, a caught upstream error) must
-   * still report `success: true` - `success: false` is reserved for
-   * "something went wrong that a generic fallback should cover instead."
-   */
-  success: boolean;
-  result?: unknown;
-  /** What to say via voice/call */
-  say: string;
-  /** Delivered as the SMS reply body when non-empty; falls back to `say` otherwise */
-  sms?: string;
-  /** Delivered as the WhatsApp reply body when non-empty; falls back to `say` otherwise */
-  whatsapp?: string;
-}
-
-export interface FlowHandlerContext {
-  phoneNumber: string;
-  channel: Channel;
-}
-
-export type FlowHandler = (
-  params: Record<string, unknown>,
-  context: FlowHandlerContext,
-) => Promise<FlowHandlerResult>;
-
-export type FlowPrefill = (
-  phoneNumber: string,
-  context: Record<string, unknown>,
-) => Record<string, unknown>;
-
-export interface FlowExtractionResult {
-  extractedParams: Record<string, unknown>;
-  allParamsFilled: boolean;
-  nextPrompt?: string;
-}
-
-export interface IntentDetection {
-  intent: string;
-  confidence: number;
-  reasoning?: string;
-}
-
-export interface LoadedFlow {
-  definition: FlowDefinition;
-  handler: FlowHandler;
-  instructionsPath: string;
-  prefill?: FlowPrefill;
-}
-
-export interface FlowResult {
-  isFlowActive: boolean;
-  response: string;
-  flowCompleted: boolean;
-  /** SMS-specific reply body, delivered by the SMS processor instead of `response` when non-empty */
-  smsContent?: string;
-  /** WhatsApp-specific reply body, delivered by the WhatsApp processor instead of `response` when non-empty */
-  whatsappContent?: string;
-  flowSuccess?: boolean;
-  /** The user cancelled an active flow; `response` carries phrases.flow.cancelled */
-  cancelled?: boolean;
-  /** Flow processing failed (registry lookup, parameter extraction, or handler init); `response` carries phrases.flow.error */
-  error?: boolean;
-}
-
-/**
- * Conversation context stored per phone number
- */
-export interface TelephonyContext {
-  phoneNumber: string;
-  channel: Channel;
-  detectedLanguage: string | null;
-  messageHistory: Array<{ role: "user" | "assistant"; content: string; timestamp: number }>;
-  activeFlow: FlowState | null;
-  noSpeechRetries: number;
-  lastPrompt: string | null;
-  createdAt: number;
-  lastActivity: number;
-}
-
-/**
- * A phrase entry: a single string, or an array to rotate through (a random
- * variant is picked per use).
- */
-export type PhraseValue = string | string[];
-
-/**
- * Phrase file structure for each language
- */
-export interface Phrases {
-  greeting: PhraseValue;
-  didNotCatch: PhraseValue;
-  /** Unused by the no-speech ladder, which speaks didNotHearRetry/didNotHearFinal instead. Kept for backward compatibility. */
-  didNotHear: PhraseValue;
-  didNotHearRetry: PhraseValue;
-  didNotHearFinal: PhraseValue;
-  transfer: PhraseValue;
-  acknowledgment: PhraseValue;
-  farewell: {
-    morning: PhraseValue;
-    afternoon: PhraseValue;
-    evening: PhraseValue;
-  };
-  error: PhraseValue;
-  timeout: PhraseValue;
-  lostQuestion: PhraseValue;
-  /** Spoken when the caller trips the per-number rate limit. */
-  rateLimited: PhraseValue;
-  /** Spoken or sent when the chat backend fails or returns nothing usable. */
-  chatError: PhraseValue;
-  flow: {
-    cancelled: PhraseValue;
-    error: PhraseValue;
-    /** Asked when the engine fills some parameters but returns no prompt of its own. */
-    needMoreDetails: PhraseValue;
-    /**
-     * Words and phrases that end an in-progress flow in this language. A list,
-     * not a rotation: every entry is matched, none is spoken. Matching is
-     * whole-word, case-insensitive and accent-insensitive, so ASCII entries
-     * still match accented speech-to-text output.
-     */
-    cancellationKeywords: PhraseValue;
-  };
-  sms: {
-    greeting: PhraseValue;
-    greetingShort: PhraseValue;
-    callForHelp: PhraseValue;
-    processingError: PhraseValue;
-    genericError: PhraseValue;
-  };
-  whatsapp: {
-    greeting: PhraseValue;
-    greetingShort: PhraseValue;
-    callForHelp: PhraseValue;
-    processingError: PhraseValue;
-    genericError: PhraseValue;
-  };
-  voice: {
-    overCapPerNumber: PhraseValue;
-    overCapGlobal: PhraseValue;
-    limitUnavailable: PhraseValue;
-    unintelligible: PhraseValue;
-    answerFailed: PhraseValue;
-  };
-}
+export type {
+  FlowDefinition,
+  FlowExtractionResult,
+  FlowHandler,
+  FlowHandlerContext,
+  FlowHandlerResult,
+  FlowPrefill,
+  FlowResult,
+  FlowSchema,
+  FlowSchemaProperty,
+  FlowState,
+  IntentDetection,
+  LoadedFlow,
+} from "./flows/types";
+export { CURRENT_FLOW_CONTRACT_VERSION, LEGACY_FLOW_CONTRACT_VERSION } from "./flows/types";

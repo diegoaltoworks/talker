@@ -7,9 +7,10 @@
 
 import type { Context, Next } from "hono";
 import { resolveLanguage } from "../core/context";
+import { UNKNOWN_PHONE_NUMBER } from "../core/defaults";
 import { logger } from "../core/logger";
 import { getPhrase } from "../core/phrases";
-import { sayTwiml } from "../core/twiml";
+import { sayTwiml, twimlResponse } from "../core/twiml";
 import type { TalkerConfig } from "../types";
 
 export const DEFAULT_MAX_REQUESTS = 30;
@@ -125,14 +126,14 @@ export function rateLimitMiddleware(
 
   return async (c: Context, next: Next) => {
     const body = await c.req.parseBody();
-    const phoneNumber = ((body.From as string) || "unknown").trim();
+    const phoneNumber = ((body.From as string) || UNKNOWN_PHONE_NUMBER).trim();
 
     if (!checkRateLimit(phoneNumber, maxRequests, windowMs)) {
       logger.warn("rate limit exceeded", { phoneNumber, path: c.req.path });
       const resolved = talkerConfig ?? {};
       const language = resolveLanguage(phoneNumber);
       const message = getPhrase(language, "rateLimited", resolved.languageDir);
-      return c.text(sayTwiml(message, language, resolved), 429, { "Content-Type": "text/xml" });
+      return twimlResponse(c, sayTwiml(message, language, resolved), 429);
     }
 
     return next();

@@ -43,6 +43,9 @@ jobs:
       - name: Run tests
         run: bun test
 
+      - name: Run em-dash gate
+        run: bun run check:em-dashes
+
       - name: Build package
         run: bun run build
 

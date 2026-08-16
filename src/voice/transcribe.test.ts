@@ -106,6 +106,18 @@ describe("createTranscriber", () => {
     expect(await transcribe(audio)).toBe("abcd");
   });
 
+  it("does not split a surrogate pair when clamping to maxChars", async () => {
+    // "ab" + an astral emoji (a surrogate pair, length 2) - a naive
+    // substring(0, 3) would keep only the lone high surrogate.
+    const { client } = mockClient(async () => ({ text: "ab\u{1F600}cd" }));
+    const transcribe = createTranscriber({ client, enabled: () => true, maxChars: 3 });
+
+    const result = await transcribe(audio);
+    expect(result).toBe("ab");
+    const last = result?.charCodeAt((result?.length ?? 1) - 1) ?? 0;
+    expect(last >= 0xd800 && last <= 0xdbff).toBe(false);
+  });
+
   it("defaults the clamp to DEFAULT_TRANSCRIPT_MAX_CHARS", async () => {
     const { client } = mockClient(async () => ({
       text: "x".repeat(DEFAULT_TRANSCRIPT_MAX_CHARS + 50),

@@ -10,9 +10,9 @@ import { join } from "node:path";
  * - `process.env` is confined to config seams (currently just
  *   `core/logger.ts`) so capability modules stay injectable and testable
  *   without env stubbing.
- * - `api.openai.com` is confined to the one client module
- *   (`core/processing/openai-request.ts`) that honors a configurable
- *   `baseUrl` and abort/timeout, so no call site can silently bypass either.
+ * - `api.openai.com` is confined to the one module
+ *   (`core/processing/openai-request.ts`) that resolves it against a
+ *   configurable `baseUrl`, so no call site can silently bypass the override.
  *
  * See `docs/ARCHITECTURE.md`'s "Injected clients" invariant and "CI
  * grep-gates" table.

@@ -285,4 +285,16 @@ describe("peer dependency ranges", () => {
   it("admits chatter minors published after this release", () => {
     expect(peers["@diegoaltoworks/chatter"]).toBe(">=0.32.0 <1");
   });
+
+  it("gives every pre-1.0 peer an explicit upper bound", () => {
+    // A floor like ">=0.6.0" with nothing above it admits every future 0.x
+    // release, including one with a breaking change - the exact caret-pin
+    // problem the test above guards against, just spelled without a caret.
+    // Checked generically (not by name) so a new pre-1.0 peer is covered the
+    // moment it is declared, not only after someone remembers to add a case.
+    const unbounded = Object.entries(peers).filter(
+      ([, range]) => />=\s*0\./.test(range) && !/<\s*1\b/.test(range),
+    );
+    expect(unbounded).toEqual([]);
+  });
 });

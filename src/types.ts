@@ -329,14 +329,24 @@ export interface FlowSchema {
 }
 
 /**
- * Highest `contractVersion` the loader understands. A flow.json omitting
- * `contractVersion` is treated as version 1 (every flow written before this
- * field existed); a flow.json naming a version above this one fails to load
- * with an actionable error rather than being silently misinterpreted. Kept
- * numerically aligned with chatter's own `CURRENT_FLOW_CONTRACT_VERSION`
- * (src/flows/types.ts there) even though this is talker's own loader fork.
+ * Highest `contractVersion` the loader understands. A flow.json naming a
+ * version above this one fails to load with an actionable error rather than
+ * being silently misinterpreted. Kept numerically aligned with chatter's own
+ * `CURRENT_FLOW_CONTRACT_VERSION` (src/flows/types.ts there) even though this
+ * is talker's own loader fork.
  */
 export const CURRENT_FLOW_CONTRACT_VERSION = 1;
+
+/**
+ * Contract version assumed for a flow.json that omits `contractVersion`
+ * entirely - every flow written before the field existed. Fixed at 1
+ * forever: it names a point in this loader's history, not "whatever version
+ * is current today". Filling an omitted field with {@link
+ * CURRENT_FLOW_CONTRACT_VERSION} instead would relabel a pre-field flow as
+ * compatible with a contract version it was never written against, the
+ * moment `CURRENT_FLOW_CONTRACT_VERSION` is next bumped.
+ */
+export const LEGACY_FLOW_CONTRACT_VERSION = 1;
 
 export interface FlowDefinition {
   id: string;
@@ -344,7 +354,7 @@ export interface FlowDefinition {
   description: string;
   triggerKeywords: string[];
   schema: FlowSchema;
-  /** Defaults to 1 when omitted. See {@link CURRENT_FLOW_CONTRACT_VERSION}. */
+  /** Defaults to {@link LEGACY_FLOW_CONTRACT_VERSION} when omitted. */
   contractVersion?: number;
 }
 

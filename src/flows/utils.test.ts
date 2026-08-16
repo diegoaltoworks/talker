@@ -1,8 +1,21 @@
-import { describe, expect, it } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { afterEach, describe, expect, it } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { getExitMessage, shouldExitFlow } from "./utils";
+
+// Every test below makes its own scratch language dir; tracking and removing
+// them here (rather than per-test) keeps each `it` block a one-liner and
+// guarantees cleanup even when an assertion throws.
+const tempDirs: string[] = [];
+function makeTempDir(prefix: string): string {
+  const dir = mkdtempSync(join(tmpdir(), prefix));
+  tempDirs.push(dir);
+  return dir;
+}
+afterEach(() => {
+  for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+});
 
 /**
  * Per shipped language: a real cancellation, and messages that must NOT
@@ -119,7 +132,7 @@ describe("Flow Utils", () => {
     });
 
     it("should honor a host's own keyword list from languageDir", () => {
-      const dir = mkdtempSync(join(tmpdir(), "talker-cancel-"));
+      const dir = makeTempDir("talker-cancel-");
       writeFileSync(
         join(dir, "en.json"),
         JSON.stringify({ flow: { cancellationKeywords: ["abort mission"] } }),
@@ -131,7 +144,7 @@ describe("Flow Utils", () => {
     });
 
     it("should fall back to the built-in list when a phrase file predates the key", () => {
-      const dir = mkdtempSync(join(tmpdir(), "talker-cancel-legacy-"));
+      const dir = makeTempDir("talker-cancel-legacy-");
       writeFileSync(
         join(dir, "en.json"),
         JSON.stringify({ flow: { cancelled: "Done.", error: "Oops." } }),
@@ -142,7 +155,7 @@ describe("Flow Utils", () => {
     });
 
     it("should accept a lone string as a single-keyword list", () => {
-      const dir = mkdtempSync(join(tmpdir(), "talker-cancel-string-"));
+      const dir = makeTempDir("talker-cancel-string-");
       writeFileSync(
         join(dir, "en.json"),
         JSON.stringify({ flow: { cancellationKeywords: "abort" } }),
@@ -154,7 +167,7 @@ describe("Flow Utils", () => {
     // An empty keyword compiles to a pattern that matches nearly anything, so
     // the inverse of being trapped in a flow is being unable to stay in one.
     it("should ignore a blank keyword rather than cancel every message", () => {
-      const dir = mkdtempSync(join(tmpdir(), "talker-cancel-blank-"));
+      const dir = makeTempDir("talker-cancel-blank-");
       writeFileSync(
         join(dir, "en.json"),
         JSON.stringify({ flow: { cancellationKeywords: ["cancel", "  "] } }),
@@ -165,7 +178,7 @@ describe("Flow Utils", () => {
     });
 
     it("should fall back to the built-in list when every keyword is blank", () => {
-      const dir = mkdtempSync(join(tmpdir(), "talker-cancel-allblank-"));
+      const dir = makeTempDir("talker-cancel-allblank-");
       writeFileSync(join(dir, "en.json"), JSON.stringify({ flow: { cancellationKeywords: [""] } }));
 
       expect(shouldExitFlow("what time is it?", "en", dir)).toBe(false);

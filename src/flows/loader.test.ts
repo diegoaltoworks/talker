@@ -7,9 +7,10 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { LEGACY_FLOW_CONTRACT_VERSION } from "../types";
 import { loadFlowsFromDirectory } from "./loader";
 
 const HANDLER_TS = `
@@ -127,7 +128,7 @@ describe("loadFlowsFromDirectory", () => {
     expect(flows.has("arrayprops")).toBe(false);
   });
 
-  it("defaults contractVersion to 1 when flow.json omits it", async () => {
+  it("defaults contractVersion to the legacy version when flow.json omits it", async () => {
     writeFlow(flowsDir, "unversioned", {
       id: "unversioned",
       name: "Unversioned",
@@ -138,7 +139,31 @@ describe("loadFlowsFromDirectory", () => {
 
     const flows = await loadFlowsFromDirectory(flowsDir);
 
-    expect(flows.get("unversioned")?.definition.contractVersion).toBe(1);
+    // Asserted against the dedicated legacy constant, not the literal `1`
+    // that CURRENT_FLOW_CONTRACT_VERSION also happens to equal today - a
+    // loader bug that filled the omitted field from CURRENT instead of
+    // LEGACY would still pass a test written against the literal, right up
+    // until CURRENT is next bumped.
+    expect(flows.get("unversioned")?.definition.contractVersion).toBe(LEGACY_FLOW_CONTRACT_VERSION);
+  });
+
+  it("pins the legacy contract version at 1, independent of the loader's current version", () => {
+    // A flow.json written before `contractVersion` existed always meant
+    // version 1 - that fact does not move when the loader's own current
+    // version does, so this constant is never derived from
+    // CURRENT_FLOW_CONTRACT_VERSION.
+    expect(LEGACY_FLOW_CONTRACT_VERSION).toBe(1);
+  });
+
+  it("fills the omitted contractVersion from LEGACY, not CURRENT, in the source itself", () => {
+    // Both constants equal 1 today, so the two tests above pass whichever one
+    // loader.ts actually reads - they can't tell a correct LEGACY default-fill
+    // apart from a regression back to CURRENT until CURRENT is next bumped.
+    // Scanning the source closes that gap immediately instead of leaving it
+    // open until the next version bump silently relabels legacy flows.
+    const source = readFileSync(join(import.meta.dir, "loader.ts"), "utf8");
+    expect(source).toContain("definition.contractVersion ??= LEGACY_FLOW_CONTRACT_VERSION;");
+    expect(source).not.toContain("definition.contractVersion ??= CURRENT_FLOW_CONTRACT_VERSION;");
   });
 
   it("loads a flow with an explicit, supported contractVersion", async () => {

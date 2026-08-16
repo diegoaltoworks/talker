@@ -34,9 +34,6 @@ jobs:
 
     env:
       NODE_VERSION: 24.x
-      # Optional. When set, the version bump is also pushed to main so the
-      # checked-in manifest tracks what shipped; see "Push the version bump".
-      RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
 
     steps:
       - name: Checkout code
@@ -133,15 +130,17 @@ jobs:
       # release is already complete — the tag is the record — so this is skipped
       # rather than failed, and the checked-in version reads as a floor.
       - name: Push the version bump to main
+        env:
+          RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
         run: |
           if [ -z "$RELEASE_PAT" ]; then
-            echo "RELEASE_PAT not configured — main keeps its current version; v${{ steps.bump.outputs.version }} is recorded by the tag."
+            echo "RELEASE_PAT not configured, main keeps its current version; v${{ steps.bump.outputs.version }} is recorded by the tag."
             exit 0
           fi
           git push "https://x-access-token:${RELEASE_PAT}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main
 
       - name: Update npm (OIDC trusted publishing needs a recent client)
-        run: npm install -g npm@latest
+        run: npm install -g npm@12.0.2
 
       - name: Publish to NPM (OIDC trusted publishing - no token)
         run: npm publish --provenance --access public

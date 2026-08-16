@@ -47,4 +47,18 @@ describe("escapeXml", () => {
   it("should strip control characters mixed with entities", () => {
     expect(escapeXml("a\x07 & b\x0Ec")).toBe("a &amp; bc");
   });
+
+  it("should strip a lone high surrogate left by an upstream truncation cut", () => {
+    // The high half of the astral emoji U+1F600, with its low half dropped -
+    // exactly what a naive length-based truncation leaves behind.
+    expect(escapeXml("ab\uD83D")).toBe("ab");
+  });
+
+  it("should strip a lone low surrogate", () => {
+    expect(escapeXml("ab\uDE00cd")).toBe("abcd");
+  });
+
+  it("should keep a valid surrogate pair intact", () => {
+    expect(escapeXml("ab\u{1F600}cd")).toBe("ab\u{1F600}cd");
+  });
 });

@@ -31,8 +31,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "./core/logger";
 import { assertWebhookSecurity } from "./core/webhook-security";
-import { initDbClient } from "./db/client";
-import { runMigrations } from "./db/migrate";
+import { resolveStore } from "./db/resolve-store";
 import { FlowRegistry } from "./flows/registry";
 import { mountTelephony } from "./mount";
 import type { TalkerConfig, TalkerDependencies } from "./types";
@@ -61,11 +60,9 @@ export async function createStandaloneServer(config: StandaloneConfig) {
 
   assertWebhookSecurity(config);
 
-  // Initialize database if configured
-  if (config.database?.url && config.database?.authToken) {
-    await initDbClient(config.database.url, config.database.authToken);
-    await runMigrations();
-  }
+  // Resolve the session/message/status store: `config.store` if set, else
+  // `config.database` if set, else a no-op. See src/db/resolve-store.ts.
+  const store = await resolveStore(config);
 
   // Initialize flow registry. Flow intent detection and parameter extraction
   // need a real OpenAI SDK client (chatter's flow engine calls it directly),
@@ -93,6 +90,7 @@ export async function createStandaloneServer(config: StandaloneConfig) {
     config,
     openaiApiKey: config.openaiApiKey,
     openaiModel: config.processing?.model || DEFAULT_MODEL,
+    store,
   };
 
   // Create Hono app

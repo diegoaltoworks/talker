@@ -181,12 +181,20 @@ interface TalkerConfig {
     systemMessage?: string;    // Override default system prompt
   };
 
-  // Database config for session persistence. In plugin mode, falls back to
-  // chatter's database config.
+  // Database config for talker's own Turso/libSQL connection. Takes
+  // priority over the plugin-mode default below - set this only when
+  // talker should persist to a different database than chatter's.
   database?: {
     url: string;       // Turso/libSQL database URL
     authToken: string; // Turso auth token
   };
+
+  // Bring-your-own persistence for sessions, messages and delivery status.
+  // When set, used as-is - no migrations run, the host owns its own schema.
+  // Default resolution: `database` above if set, else (plugin mode only)
+  // chatter's own already-connected database - reused rather than opening a
+  // second connection to it - else a no-op store. See `TalkerStore` below.
+  store?: TalkerStore;
 
   // Override OpenAI key (falls back to chatter's key in plugin mode)
   openaiApiKey?: string;
@@ -498,6 +506,38 @@ createTelephonyRoutes(app, deps, {
   voices: {
     en: { voice: 'Polly.Amy', language: 'en-US' },
     fr: { voice: 'Polly.Lea', language: 'fr-FR' },
+  },
+});
+```
+
+### Custom Session Store
+
+Session/message/status persistence goes through `TalkerStore` - a structural
+interface, so no import or subclassing is needed:
+
+```typescript
+interface TalkerStore {
+  upsertSession(session: SessionRecord): Promise<boolean>;
+  insertMessage(message: MessageRecord): Promise<boolean>;
+  upsertMessageStatus(record: MessageStatusRecord): Promise<boolean>;
+}
+```
+
+Left unset, plugin mode reuses chatter's own already-connected database
+(`deps.db`) rather than opening a second connection to it; standalone mode and
+an explicit `database` config open talker's own Turso/libSQL connection and run
+migrations against it. Either way you get `createLibsqlTalkerStore`, exported
+for hosts that want the same implementation over a client they manage
+themselves. Set `store` to persist through a different database, add
+instrumentation, or use a fake in tests - no migrations run against a
+bring-your-own store, since the host owns its own schema:
+
+```typescript
+createTelephonyRoutes(app, deps, {
+  store: {
+    async upsertSession(session) { /* ... */ return true; },
+    async insertMessage(message) { /* ... */ return true; },
+    async upsertMessageStatus(record) { /* ... */ return true; },
   },
 });
 ```

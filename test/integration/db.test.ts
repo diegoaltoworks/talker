@@ -6,11 +6,10 @@
  */
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { type Client, createClient } from "@libsql/client";
 import { clearAllContexts, stopCleanup } from "../../src/core/context";
 import { setDbClient } from "../../src/db/client";
+import { runMigrations } from "../../src/db/migrate";
 import type { SessionRecord } from "../../src/db/sessions";
 import {
   generateSessionId,
@@ -22,27 +21,10 @@ import {
 
 let db: Client;
 
-const schemaPath = join(__dirname, "../../src/db/schema.sql");
-const schemaSql = readFileSync(schemaPath, "utf-8");
-
-async function runSchema(client: Client) {
-  const statements = schemaSql
-    .split("\n")
-    .filter((line) => !line.trim().startsWith("--"))
-    .join("\n")
-    .split(";")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-
-  for (const stmt of statements) {
-    await client.execute(stmt);
-  }
-}
-
 describe("Database Integration", () => {
   beforeAll(async () => {
     db = createClient({ url: ":memory:" });
-    await runSchema(db);
+    await runMigrations(db);
     setDbClient(db);
   });
 

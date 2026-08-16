@@ -41,8 +41,8 @@ export async function processCall(
   // Transfer to human if requested
   if (incoming.shouldTransfer) {
     logger.info("transferring to human", { phoneNumber, language: incoming.detectedLanguage });
-    await persistSession(phoneNumber, "call");
-    persistFinalSession(phoneNumber, "call", "redirected", incoming.processedMessage);
+    await persistSession(phoneNumber, "call", deps.store);
+    persistFinalSession(phoneNumber, "call", "redirected", incoming.processedMessage, deps.store);
     // transferTwiml <Dial>s straight to a human with no further <Gather> -
     // talker won't be asked to handle this call again, same as the
     // shouldEndCall branch below. Clearing the context here (not just
@@ -58,8 +58,8 @@ export async function processCall(
   // End call politely if user is done
   if (incoming.shouldEndCall) {
     logger.info("ending call - user done", { phoneNumber, language: incoming.detectedLanguage });
-    await persistSession(phoneNumber, "call");
-    persistFinalSession(phoneNumber, "call", "ended");
+    await persistSession(phoneNumber, "call", deps.store);
+    persistFinalSession(phoneNumber, "call", "ended", undefined, deps.store);
     clearContext(phoneNumber);
     const message = getFarewellPhrase(incoming.detectedLanguage, deps.config.languageDir);
     tapOutbound(message);
@@ -92,8 +92,8 @@ export async function processCall(
 
     // If flow completed but failed, transfer to human
     if (flowResult.flowCompleted && flowResult.flowSuccess === false) {
-      await persistSession(phoneNumber, "call");
-      persistFinalSession(phoneNumber, "call", "redirected", flowResult.response);
+      await persistSession(phoneNumber, "call", deps.store);
+      persistFinalSession(phoneNumber, "call", "redirected", flowResult.response, deps.store);
       // Same reasoning as the shouldTransfer branch above: this call also
       // ends in a <Dial> with no further <Gather>, so clear the context here
       // rather than leaving it for the caller's own post-response

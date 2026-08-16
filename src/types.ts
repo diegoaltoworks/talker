@@ -8,6 +8,7 @@
 import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import type OpenAI from "openai";
 import type { ContextStore } from "./core/context";
+import type { TalkerStore } from "./db/store";
 
 /**
  * Channel type for telephony interactions
@@ -187,13 +188,28 @@ export interface TalkerConfig {
   /** Remote chatbot API (standalone mode). Not needed in plugin mode — chatter's RAG is used directly */
   chatbot?: ChatbotConfig;
 
-  /** Database config for session persistence. In plugin mode, falls back to chatter's database config */
+  /**
+   * Database config for session persistence: opens talker's own Turso/libSQL
+   * connection. Takes priority over the plugin-mode default (below) - set
+   * this only when talker should persist to a different database than
+   * chatter's.
+   */
   database?: {
     /** Turso/libSQL database URL */
     url: string;
     /** Turso auth token */
     authToken: string;
   };
+
+  /**
+   * Bring-your-own persistence for sessions, messages and delivery status.
+   * When set, this is used as-is and no migrations run - the host owns its
+   * own schema. Default resolution order (see `TalkerDependencies.store` and
+   * `src/db/resolve-store.ts`): `database` above if set, else (plugin mode
+   * only) chatter's own already-connected database - avoiding a second
+   * connection to the same database - else a no-op store.
+   */
+  store?: TalkerStore;
 
   /** OpenAI API key for the pre/post-processing pipeline. Falls back to chatter's OpenAI client */
   openaiApiKey?: string;
@@ -336,6 +352,15 @@ export interface TalkerDependencies {
   openaiApiKey: string;
   /** Resolved OpenAI model for the processing pipeline */
   openaiModel: string;
+  /**
+   * Session/message/status persistence. `createTelephonyRoutes`/
+   * `createStandaloneServer` always populate this before mounting (see
+   * `src/db/resolve-store.ts`), so it is only left `undefined` when a caller
+   * builds `TalkerDependencies` by hand (mainly tests) - `db/persist.ts` and
+   * `db/sessions.ts`'s deprecated no-deps exports fall back to the legacy
+   * singleton client in that case. Route handlers read `deps.store` directly.
+   */
+  store?: TalkerStore;
 }
 
 /**

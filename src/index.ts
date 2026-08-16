@@ -103,10 +103,13 @@ export { getDefaultVoices, getVoiceConfig } from "./core/voice";
 export { escapeXml } from "./core/xml";
 // Database (session persistence)
 export { closeDbClient, getDbClient, initDbClient } from "./db/client";
+export { createLibsqlTalkerStore } from "./db/libsql-store";
 export { runMigrations } from "./db/migrate";
 export { persistFinalSession, persistSession } from "./db/persist";
-export type { MessageRecord, MessageStatusRecord, SessionRecord } from "./db/sessions";
+export { resolveStore } from "./db/resolve-store";
 export { upsertMessageStatus } from "./db/sessions";
+export type { MessageRecord, MessageStatusRecord, SessionRecord, TalkerStore } from "./db/store";
+export { createNullTalkerStore } from "./db/store";
 export { loadFlowsFromDirectory } from "./flows/loader";
 export { processFlow, shouldExitFlow } from "./flows/manager";
 // Flow engine

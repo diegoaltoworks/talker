@@ -8,10 +8,14 @@ import { afterEach, describe, expect, it } from "bun:test";
 import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import { Hono } from "hono";
 import { clearAllContexts, stopCleanup } from "../../core/context";
+import type { TalkerStore } from "../../db/store";
 import type { MessageStatusEvent, TalkerDependencies } from "../../types";
 import { handleStatusCallback } from "./handle-status-callback";
 
-function createTestDeps(onMessageStatus?: (event: MessageStatusEvent) => void): TalkerDependencies {
+function createTestDeps(
+  onMessageStatus?: (event: MessageStatusEvent) => void,
+  store?: TalkerStore,
+): TalkerDependencies {
   return {
     chatter: {} as ServerDependencies,
     config: {
@@ -19,6 +23,7 @@ function createTestDeps(onMessageStatus?: (event: MessageStatusEvent) => void): 
     },
     openaiApiKey: "test-key",
     openaiModel: "gpt-4o-mini",
+    store,
   };
 }
 
@@ -182,6 +187,38 @@ describe("handleStatusCallback", () => {
 
     resolveCallback?.();
     await Promise.resolve();
+  });
+
+  it("persists the delivery status through deps.store", async () => {
+    const statuses: Array<{ messageSid: string; status: string; errorCode?: string }> = [];
+    const fakeStore: TalkerStore = {
+      upsertSession: async () => true,
+      insertMessage: async () => true,
+      upsertMessageStatus: async (record) => {
+        statuses.push({
+          messageSid: record.messageSid,
+          status: record.status,
+          errorCode: record.errorCode,
+        });
+        return true;
+      },
+    };
+    const deps = createTestDeps(undefined, fakeStore);
+    const app = createApp(deps, "sms");
+
+    await postStatus(app, {
+      MessageSid: "SM-store-test",
+      MessageStatus: "delivered",
+      From: "+15551234567",
+      To: "+15559876543",
+    });
+    // upsertMessageStatus is fire-and-forget - let its microtask settle.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(statuses).toEqual([
+      { messageSid: "SM-store-test", status: "delivered", errorCode: undefined },
+    ]);
   });
 
   it("should handle all Twilio message statuses", async () => {

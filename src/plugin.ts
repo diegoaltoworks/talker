@@ -26,8 +26,7 @@ import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import type { Hono } from "hono";
 import { logger } from "./core/logger";
 import { assertWebhookSecurity } from "./core/webhook-security";
-import { initDbClient } from "./db/client";
-import { runMigrations } from "./db/migrate";
+import { resolveStore } from "./db/resolve-store";
 import { FlowRegistry } from "./flows/registry";
 import { mountTelephony } from "./mount";
 import type { TalkerConfig, TalkerDependencies } from "./types";
@@ -57,21 +56,20 @@ export async function createTelephonyRoutes(
     publicUrl: config.publicUrl || chatterDeps.config.bot?.publicUrl,
   };
 
+  // Resolve the session/message/status store: `config.store` if set, else
+  // `config.database` if set, else chatter's own already-connected database
+  // (`chatterDeps.db`) - reused rather than opening a second connection to
+  // it - else a no-op. See src/db/resolve-store.ts.
+  const store = await resolveStore(resolvedConfig, chatterDeps.db);
+
   const deps: TalkerDependencies = {
     chatter: chatterDeps,
     openaiClient: chatterDeps.client,
     config: resolvedConfig,
     openaiApiKey,
     openaiModel: config.processing?.model || DEFAULT_MODEL,
+    store,
   };
-
-  // Initialize database — use talker's config, or fall back to chatter's database
-  const dbUrl = config.database?.url || chatterDeps.config.database?.url;
-  const dbToken = config.database?.authToken || chatterDeps.config.database?.authToken;
-  if (dbUrl && dbToken) {
-    await initDbClient(dbUrl, dbToken);
-    await runMigrations();
-  }
 
   const registry = new FlowRegistry(config.flowsDir || "");
   if (config.flowsDir) {

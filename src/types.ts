@@ -328,12 +328,24 @@ export interface FlowSchema {
   required: string[];
 }
 
+/**
+ * Highest `contractVersion` the loader understands. A flow.json omitting
+ * `contractVersion` is treated as version 1 (every flow written before this
+ * field existed); a flow.json naming a version above this one fails to load
+ * with an actionable error rather than being silently misinterpreted. Kept
+ * numerically aligned with chatter's own `CURRENT_FLOW_CONTRACT_VERSION`
+ * (src/flows/types.ts there) even though this is talker's own loader fork.
+ */
+export const CURRENT_FLOW_CONTRACT_VERSION = 1;
+
 export interface FlowDefinition {
   id: string;
   name: string;
   description: string;
   triggerKeywords: string[];
   schema: FlowSchema;
+  /** Defaults to 1 when omitted. See {@link CURRENT_FLOW_CONTRACT_VERSION}. */
+  contractVersion?: number;
 }
 
 export interface FlowState {

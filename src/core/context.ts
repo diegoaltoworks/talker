@@ -218,6 +218,13 @@ export function clearActiveFlow(phoneNumber: string): void {
 
 // No-speech retry management
 
+/**
+ * @deprecated Internal call-flow bookkeeping (see `src/routes/call/handle-nospeech.ts`);
+ * internal callers within this package are unaffected. Not part of the
+ * documented public API — unlike its read-only sibling `getNoSpeechRetries`,
+ * which was never exported from the package root at all — and the package
+ * root re-export may be dropped in a future release without notice.
+ */
 export function incrementNoSpeechRetries(phoneNumber: string): number {
   const context = contexts.get(phoneNumber);
   if (!context) return 0;
@@ -230,6 +237,12 @@ export function getNoSpeechRetries(phoneNumber: string): number {
   return contexts.get(phoneNumber)?.noSpeechRetries || 0;
 }
 
+/**
+ * @deprecated Internal call-flow bookkeeping (see `src/routes/call/handle-respond.ts`);
+ * internal callers within this package are unaffected. Not part of the
+ * documented public API, and the package root re-export may be dropped in a
+ * future release without notice.
+ */
 export function resetNoSpeechRetries(phoneNumber: string): void {
   const context = contexts.get(phoneNumber);
   if (context && context.noSpeechRetries > 0) {
@@ -248,6 +261,10 @@ export function getLastPrompt(phoneNumber: string): string | null {
 
 /**
  * Clear all contexts (for testing)
+ *
+ * @deprecated Test-only reset helper; existing test usage is unaffected. Not
+ * part of the documented public API, and the package root re-export may be
+ * dropped in a future release without notice.
  */
 export function clearAllContexts(): void {
   contexts.clear();

@@ -15,7 +15,8 @@
       "types": "./dist/adapters/twilio.d.ts",
       "import": "./dist/adapters/twilio.mjs",
       "require": "./dist/adapters/twilio.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",

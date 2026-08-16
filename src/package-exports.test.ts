@@ -24,7 +24,7 @@ function manifest(): {
   main?: string;
   module?: string;
   types?: string;
-  exports?: Record<string, Conditions>;
+  exports?: Record<string, Conditions | string>;
   scripts?: Record<string, string>;
 } {
   return JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
@@ -39,13 +39,32 @@ function sourceFor(distPath: string): string {
 }
 
 const pkg = manifest();
-const exportEntries = Object.entries(pkg.exports ?? {});
+const allExportEntries = Object.entries(pkg.exports ?? {});
+// "./package.json": "./package.json" is a bare-string mapping with no
+// import/require/types conditions — the escape hatch tooling uses to read a
+// package's own manifest without guessing a path. It has no build artifact to
+// check, so it is exercised on its own, below, rather than through the
+// per-condition describe loop. Filtered by key, not by `typeof value ===
+// "object"`, so a future bare-string export other than this one still falls
+// through to the per-condition loop and gets checked rather than silently
+// exempted.
+const exportEntries = allExportEntries.filter(
+  (entry): entry is [string, Conditions] => entry[0] !== "./package.json",
+);
 const buildEsm = pkg.scripts?.["build:esm"] ?? "";
 const buildCjs = pkg.scripts?.["build:cjs"] ?? "";
 
 describe("package exports", () => {
-  it("declares at least the root and the twilio subpath", () => {
-    expect(exportEntries.map(([key]) => key).sort()).toEqual([".", "./twilio"]);
+  it("declares at least the root, the twilio subpath and package.json", () => {
+    expect(allExportEntries.map(([key]) => key).sort()).toEqual([
+      ".",
+      "./package.json",
+      "./twilio",
+    ]);
+  });
+
+  it("maps ./package.json directly to the manifest, not a build artifact", () => {
+    expect(pkg.exports?.["./package.json"]).toBe("./package.json");
   });
 
   for (const [key, conditions] of exportEntries) {

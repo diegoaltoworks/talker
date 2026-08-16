@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 #
 # Packed-tarball smoke test: install the published artifact into a throwaway
-# project that has ONLY hono, and prove it imports — then prove every exports
-# key resolves under both import and require, and that no test declarations
-# shipped.
+# project whose only RUNTIME dependency is hono, and prove it imports — then
+# prove every exports key resolves under both import and require, that no
+# test declarations shipped, and that the .d.ts graph type-checks under the
+# host's own tsc (typescript is installed alongside hono for that last leg;
+# it is dev tooling for the check itself, not a runtime dependency).
 #
 # The optional peers (@diegoaltoworks/chatter, @libsql/client, openai) are
 # deliberately absent. npm does not auto-install peers marked optional, so this
@@ -28,10 +30,10 @@ echo "==> Packing tarball"
 tarball="$(cd "$repo" && npm pack --silent --pack-destination "$work")"
 tarball="$work/$tarball"
 
-echo "==> Installing $(basename "$tarball") with only hono"
+echo "==> Installing $(basename "$tarball") with hono (runtime) and typescript (for the tsc leg)"
 cd "$work"
 npm init -y >/dev/null
-npm install --silent --no-audit --no-fund hono "$tarball"
+npm install --silent --no-audit --no-fund hono typescript "$tarball"
 
 echo "==> Asserting the package imports and degrades actionably"
 node --input-type=module -e '
@@ -103,6 +105,13 @@ const manifest = JSON.parse(fs.readFileSync(path.join(pkgDir, "package.json"), "
 
 for (const [key, conditions] of Object.entries(manifest.exports ?? {})) {
   const specifier = key === "." ? "@diegoaltoworks/talker" : `@diegoaltoworks/talker/${key.slice(2)}`;
+
+  // "./package.json": "./package.json" is a bare-string mapping (no
+  // import/require/types conditions) — the escape hatch tooling uses to read
+  // an installed package manifest without guessing a path. Its resolution is
+  // proven separately, below.
+  if (key === "./package.json") continue;
+
   assert(
     conditions !== null && typeof conditions === "object",
     `${specifier} declares conditions as an object`,
@@ -119,6 +128,15 @@ for (const [key, conditions] of Object.entries(manifest.exports ?? {})) {
     `${specifier} ships ${conditions.types}`,
   );
 }
+
+assert(
+  manifest.exports?.["./package.json"] === "./package.json",
+  "exports declares ./package.json for tooling that resolves an installed package manifest",
+);
+assert(
+  req("@diegoaltoworks/talker/package.json").name === "@diegoaltoworks/talker",
+  "./package.json resolves via require to the installed manifest",
+);
 
 const twilio = await import("@diegoaltoworks/talker/twilio");
 assert(typeof twilio.sendSMS === "function", "subpath exports sendSMS");
@@ -168,5 +186,37 @@ const walk = (dir) => {
 walk(path.join(pkgDir, "dist"));
 assert(stray.length === 0, `no test or map declarations shipped (found ${stray.length})`);
 '
+
+echo "==> Type-checking a hono-only host against the packaged .d.ts graph"
+# The .d.ts graph re-exports types from every optional peer's own type
+# declarations (chatter, @libsql/client, openai) for consumers that DO have
+# them installed. A host that doesn't still needs the whole graph to resolve
+# for `tsc` to bind this package's module shape at all — with the one
+# standard TypeScript setting every non-trivial consumer already needs for
+# third-party deps in general: `skipLibCheck: true` (see README's "Optional
+# peer dependencies" section). Prove the documented, supported configuration
+# actually type-checks clean.
+mkdir -p tsc-host/src
+cat > tsc-host/tsconfig.json <<'EOF'
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["src"]
+}
+EOF
+cat > tsc-host/src/index.ts <<'EOF'
+import { createTelephonyRoutes, createStandaloneServer, parseOggOpus } from "@diegoaltoworks/talker";
+import { sendSMS } from "@diegoaltoworks/talker/twilio";
+
+console.log(createTelephonyRoutes, createStandaloneServer, parseOggOpus, sendSMS);
+EOF
+(cd tsc-host && npx --no-install tsc -p tsconfig.json)
+echo "ok - hono-only host type-checks with the documented skipLibCheck: true"
 
 echo "==> Packed install smoke test passed"

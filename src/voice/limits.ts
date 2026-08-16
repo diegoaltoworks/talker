@@ -17,7 +17,14 @@ export interface VoiceLimitsConfig {
   globalDailyLimit: number;
 }
 
-/** The key used for the global counter — there is no per-number key at that scope. */
+/**
+ * The key used for the global counter — there is no per-number key at that scope.
+ *
+ * @deprecated Internal implementation constant for this module's own
+ * `VoiceLimitsStore` calls; internal use is unaffected. Not part of the
+ * documented public API, and the package root re-export may be dropped in a
+ * future release without notice.
+ */
 export const GLOBAL_LIMIT_KEY = "global";
 
 export const DEFAULT_PER_NUMBER_DAILY_LIMIT = 100;
@@ -85,12 +92,24 @@ export interface VoiceLimiter {
   checkAndReserve(phoneNumber: string): Promise<VoiceLimitCheck>;
 }
 
-/** The UTC calendar day counters roll over on, e.g. "2026-08-01". */
+/**
+ * The UTC calendar day counters roll over on, e.g. "2026-08-01".
+ *
+ * @deprecated Internal helper for this module's own day-bucketing; internal
+ * use is unaffected. Not part of the documented public API, and the package
+ * root re-export may be dropped in a future release without notice.
+ */
 export function utcDayKey(now: number): string {
   return new Date(now).toISOString().slice(0, 10);
 }
 
-/** A configured non-negative integer wins over the default; anything else falls back. */
+/**
+ * A configured non-negative integer wins over the default; anything else falls back.
+ *
+ * @deprecated Internal helper used by `resolveVoiceLimitsConfig`; internal
+ * use is unaffected. Not a supported host API on its own, and the package
+ * root re-export may be dropped in a future release without notice.
+ */
 export function pickDailyLimit(value: string | undefined, fallback: number): number {
   // Blank-but-present must fall back, not parse: Number(" ") is 0, which would
   // silently become a cap of zero and block every request.

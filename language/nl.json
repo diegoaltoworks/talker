@@ -14,6 +14,8 @@
   "error": "Sorry, er is een fout opgetreden. Probeer het later opnieuw. Tot ziens.",
   "timeout": "Sorry, ik deed er te lang over om te antwoorden. Probeer het opnieuw. Tot ziens.",
   "lostQuestion": "Sorry, ik ben uw vraag kwijt. Kunt u het herhalen?",
+  "rateLimited": "Probeer het over een moment opnieuw.",
+  "chatError": "Sorry, er is een fout opgetreden bij het verwerken van uw vraag.",
   "flow": {
     "cancelled": "Geen probleem! Ik heb dat geannuleerd. Waarmee kan ik je helpen?",
     "error": "Sorry, daar ging iets mis. Laten we opnieuw beginnen - waarmee kan ik je helpen?",

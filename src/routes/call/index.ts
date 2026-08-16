@@ -29,7 +29,7 @@ export function callRoutes(deps: TalkerDependencies, registry: FlowRegistry) {
   // Security middleware stack. "/call/*" also matches the bare "/call" path,
   // so this alone covers every route registered below.
   app.use("/call/*", twilioSignatureMiddleware(authToken, baseUrl, signatureOptions));
-  app.use("/call/*", rateLimitMiddleware(deps.config.rateLimit));
+  app.use("/call/*", rateLimitMiddleware(deps.config.rateLimit, deps.config));
   app.use("/call/*", inputSanitizeMiddleware(deps.config.maxInputLength));
 
   app.post("/call", (c) => handleInitialCall(c, deps.config));

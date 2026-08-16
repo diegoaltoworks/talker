@@ -7,7 +7,7 @@
 
 import type { Channel, FlowState, TelephonyContext } from "../types";
 import { getErrorMessage } from "./errors";
-import { isValidLanguageCode } from "./language";
+import { DEFAULT_LANGUAGE, isValidLanguageCode } from "./language";
 import { logger } from "./logger";
 
 const contexts = new Map<string, TelephonyContext>();
@@ -141,6 +141,24 @@ export function setDetectedLanguage(phoneNumber: string, language: string): void
  */
 export function getDetectedLanguage(phoneNumber: string): string | null {
   return contexts.get(phoneNumber)?.detectedLanguage || null;
+}
+
+/**
+ * The language to render this caller's next phrase in.
+ *
+ * Detection runs on the caller's first utterance and sticks for the life of
+ * the context, so every phrase lookup after that turn has a language to use.
+ * This is the one accessor phrase call sites reach for: writing
+ * `getDetectedLanguage(x) || "en"` at each site works until one site forgets,
+ * and a single forgotten site is a caller who said one thing in French and
+ * hears the next error, timeout or acknowledgment in English.
+ *
+ * Falls back to `DEFAULT_LANGUAGE` before detection has run (or for a number
+ * with no context at all), which is what the phrase loader would resolve to
+ * anyway - so the fallback is stated here rather than left implicit.
+ */
+export function resolveLanguage(phoneNumber: string): string {
+  return getDetectedLanguage(phoneNumber) || DEFAULT_LANGUAGE;
 }
 
 /**

@@ -14,6 +14,8 @@
   "error": "Entschuldigung, es ist ein Fehler aufgetreten. Bitte versuchen Sie es spaeter erneut. Auf Wiedersehen.",
   "timeout": "Entschuldigung, ich habe zu lange gebraucht. Bitte versuchen Sie es erneut. Auf Wiedersehen.",
   "lostQuestion": "Es tut mir leid, ich habe Ihre Frage verloren. Koennten Sie das wiederholen?",
+  "rateLimited": "Bitte versuchen Sie es gleich noch einmal.",
+  "chatError": "Entschuldigung, bei der Bearbeitung Ihrer Frage ist ein Fehler aufgetreten.",
   "flow": {
     "cancelled": "Kein Problem! Ich habe das abgebrochen. Wie kann ich helfen?",
     "error": "Entschuldigung, dabei ist etwas schiefgelaufen. Fangen wir noch einmal an - wie kann ich helfen?",

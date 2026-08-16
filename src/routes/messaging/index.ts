@@ -43,11 +43,11 @@ export function messagingRoutes(
 
   // Security middleware stack for all POST endpoints
   app.post(path, twilioSignatureMiddleware(authToken, baseUrl, signatureOptions));
-  app.post(path, rateLimitMiddleware(deps.config.rateLimit));
+  app.post(path, rateLimitMiddleware(deps.config.rateLimit, deps.config));
   app.post(path, inputSanitizeMiddleware(deps.config.maxInputLength));
 
   app.post(`${path}/fallback`, twilioSignatureMiddleware(authToken, baseUrl, signatureOptions));
-  app.post(`${path}/fallback`, rateLimitMiddleware(deps.config.rateLimit));
+  app.post(`${path}/fallback`, rateLimitMiddleware(deps.config.rateLimit, deps.config));
   app.post(`${path}/fallback`, inputSanitizeMiddleware(deps.config.maxInputLength));
 
   app.post(`${path}/status`, twilioSignatureMiddleware(authToken, baseUrl, signatureOptions));

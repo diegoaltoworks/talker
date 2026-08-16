@@ -6,6 +6,7 @@
  */
 
 import type { Context } from "hono";
+import { resolveLanguage } from "../../core/context";
 import { getErrorMessage } from "../../core/errors";
 import { logger } from "../../core/logger";
 import { emitMessageTap } from "../../core/message-tap";
@@ -26,7 +27,11 @@ export async function handleAnswer(c: Context, config: TalkerConfig): Promise<Re
   const pending = getPending(phoneNumber);
   if (!pending) {
     logger.warn("no pending query found", { phoneNumber });
-    const message = getPhrase("en", "lostQuestion", config.languageDir);
+    // The caller has already spoken by the time this webhook fires (it is
+    // the redirect target of the acknowledgment), so detection has usually
+    // run even though the query itself is gone.
+    const language = resolveLanguage(phoneNumber);
+    const message = getPhrase(language, "lostQuestion", config.languageDir);
     emitMessageTap(config, {
       direction: "outbound",
       channel: "call",
@@ -34,7 +39,7 @@ export async function handleAnswer(c: Context, config: TalkerConfig): Promise<Re
       to: phoneNumber,
       body: message,
     });
-    const twiml = gatherTwiml(message, "en", config, phoneNumber);
+    const twiml = gatherTwiml(message, language, config, phoneNumber);
     return c.text(twiml, 200, { "Content-Type": "text/xml" });
   }
 
@@ -49,7 +54,11 @@ export async function handleAnswer(c: Context, config: TalkerConfig): Promise<Re
     return c.text(result.twiml, 200, { "Content-Type": "text/xml" });
   } catch (error) {
     logger.error("answer error", { phoneNumber, error: getErrorMessage(error) });
-    const message = getPhrase("en", "timeout", config.languageDir);
+    // Resolved after the race, not before it: background processing runs
+    // detection and may have recorded the caller's language while this
+    // handler was waiting on the budget.
+    const language = resolveLanguage(phoneNumber);
+    const message = getPhrase(language, "timeout", config.languageDir);
     emitMessageTap(config, {
       direction: "outbound",
       channel: "call",
@@ -57,7 +66,7 @@ export async function handleAnswer(c: Context, config: TalkerConfig): Promise<Re
       to: phoneNumber,
       body: message,
     });
-    const twiml = sayTwiml(message, "en", config);
+    const twiml = sayTwiml(message, language, config);
     return c.text(twiml, 200, { "Content-Type": "text/xml" });
   } finally {
     clearTimeout(timeoutHandle);

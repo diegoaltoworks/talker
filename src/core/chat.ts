@@ -9,15 +9,18 @@
  * All three paths are guarded: a throw anywhere along the chain is logged and
  * answered with a generic apology reply rather than propagating, so a
  * failure in one hook can't take down the whole request differently
- * depending on which branch was active. Path 1 and 3 share the
- * GENERIC_ERROR_REPLY constant below; path 2 (chatbot.ts) guards itself with
- * its own copy of the same literal, since it's a standalone module.
+ * depending on which branch was active. All three resolve that apology from
+ * the same `chatError` phrase key, in the caller's detected language - it is
+ * spoken on a call and sent as a message, so it is caller-facing copy like
+ * any other and does not belong in the code.
  */
 
 import type { Channel, TalkerDependencies } from "../types";
 import { chatViaHTTP } from "./chatbot/client";
+import { resolveLanguage } from "./context";
 import { getErrorMessage } from "./errors";
 import { logger } from "./logger";
+import { getPhrase } from "./phrases";
 
 /**
  * Per-channel instruction appended to the assembled system prompt. Kept to
@@ -31,8 +34,6 @@ const CHANNEL_HINTS: Record<Channel, string> = {
   whatsapp: "This reply will be sent as a WhatsApp message.",
 };
 
-const GENERIC_ERROR_REPLY = "Sorry, I encountered an error processing your question.";
-
 /**
  * Get a chat response
  */
@@ -42,6 +43,9 @@ export async function chat(
   message: string,
   channel: Channel,
 ): Promise<string> {
+  const genericErrorReply = () =>
+    getPhrase(resolveLanguage(phoneNumber), "chatError", deps.config.languageDir);
+
   // 1. Custom chat function (highest priority). Guarded like every other
   // hook: an override that throws must not behave differently from one that
   // fails inside the built-in pipeline below.
@@ -50,13 +54,13 @@ export async function chat(
       return await deps.config.chatFn(phoneNumber, message);
     } catch (error) {
       logger.error("chatFn error", { phoneNumber, error: getErrorMessage(error) });
-      return GENERIC_ERROR_REPLY;
+      return genericErrorReply();
     }
   }
 
   // 2. Remote chatbot API via HTTP (standalone mode)
   if (deps.config.chatbot?.url) {
-    return chatViaHTTP(deps.config.chatbot, phoneNumber, message);
+    return chatViaHTTP(deps.config.chatbot, phoneNumber, message, deps.config.languageDir);
   }
 
   // 3. Chatter RAG pipeline (plugin mode)
@@ -117,6 +121,6 @@ export async function chat(
     return result.content;
   } catch (error) {
     logger.error("chat error", { phoneNumber, error: getErrorMessage(error) });
-    return GENERIC_ERROR_REPLY;
+    return genericErrorReply();
   }
 }

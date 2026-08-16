@@ -12,6 +12,7 @@
 
 import type { Context } from "hono";
 import { stripWhatsAppPrefix } from "../../adapters/twilio";
+import { resolveLanguage } from "../../core/context";
 import { logger } from "../../core/logger";
 import { emitMessageTap } from "../../core/message-tap";
 import { getChannelPhrase } from "../../core/phrases";
@@ -54,8 +55,16 @@ export async function handleFallback(
     body: messageBody,
   });
 
-  // Respond with a generic error message appropriate to the channel
-  const errorMessage = getChannelPhrase(channel, "en", "genericError", deps.config.languageDir);
+  // Respond with a generic error message appropriate to the channel. A
+  // fallback fires because the primary webhook failed, not because the
+  // conversation restarted, so an established context (and with it a
+  // detected language) is usually still there to answer in.
+  const errorMessage = getChannelPhrase(
+    channel,
+    resolveLanguage(phoneNumber),
+    "genericError",
+    deps.config.languageDir,
+  );
 
   emitMessageTap(deps.config, {
     direction: "outbound",

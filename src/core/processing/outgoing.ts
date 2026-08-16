@@ -6,7 +6,7 @@
  */
 
 import type { Channel, TalkerDependencies } from "../../types";
-import { addMessage, getDetectedLanguage } from "../context";
+import { addMessage, resolveLanguage } from "../context";
 import { getErrorMessage } from "../errors";
 import { logger } from "../logger";
 import { callOpenAI } from "./openai";
@@ -22,7 +22,7 @@ export async function processOutgoing(
   channel: Channel = "call",
 ): Promise<string> {
   try {
-    const language = getDetectedLanguage(phoneNumber) || "en";
+    const language = resolveLanguage(phoneNumber);
     const prompt = getOutgoingPrompt(deps);
     const promptWithContext = `${prompt}\n\n---\nChannel: ${channel}\nRespond in: ${language}`;
 

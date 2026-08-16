@@ -134,6 +134,8 @@ const ENGLISH_FALLBACK: Phrases = {
   error: "Sorry, I encountered an error. Please try again later. Goodbye.",
   timeout: "Sorry, I took too long to respond. Please try again. Goodbye.",
   lostQuestion: "I'm sorry, I lost track of your question. Could you please repeat?",
+  rateLimited: "Please try again in a moment.",
+  chatError: "Sorry, I encountered an error processing your question.",
   flow: {
     cancelled: "No problem! I've cancelled that. What else would you like to know?",
     error: "Sorry, something went wrong with that. Let's start over - what would you like to know?",
@@ -234,7 +236,9 @@ type SimplePhraseKey =
   | "acknowledgment"
   | "error"
   | "timeout"
-  | "lostQuestion";
+  | "lostQuestion"
+  | "rateLimited"
+  | "chatError";
 
 /**
  * Get a simple phrase by key

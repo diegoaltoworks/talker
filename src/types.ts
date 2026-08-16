@@ -116,7 +116,10 @@ export interface ProcessingConfig {
    * milliseconds. A hung upstream request would otherwise hold the /call,
    * /sms or /whatsapp webhook open indefinitely - callers already treat a
    * failed call as "use the original text unmodified", so aborting is safe.
-   * Default: 8000 (8 seconds)
+   * Default: 5000 (5 seconds). One webhook makes up to two of these calls
+   * sequentially, so the default is kept well under half the ~15s budget -
+   * see `DEFAULT_OPENAI_REQUEST_TIMEOUT_MS`, which this number is pinned to
+   * by `src/core/processing/openai.test.ts`.
    */
   requestTimeoutMs?: number;
 }
@@ -476,6 +479,10 @@ export interface Phrases {
   error: PhraseValue;
   timeout: PhraseValue;
   lostQuestion: PhraseValue;
+  /** Spoken when the caller trips the per-number rate limit. */
+  rateLimited: PhraseValue;
+  /** Spoken or sent when the chat backend fails or returns nothing usable. */
+  chatError: PhraseValue;
   flow: {
     cancelled: PhraseValue;
     error: PhraseValue;

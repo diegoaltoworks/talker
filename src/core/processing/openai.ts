@@ -36,7 +36,7 @@ export async function callOpenAI(
   logger.info(`${context.stage} request`, {
     phoneNumber: context.phoneNumber,
     stage: context.stage,
-    input: userMessage.substring(0, 160) + (userMessage.length > 160 ? "..." : ""),
+    input: userMessage,
   });
 
   const response = await fetch(OPENAI_API_URL, {
@@ -65,7 +65,7 @@ export async function callOpenAI(
   logger.info(`${context.stage} response`, {
     phoneNumber: context.phoneNumber,
     stage: context.stage,
-    output: content.substring(0, 160) + (content.length > 160 ? "..." : ""),
+    output: content,
     tokens: data.usage?.total_tokens,
   });
 

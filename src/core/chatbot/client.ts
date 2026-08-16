@@ -43,7 +43,7 @@ export async function chatViaHTTP(
   logger.info("chatbot request", {
     phoneNumber,
     conversationId: conversation.conversationId,
-    message: message.substring(0, 100),
+    message,
     historyLength: conversation.chatHistory.length,
   });
 
@@ -69,7 +69,7 @@ export async function chatViaHTTP(
     logger.info("chatbot response", {
       phoneNumber,
       conversationId: conversation.conversationId,
-      reply: data.reply.substring(0, 200),
+      reply: data.reply,
     });
 
     const answer = data.reply || "Sorry, I could not process your request.";

@@ -31,7 +31,8 @@ export async function handleRespond(
   const speechResult = body.SpeechResult as string;
   const config = deps.config;
 
-  logger.info("speech received", { phoneNumber, speechResult });
+  logger.info("speech received", { phoneNumber });
+  logger.debug("speech content", { phoneNumber, speechResult });
 
   const tapOutbound = (text: string) =>
     emitMessageTap(config, {

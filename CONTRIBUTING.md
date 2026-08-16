@@ -249,8 +249,8 @@ past the commit.
 ## Questions?
 
 Feel free to:
-- Open an issue for questions
-- Start a discussion in GitHub Discussions
+- Open an [issue](https://github.com/diegoaltoworks/talker/issues) for
+  questions or discussion
 - Email: diego@diegoalto.works
 
 Thank you for contributing!

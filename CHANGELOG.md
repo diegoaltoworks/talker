@@ -32,6 +32,17 @@ the version they actually shipped in.
 
 ### Changed
 
+- **The `@diegoaltoworks/chatter` peer range is now `>=0.32.0 <2`** (was
+  `>=0.32.0 <1`), so a host can co-install this package with a chatter 1.x.
+  npm enforces a declared peer range even when the peer is `optional` -
+  `optional` only stops npm auto-installing an absent peer - so under the old
+  upper bound, the day chatter tags 1.0 every host installing latest-of-both
+  gets a hard `ERESOLVE` with no fix but `--force`. Widening has to ship
+  before that tag exists, which is why it lands here rather than in response
+  to the break. `scripts/smoke-packed-install.sh` now co-installs the packed
+  tarball with a chatter 1.0.0 stub under default npm resolution and fails if
+  the pair is refused.
+
 - **Plugin mode no longer opens its own database connection by default.**
   Previously `createTelephonyRoutes` always dialed a fresh Turso/libSQL
   connection (using talker's `database` config, or chatter's, as a

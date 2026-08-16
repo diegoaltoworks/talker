@@ -264,7 +264,14 @@ describe("optional peer dependencies", () => {
  * pins one minor, because every 0.x minor is treated as a breaking major. Peers
  * that release minors faster than this package does therefore fall out of range
  * within days, and a host installing latest-of-both gets a peer conflict for a
- * combination that works fine. Pre-1.0 peers get an explicit `>=x.y.z <1`.
+ * combination that works fine. Pre-1.0 peers get an explicit `>=x.y.z <major`.
+ *
+ * The upper bound has to lead the peer, not follow it. npm refuses to resolve
+ * an installed peer that sits outside the declared range even when the peer is
+ * `optional` (optional only stops npm auto-installing an absent one), so the
+ * moment chatter tags 1.0 every host on latest-of-both gets a hard ERESOLVE
+ * until a talker release widens the range - and that release cannot be
+ * back-dated. `<2` is therefore declared before chatter's 1.0 exists.
  */
 describe("peer dependency ranges", () => {
   const peers = peerRanges();
@@ -283,17 +290,32 @@ describe("peer dependency ranges", () => {
   });
 
   it("admits chatter minors published after this release", () => {
-    expect(peers["@diegoaltoworks/chatter"]).toBe(">=0.32.0 <1");
+    expect(peers["@diegoaltoworks/chatter"]).toBe(">=0.32.0 <2");
   });
 
-  it("gives every pre-1.0 peer an explicit upper bound", () => {
-    // A floor like ">=0.6.0" with nothing above it admits every future 0.x
+  it("admits a chatter 1.x a host installs alongside this release", () => {
+    // The version-level statement of the range above, and the one that
+    // actually matters: chatter's 1.0 is the release npm currently refuses to
+    // resolve against, so it is asserted by version rather than only by the
+    // range's spelling. 2.0.0 stays out - widening past the next major would
+    // promise compatibility with an API nobody has designed yet.
+    const range = peers["@diegoaltoworks/chatter"];
+    for (const version of ["0.32.0", "0.61.0", "1.0.0", "1.7.3"]) {
+      expect([version, Bun.semver.satisfies(version, range)]).toEqual([version, true]);
+    }
+    for (const version of ["0.31.0", "2.0.0"]) {
+      expect([version, Bun.semver.satisfies(version, range)]).toEqual([version, false]);
+    }
+  });
+
+  it("gives every peer an explicit upper bound", () => {
+    // A floor like ">=0.6.0" with nothing above it admits every future
     // release, including one with a breaking change - the exact caret-pin
     // problem the test above guards against, just spelled without a caret.
-    // Checked generically (not by name) so a new pre-1.0 peer is covered the
-    // moment it is declared, not only after someone remembers to add a case.
+    // Checked generically (not by name) so a new peer is covered the moment
+    // it is declared, not only after someone remembers to add a case.
     const unbounded = Object.entries(peers).filter(
-      ([, range]) => />=\s*0\./.test(range) && !/<\s*1\b/.test(range),
+      ([, range]) => !/<\s*\d/.test(range) && !/[\^~]/.test(range),
     );
     expect(unbounded).toEqual([]);
   });

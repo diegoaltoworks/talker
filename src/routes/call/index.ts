@@ -36,7 +36,7 @@ export function callRoutes(deps: TalkerDependencies, registry: FlowRegistry) {
   app.post("/call/respond", (c) => handleRespond(c, deps, registry));
   app.post("/call/answer", (c) => handleAnswer(c, deps.config));
   app.post("/call/no-speech", (c) => handleNoSpeech(c, deps.config));
-  app.post("/call/status", (c) => handleStatus(c));
+  app.post("/call/status", (c) => handleStatus(c, deps));
 
   return app;
 }

@@ -103,13 +103,27 @@ a hono-only install can import the package without any of them present, and
 a disabled or misconfigured capability degrades to `null`/an actionable
 error instead of throwing at module load.
 
+Session/message/status persistence follows the same shape one layer up:
+`TalkerStore` (`src/db/store.ts`) is the structural interface, resolved once
+per mount by `resolveStore` (`src/db/resolve-store.ts`) into
+`TalkerDependencies.store` - `config.store` if a host sets one, else a
+`createLibsqlTalkerStore` wrapping `config.database`, else (plugin mode only)
+the same wrapping chatter's own already-connected database
+(`ServerDependencies.db`) rather than opening a second connection to it, else
+a no-op store. Route handlers read `deps.store` directly; only
+`src/db/persist.ts` and `src/db/sessions.ts`'s deprecated no-`deps` exports
+still fall back to the legacy singleton client (`src/db/client.ts`) when no
+store was passed.
+
 - Implementation: `src/voice/synthesize.ts`, `src/voice/transcribe.ts`,
-  `src/db/client.ts`, `src/flows/engine.ts`
+  `src/db/client.ts`, `src/db/resolve-store.ts`, `src/db/libsql-store.ts`,
+  `src/flows/engine.ts`
 - Test: `src/peer-deps.test.ts` (static: no top-level value import of an
   optional peer anywhere reachable from `src/index.ts`),
   `scripts/smoke-packed-install.sh` (dynamic: installs only `hono` and
-  proves the package still imports and degrades actionably), and the
-  narrower `src/seam-guards.test.ts` below
+  proves the package still imports and degrades actionably), the narrower
+  `src/seam-guards.test.ts` below, and `src/db/resolve-store.test.ts` (the
+  store priority order, including the zero-extra-connections case)
 
 ### Single-process state caveat
 

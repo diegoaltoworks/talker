@@ -1,60 +1,24 @@
 /**
  * Database Migrations
  *
- * Creates talker_sessions and talker_messages tables.
- * Safe to run multiple times (uses IF NOT EXISTS).
+ * Creates the talker_sessions, talker_messages and talker_message_status
+ * tables. Safe to run multiple times (uses IF NOT EXISTS). Statements are
+ * single-sourced from `./schema.ts`, shared with `libsql-store.ts`'s queries.
  */
 
+import type { Client } from "@libsql/client";
 import { getErrorMessage } from "../core/errors";
 import { logger } from "../core/logger";
 import { getDbClient } from "./client";
+import { SCHEMA_STATEMENTS } from "./schema";
 
-const SCHEMA_STATEMENTS = [
-  `CREATE TABLE IF NOT EXISTS talker_sessions (
-    id TEXT PRIMARY KEY,
-    phone_number TEXT NOT NULL,
-    channel TEXT NOT NULL CHECK(channel IN ('call', 'sms', 'whatsapp')),
-    reason TEXT NOT NULL CHECK(reason IN ('ended', 'redirected')),
-    language TEXT NOT NULL,
-    started_at INTEGER NOT NULL,
-    ended_at INTEGER NOT NULL,
-    duration_ms INTEGER NOT NULL,
-    transfer_reason TEXT,
-    conversation_id TEXT,
-    created_at INTEGER NOT NULL DEFAULT (unixepoch()),
-    updated_at INTEGER NOT NULL DEFAULT (unixepoch())
-  )`,
-  `CREATE TABLE IF NOT EXISTS talker_messages (
-    id TEXT PRIMARY KEY,
-    session_id TEXT NOT NULL,
-    role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
-    content TEXT NOT NULL,
-    timestamp INTEGER NOT NULL,
-    created_at INTEGER NOT NULL DEFAULT (unixepoch()),
-    FOREIGN KEY (session_id) REFERENCES talker_sessions(id) ON DELETE CASCADE
-  )`,
-  `CREATE TABLE IF NOT EXISTS talker_message_status (
-    message_sid TEXT PRIMARY KEY,
-    channel TEXT NOT NULL CHECK(channel IN ('sms', 'whatsapp')),
-    phone_from TEXT NOT NULL,
-    phone_to TEXT NOT NULL,
-    status TEXT NOT NULL,
-    error_code TEXT,
-    error_message TEXT,
-    created_at INTEGER NOT NULL DEFAULT (unixepoch()),
-    updated_at INTEGER NOT NULL DEFAULT (unixepoch())
-  )`,
-  "CREATE INDEX IF NOT EXISTS idx_talker_sessions_phone ON talker_sessions(phone_number)",
-  "CREATE INDEX IF NOT EXISTS idx_talker_sessions_created ON talker_sessions(created_at DESC)",
-  "CREATE INDEX IF NOT EXISTS idx_talker_messages_session ON talker_messages(session_id)",
-  "CREATE INDEX IF NOT EXISTS idx_talker_messages_ts ON talker_messages(timestamp)",
-  "CREATE INDEX IF NOT EXISTS idx_talker_message_status_phone ON talker_message_status(phone_to)",
-  "CREATE INDEX IF NOT EXISTS idx_talker_message_status_created ON talker_message_status(created_at DESC)",
-];
-
-export async function runMigrations(): Promise<void> {
-  const client = getDbClient();
-
+/**
+ * `client` defaults to the legacy singleton (`./client.ts`) when omitted,
+ * matching the pre-`TalkerStore` call shape (`initDbClient(...)` then
+ * `runMigrations()`) - `resolveStore` (`./resolve-store.ts`) always passes
+ * one explicitly.
+ */
+export async function runMigrations(client: Client | null = getDbClient()): Promise<void> {
   if (!client) {
     logger.warn("cannot run migrations - database not configured");
     return;

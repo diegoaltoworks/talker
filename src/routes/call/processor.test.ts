@@ -9,6 +9,7 @@
 import { afterEach, describe, expect, it, mock } from "bun:test";
 import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import type { Client } from "@libsql/client";
+import type { TalkerStore } from "../../db/store";
 import type { FlowResult, TalkerDependencies } from "../../types";
 
 let flowResultToReturn: FlowResult = { isFlowActive: false, response: "", flowCompleted: false };
@@ -48,12 +49,16 @@ const { setDbClient } = await import("../../db/client");
 const { FlowRegistry } = await import("../../flows/registry");
 const { processCall } = await import("./processor");
 
-function makeDeps(configOverrides: Partial<TalkerDependencies["config"]> = {}): TalkerDependencies {
+function makeDeps(
+  configOverrides: Partial<TalkerDependencies["config"]> = {},
+  store?: TalkerStore,
+): TalkerDependencies {
   return {
     chatter: {} as ServerDependencies,
     config: { ...configOverrides },
     openaiApiKey: "test-key",
     openaiModel: "gpt-4o-mini",
+    store,
   };
 }
 
@@ -243,6 +248,40 @@ describe("processCall transfer, end-call, and default chat branches", () => {
     expect(getContext(phoneNumber)).toBeUndefined();
     expect(writes.length).toBeGreaterThan(0);
     const last = writes[writes.length - 1];
+    expect(last.reason).toBe("redirected");
+    expect(last.transferReason).toBe("Let me get you a person.");
+  });
+
+  it("persists through deps.store, a bring-your-own TalkerStore, without any db client configured", async () => {
+    flowResultToReturn = {
+      isFlowActive: false,
+      flowCompleted: true,
+      flowSuccess: false,
+      response: "Let me get you a person.",
+    };
+    const phoneNumber = "+15551234584";
+    const sessions: Array<{ reason: string; transferReason?: string }> = [];
+    const fakeStore: TalkerStore = {
+      upsertSession: async (session) => {
+        sessions.push({ reason: session.reason, transferReason: session.transferReason });
+        return true;
+      },
+      insertMessage: async () => true,
+      upsertMessageStatus: async () => true,
+    };
+
+    const twiml = await processCall(
+      makeDeps({ transferNumber: "+441234567890" }, fakeStore),
+      new FlowRegistry(""),
+      phoneNumber,
+      "book a flight",
+      "+15559876543",
+    );
+    await Promise.resolve();
+
+    expect(twiml).toContain("<Dial>+441234567890</Dial>");
+    expect(sessions.length).toBeGreaterThan(0);
+    const last = sessions[sessions.length - 1];
     expect(last.reason).toBe("redirected");
     expect(last.transferReason).toBe("Let me get you a person.");
   });

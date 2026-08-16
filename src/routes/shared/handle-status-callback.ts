@@ -19,7 +19,7 @@ import { stripWhatsAppPrefix } from "../../adapters/twilio";
 import { getErrorMessage } from "../../core/errors";
 import { fireAndForget } from "../../core/fire-and-forget";
 import { logger } from "../../core/logger";
-import { upsertMessageStatus } from "../../db/sessions";
+import { resolveDefaultStore } from "../../db/default-store";
 import type { MessageStatusEvent, MessagingChannel, TalkerDependencies } from "../../types";
 
 /**
@@ -58,21 +58,24 @@ export async function handleStatusCallback(
     return c.text("", 200);
   }
 
-  // Persist status to database
-  upsertMessageStatus({
-    messageSid,
-    channel,
-    from,
-    to,
-    status: messageStatus,
-    errorCode,
-    errorMessage,
-  }).catch((err) => {
-    logger.error("failed to persist message status", {
+  // Persist status through the store
+  const store = deps.store ?? resolveDefaultStore();
+  store
+    .upsertMessageStatus({
       messageSid,
-      error: getErrorMessage(err),
+      channel,
+      from,
+      to,
+      status: messageStatus,
+      errorCode,
+      errorMessage,
+    })
+    .catch((err) => {
+      logger.error("failed to persist message status", {
+        messageSid,
+        error: getErrorMessage(err),
+      });
     });
-  });
 
   // Invoke user callback if configured. Fire-and-forget: Twilio's status
   // webhook has the same ~15s response budget as every other telephony

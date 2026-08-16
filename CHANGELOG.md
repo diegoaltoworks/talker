@@ -23,9 +23,33 @@ the version they actually shipped in.
   threaded through but never read). It is a per-process log/DB correlation
   id, not a per-call or per-session identifier; see
   `src/core/chatbot/conversations.ts`'s docstring for the exact semantics.
+- `TalkerStore` - a structural interface for session/message/status
+  persistence, threaded through `TalkerDependencies.store`. Set
+  `TalkerConfig.store` to bring your own (a different database, added
+  instrumentation, a fake for tests); `createLibsqlTalkerStore` is the
+  default Turso/libSQL implementation, exported for hosts that want it over
+  a client they manage themselves. See the README's "Custom Session Store".
 
 ### Changed
 
+- **Plugin mode no longer opens its own database connection by default.**
+  Previously `createTelephonyRoutes` always dialed a fresh Turso/libSQL
+  connection (using talker's `database` config, or chatter's, as a
+  fallback) even though chatter's own connection (`ServerDependencies.db`)
+  was already live - a redundant second connection to the same database on
+  every mount. It now reuses chatter's connection by default; set
+  `TalkerConfig.database` explicitly if talker should persist to a
+  *different* database than chatter's. One consequence: the legacy
+  singleton client (`getDbClient()`, and the deprecated `upsertSession`/
+  `insertMessage`/`upsertMessageStatus`/`persistSession`/`persistFinalSession`
+  exports that read it when called without their new trailing `store`
+  argument) is populated in plugin mode only when `database` is set - a host
+  calling those directly, relying on chatter's connection being reused
+  implicitly, now needs its own `database` config or should migrate to
+  `deps.store`.
+- `runMigrations` now takes an explicit `Client` argument (`resolveStore`
+  always passes one). The no-argument call shape still works, falling back
+  to the legacy singleton client exactly as before.
 - `StandaloneConfig.cors` (previously declared but never wired to anything)
   now actually enables permissive CORS by default via `hono/cors`, matching
   its documented `Default: true`. Set `cors: false` to keep the previous

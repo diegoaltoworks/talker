@@ -59,7 +59,7 @@ export async function handleIncomingMessage(
 
   try {
     const twiml = await processMessage(deps, registry, phoneNumber, messageBody, to, channel);
-    persistSession(phoneNumber, channel);
+    persistSession(phoneNumber, channel, deps.store);
     return c.text(twiml, 200, { "Content-Type": "text/xml" });
   } catch (error) {
     logger.error(`${channel} processing error`, {

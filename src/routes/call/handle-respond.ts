@@ -80,7 +80,7 @@ export async function handleRespond(
       .then((twiml) => {
         const pending = getPending(phoneNumber);
         if (pending) pending.resolve({ twiml });
-        persistSession(phoneNumber, "call");
+        persistSession(phoneNumber, "call", deps.store);
       })
       .catch((error) => {
         logger.error("background processing error", {
@@ -116,7 +116,7 @@ export async function handleRespond(
   // Synchronous flow
   try {
     const twiml = await processCall(deps, registry, phoneNumber, speechResult, to);
-    persistSession(phoneNumber, "call");
+    persistSession(phoneNumber, "call", deps.store);
     return c.text(twiml, 200, { "Content-Type": "text/xml" });
   } catch (error) {
     logger.error("call processing error", { error: getErrorMessage(error) });

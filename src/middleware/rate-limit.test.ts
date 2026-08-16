@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, spyOn } from "bun:test";
 import { logger } from "../core/logger";
 import {
   checkRateLimit,
+  DEFAULT_MAX_REQUESTS,
+  DEFAULT_WINDOW_MS,
   rateLimitMiddleware,
   resetRateLimitStore,
   stopRateLimitCleanup,
@@ -10,6 +12,11 @@ import {
 describe("Rate Limiting", () => {
   afterEach(() => {
     resetRateLimitStore();
+  });
+
+  it("pins the default max requests and window", () => {
+    expect(DEFAULT_MAX_REQUESTS).toBe(30);
+    expect(DEFAULT_WINDOW_MS).toBe(60_000);
   });
 
   describe("checkRateLimit", () => {

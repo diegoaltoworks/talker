@@ -16,7 +16,7 @@ import { deletePending, getPending } from "./pending";
 
 // Twilio gives up on a webhook response after ~15s; staying well under that
 // means our own timeout phrase is actually spoken instead of Twilio's error.
-const DEFAULT_ANSWER_BUDGET_MS = 8000;
+export const DEFAULT_ANSWER_BUDGET_MS = 8000;
 
 export async function handleAnswer(c: Context, config: TalkerConfig): Promise<Response> {
   const body = await c.req.parseBody();

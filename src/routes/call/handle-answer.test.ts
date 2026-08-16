@@ -10,6 +10,7 @@ import { Hono } from "hono";
 import { clearAllContexts, stopCleanup } from "../../core/context";
 import { FlowRegistry } from "../../flows/registry";
 import type { MessageTapEvent, TalkerDependencies } from "../../types";
+import { DEFAULT_ANSWER_BUDGET_MS } from "./handle-answer";
 import { callRoutes } from "./index";
 import { deletePending, getPending, setPending } from "./pending";
 
@@ -53,6 +54,11 @@ describe("handleAnswer", () => {
     clearAllContexts();
     stopCleanup();
     deletePending("+15551234567");
+  });
+
+  it("pins the default answer budget well under Twilio's ~15s webhook timeout", () => {
+    expect(DEFAULT_ANSWER_BUDGET_MS).toBe(8000);
+    expect(DEFAULT_ANSWER_BUDGET_MS).toBeLessThan(15_000);
   });
 
   it("should return lostQuestion Gather TwiML when no pending query exists", async () => {

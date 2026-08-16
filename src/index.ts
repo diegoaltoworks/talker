@@ -60,6 +60,7 @@ export {
   stopCleanup,
   updateFlowParams,
 } from "./core/context";
+export { DEFAULT_LANGUAGE, isValidLanguageCode, normalizeLanguage } from "./core/language";
 // Logger
 export { logger, redactPhone } from "./core/logger";
 export {

@@ -9,6 +9,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Phrases, PhraseValue } from "../types";
 import { resolvePackagedDir } from "./assets";
+import { DEFAULT_LANGUAGE, normalizeLanguage } from "./language";
 import { logger } from "./logger";
 
 /** A phrase file as read off disk, before validation - any key may be missing or malformed. */
@@ -155,9 +156,14 @@ function resolveBuiltinLanguageDir(): string | undefined {
 }
 
 /**
- * Load phrases for a language from a directory
+ * Load phrases for a language from a directory.
+ *
+ * The code becomes a filename, so it is normalized before it is joined with
+ * a directory - an unvalidated code turns this lookup into an arbitrary-JSON
+ * read (`../package`). Anything malformed loads English instead.
  */
-export function loadPhrases(language: string, languageDir?: string): Phrases {
+export function loadPhrases(requestedLanguage: string, languageDir?: string): Phrases {
+  const language = normalizeLanguage(requestedLanguage, "loadPhrases");
   const cacheKey = `${languageDir || "default"}:${language}`;
   if (phrasesCache[cacheKey]) {
     return phrasesCache[cacheKey];
@@ -191,8 +197,8 @@ export function loadPhrases(language: string, languageDir?: string): Phrases {
   }
 
   // Fallback to English file if non-English language not found
-  if (language !== "en") {
-    return loadPhrases("en", languageDir);
+  if (language !== DEFAULT_LANGUAGE) {
+    return loadPhrases(DEFAULT_LANGUAGE, languageDir);
   }
 
   // Final fallback: inlined English phrases

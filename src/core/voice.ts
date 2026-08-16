@@ -19,16 +19,26 @@ const DEFAULT_VOICES: Record<string, VoiceConfig> = {
 const DEFAULT_VOICE = DEFAULT_VOICES.en;
 
 /**
- * Get voice configuration for a language, with optional custom overrides
+ * Get voice configuration for a language, with optional custom overrides.
+ *
+ * Both maps are read with `Object.hasOwn`: the language is caller-influenced,
+ * and a plain `[language]` index resolves inherited keys like `constructor`
+ * to a non-`VoiceConfig` value, which reaches TwiML as an undefined voice and
+ * breaks speech for the rest of the session.
  */
 export function getVoiceConfig(
   language: string,
   customVoices?: Record<string, VoiceConfig>,
 ): VoiceConfig {
-  if (customVoices?.[language]) {
-    return customVoices[language];
+  if (customVoices && Object.hasOwn(customVoices, language)) {
+    const custom = customVoices[language];
+    if (custom) return custom;
   }
-  return DEFAULT_VOICES[language] || DEFAULT_VOICE;
+  if (Object.hasOwn(DEFAULT_VOICES, language)) {
+    const voice = DEFAULT_VOICES[language];
+    if (voice) return voice;
+  }
+  return DEFAULT_VOICE;
 }
 
 /**

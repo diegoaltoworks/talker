@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -44,6 +44,23 @@ describe("Phrases", () => {
     it("should fall back to English for unknown language", () => {
       const phrases = loadPhrases("xx");
       expect(phrases.greeting).toBe(loadPhrases("en").greeting);
+    });
+
+    it("should not read a JSON file outside the language directory", () => {
+      const root = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      const dir = join(root, "langs");
+      mkdirSync(dir);
+      writeFileSync(join(root, "secret.json"), JSON.stringify({ greeting: "leaked" }));
+
+      const phrases = loadPhrases("../secret", dir);
+      expect(phrases.greeting).not.toBe("leaked");
+      expect(phrases.greeting).toBe(loadPhrases("en").greeting);
+    });
+
+    it("should fall back to English for inherited object keys", () => {
+      for (const language of ["constructor", "__proto__", "toString"]) {
+        expect(loadPhrases(language).greeting).toBe(loadPhrases("en").greeting);
+      }
     });
   });
 

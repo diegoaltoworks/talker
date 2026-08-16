@@ -44,6 +44,21 @@ describe("getVoiceConfig", () => {
     expect(config.language).toBe("en-GB");
   });
 
+  it("should fall back to English for inherited object keys", () => {
+    for (const language of ["constructor", "__proto__", "toString", "valueOf"]) {
+      const config = getVoiceConfig(language);
+      expect(config.voice).toBe("Polly.Brian");
+      expect(config.language).toBe("en-GB");
+    }
+  });
+
+  it("should ignore inherited keys on a custom voice map", () => {
+    const customVoices = { en: { voice: "Polly.Amy", language: "en-US" } };
+    const config = getVoiceConfig("constructor", customVoices);
+    expect(config.voice).toBe("Polly.Brian");
+    expect(config.language).toBe("en-GB");
+  });
+
   it("should use custom voices when provided", () => {
     const customVoices = {
       en: { voice: "Polly.Amy", language: "en-US" },

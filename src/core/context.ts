@@ -7,6 +7,7 @@
 
 import type { Channel, FlowState, TelephonyContext } from "../types";
 import { getErrorMessage } from "./errors";
+import { isValidLanguageCode } from "./language";
 import { logger } from "./logger";
 
 const contexts = new Map<string, TelephonyContext>();
@@ -84,9 +85,19 @@ export function getContext(phoneNumber: string): TelephonyContext | undefined {
 }
 
 /**
- * Set detected language (first detection wins)
+ * Set detected language (first detection wins).
+ *
+ * The language is LLM-derived from caller speech and sticks for the life of
+ * the context, so a malformed code is rejected here rather than stored: it
+ * would otherwise be reused as a path segment and an object key on every
+ * turn until the context expires. Rejecting without storing keeps the slot
+ * open for the next, well-formed detection.
  */
 export function setDetectedLanguage(phoneNumber: string, language: string): void {
+  if (!isValidLanguageCode(language)) {
+    logger.warn("ignoring invalid detected language", { phoneNumber, language: String(language) });
+    return;
+  }
   const context = getOrCreateContext(phoneNumber);
   if (!context.detectedLanguage) {
     context.detectedLanguage = language;

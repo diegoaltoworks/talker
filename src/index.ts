@@ -57,6 +57,7 @@ export {
   getOrCreateContext,
   incrementNoSpeechRetries,
   resetNoSpeechRetries,
+  resolveLanguage,
   setActiveFlow,
   setDetectedLanguage,
   setLastPrompt,

@@ -14,6 +14,8 @@
   "error": "Desculpe, encontrei um erro. Por favor, tente novamente mais tarde. Tchau!",
   "timeout": "Desculpe, demorei muito para responder. Por favor, tente novamente. Tchau!",
   "lostQuestion": "Desculpe, perdi o fio da sua pergunta. Voce poderia repetir?",
+  "rateLimited": "Desculpe, tente novamente em um momento.",
+  "chatError": "Desculpe, encontrei um erro ao processar a sua pergunta.",
   "flow": {
     "cancelled": "Sem problema! Cancelei isso. Como posso ajudar?",
     "error": "Desculpe, algo deu errado com isso. Vamos comecar de novo - como posso ajudar?",

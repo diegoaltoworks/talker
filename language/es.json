@@ -14,6 +14,8 @@
   "error": "Lo siento, encontre un error. Por favor, intentelo mas tarde. Adios!",
   "timeout": "Lo siento, tarde demasiado en responder. Por favor, intentelo de nuevo. Adios!",
   "lostQuestion": "Lo siento, perdi el hilo de su pregunta. Podria repetir?",
+  "rateLimited": "Por favor, intentelo de nuevo en un momento.",
+  "chatError": "Lo siento, encontre un error al procesar su pregunta.",
   "flow": {
     "cancelled": "No hay problema! He cancelado eso. En que mas puedo ayudar?",
     "error": "Lo siento, algo salio mal con eso. Empecemos de nuevo - en que puedo ayudar?",

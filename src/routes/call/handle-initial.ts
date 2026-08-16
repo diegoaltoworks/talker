@@ -8,6 +8,7 @@
 import type { Context } from "hono";
 import { clearContext } from "../../core/context";
 import { resolveGreeting } from "../../core/greeting";
+import { DEFAULT_LANGUAGE } from "../../core/language";
 import { logger } from "../../core/logger";
 import { emitMessageTap } from "../../core/message-tap";
 import { getPhrase } from "../../core/phrases";
@@ -22,9 +23,13 @@ export async function handleInitialCall(c: Context, config: TalkerConfig): Promi
 
   clearContext(phoneNumber);
 
+  // The only phrase lookup in the package that does not resolve a detected
+  // language: this handler just cleared the context, and the caller has not
+  // said a word yet, so there is nothing to detect from. Every later turn
+  // goes through `resolveLanguage`.
   const greeting =
     (await resolveGreeting(config, phoneNumber, "call")) ??
-    getPhrase("en", "greeting", config.languageDir);
+    getPhrase(DEFAULT_LANGUAGE, "greeting", config.languageDir);
 
   emitMessageTap(config, {
     direction: "outbound",
@@ -36,6 +41,6 @@ export async function handleInitialCall(c: Context, config: TalkerConfig): Promi
 
   // gatherTwiml nests the greeting inside Gather (barge-in) and redirects to
   // /call/no-speech on silence, so the retry ladder engages from turn one.
-  const twiml = gatherTwiml(greeting, "en", config, phoneNumber);
+  const twiml = gatherTwiml(greeting, DEFAULT_LANGUAGE, config, phoneNumber);
   return c.text(twiml, 200, { "Content-Type": "text/xml" });
 }

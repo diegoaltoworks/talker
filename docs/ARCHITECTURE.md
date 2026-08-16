@@ -67,17 +67,31 @@ hold unambiguous cancellation forms only: a form that flips meaning under
 negation ("don't forget my room number") is left out on purpose, because a
 wrongly cancelled flow throws away everything the caller has said.
 
-- Implementation: `src/core/phrases.ts`, `src/flows/utils.ts` (cancellation
-  keywords)
+A phrase file is only half the rule: a lookup that always asks for `en`
+speaks English no matter how many translations ship. Language detection runs
+on the caller's first utterance and sticks for the life of the context, and
+every phrase lookup after that turn resolves it with
+`resolveLanguage(phoneNumber)` (`src/core/context.ts`), which falls back to
+`DEFAULT_LANGUAGE`. The single deliberate exception is
+`src/routes/call/handle-initial.ts`, which clears the context before the
+caller has said anything, so it passes the named `DEFAULT_LANGUAGE` constant.
+
+- Implementation: `src/core/phrases.ts`, `src/core/context.ts`
+  (`resolveLanguage`), `src/flows/utils.ts` (cancellation keywords)
 - Test: `src/core/phrases.test.ts`, `src/core/phrasesRotation.test.ts` cover
   the loader (`getPhrase`, fallbacks, path traversal);
-  `src/flows/utils.test.ts` covers cancelling in every shipped language.
-  "Never a hardcoded string" is a gate inside `src/flows/` only
-  (`src/flows/phrase-guard.test.ts`: no flow `response`, `smsContent` or
-  `whatsappContent` may be written as a string literal). It catches the easy
-  mistake, not every shape of it - a literal hoisted into a named `const`
-  still passes. Everywhere else it stays convention - watch for it in review
-  the way you'd watch for a stray `console.log`.
+  `src/flows/utils.test.ts` covers cancelling in every shipped language;
+  `src/language-resolution.test.ts` drives each handler with a detected
+  language and asserts the caller gets that language's copy and voice.
+  "Never a hardcoded string" is a gate over all of `src/`
+  (`src/phrase-guard.test.ts`), in four rules: no literal in a flow result's
+  `response`/`smsContent`/`whatsappContent`; no TwiML markup outside
+  `src/core/twiml.ts`; no literal message argument to a TwiML builder; no
+  literal language argument to a phrase lookup. It catches the easy mistakes,
+  not every shape of them - a literal hoisted into a named `const`, or a
+  language code hoisted the same way, still passes. Beyond those shapes it
+  stays convention - watch for it in review the way you'd watch for a stray
+  `console.log`.
 
 ### Injected clients
 
@@ -185,7 +199,7 @@ behavior and checking a return value:
 |---|---|---|
 | No `process.env` outside config seams | Capability modules stay injectable; env reads are confined to the few places that are explicitly about reading configuration | `src/seam-guards.test.ts` |
 | No raw `fetch`/URL literal to `api.openai.com` outside `openai-request.ts` | Every outbound OpenAI call resolves its URL through the one place that honors a configurable base URL, rather than a call site bypassing it with the public default | `src/seam-guards.test.ts` |
-| No hardcoded caller-facing `response`/`smsContent`/`whatsappContent` in `src/flows/` | Flow replies come from the phrase files, so a caller mid-flow hears their own language rather than an English default | `src/flows/phrase-guard.test.ts` |
+| No hardcoded caller-facing text in `src/`: no literal `response`/`smsContent`/`whatsappContent`, no TwiML outside `src/core/twiml.ts`, no literal message into a TwiML builder, no literal language into a phrase lookup | Everything a caller hears or reads comes from the phrase files in the language they are speaking, rather than an English default frozen at a call site | `src/phrase-guard.test.ts` |
 | Every `package.json` `exports` key resolves under both `import` and `require`, ships its declared types, and carries no test/map declarations | A subpath the build doesn't produce can't reach a consumer silently | `scripts/smoke-packed-install.sh`, run via `bun run test:packaged` |
 | Every emitted `dist/**/*.{js,mjs}` bundle stays under its budget in `scripts/bundle-budgets.ts`, and every emitted bundle has a budget entry | Bundle-size creep (a new dependency pulled in, an accidental non-external import) is a build failure, not a silent regression discovered later | `scripts/bundle-budgets.ts`, run via `bun run check:bundle-budgets` |
 

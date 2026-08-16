@@ -8,6 +8,7 @@
 
 import type { Context } from "hono";
 import { stripWhatsAppPrefix } from "../../adapters/twilio";
+import { resolveLanguage } from "../../core/context";
 import { getErrorMessage } from "../../core/errors";
 import { resolveGreeting } from "../../core/greeting";
 import { logger } from "../../core/logger";
@@ -43,7 +44,7 @@ export async function handleIncomingMessage(
   if (!messageBody.trim()) {
     const greeting =
       (await resolveGreeting(deps.config, phoneNumber, channel)) ??
-      getChannelPhrase(channel, "en", "greeting", deps.config.languageDir);
+      getChannelPhrase(channel, resolveLanguage(phoneNumber), "greeting", deps.config.languageDir);
     emitMessageTap(deps.config, {
       direction: "outbound",
       channel,
@@ -65,7 +66,12 @@ export async function handleIncomingMessage(
       phoneNumber,
       error: getErrorMessage(error),
     });
-    const errorMessage = getChannelPhrase(channel, "en", "genericError", deps.config.languageDir);
+    const errorMessage = getChannelPhrase(
+      channel,
+      resolveLanguage(phoneNumber),
+      "genericError",
+      deps.config.languageDir,
+    );
     emitMessageTap(deps.config, {
       direction: "outbound",
       channel,

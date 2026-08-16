@@ -6,7 +6,7 @@
  */
 
 import { getConversation } from "../core/chatbot/conversations";
-import { getContext, getDetectedLanguage, getMessageHistory } from "../core/context";
+import { getContext, getMessageHistory, resolveLanguage } from "../core/context";
 import { getErrorMessage } from "../core/errors";
 import { logger } from "../core/logger";
 import type { Channel } from "../types";
@@ -22,7 +22,7 @@ import { generateSessionId, insertMessage, upsertSession } from "./sessions";
  */
 export async function persistSession(phoneNumber: string, channel: Channel): Promise<void> {
   const context = getContext(phoneNumber);
-  const language = getDetectedLanguage(phoneNumber) || "en";
+  const language = resolveLanguage(phoneNumber);
   const messages = getMessageHistory(phoneNumber);
 
   if (!context || messages.length === 0) return;
@@ -78,7 +78,7 @@ export function persistFinalSession(
   transferReason?: string,
 ): void {
   const context = getContext(phoneNumber);
-  const language = getDetectedLanguage(phoneNumber) || "en";
+  const language = resolveLanguage(phoneNumber);
 
   if (!context) return;
   if (!getDbClient()) return;

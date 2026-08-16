@@ -451,6 +451,14 @@ path and object lookups. `isValidLanguageCode(code)` and
 `normalizeLanguage(code, where)` are exported if you resolve languages
 yourself.
 
+Detection runs on the caller's first utterance and holds for the life of the
+session, and every phrase after it - greetings, retries, errors, timeouts,
+the rate-limit reply, the chat apology - is rendered in that language, with
+that language's voice. The first turn of a call is the one exception: the
+context has just been cleared and the caller has not spoken yet, so the
+greeting uses the default language. `resolveLanguage(phoneNumber)` is
+exported if you need the same answer in your own handlers.
+
 ### Custom Prompts
 
 Override the pre/post-processing system prompts:

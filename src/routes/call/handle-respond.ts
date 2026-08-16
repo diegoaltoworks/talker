@@ -6,7 +6,7 @@
  */
 
 import type { Context } from "hono";
-import { getMessageHistory, resetNoSpeechRetries } from "../../core/context";
+import { getMessageHistory, resetNoSpeechRetries, resolveLanguage } from "../../core/context";
 import { getErrorMessage } from "../../core/errors";
 import { logger } from "../../core/logger";
 import { emitMessageTap } from "../../core/message-tap";
@@ -42,9 +42,10 @@ export async function handleRespond(
     });
 
   if (!speechResult) {
-    const prompt = getPhrase("en", "didNotCatch", config.languageDir);
+    const language = resolveLanguage(phoneNumber);
+    const prompt = getPhrase(language, "didNotCatch", config.languageDir);
     tapOutbound(prompt);
-    const twiml = gatherTwiml(prompt, "en", config, phoneNumber);
+    const twiml = gatherTwiml(prompt, language, config, phoneNumber);
     return c.text(twiml, 200, { "Content-Type": "text/xml" });
   }
 
@@ -86,19 +87,28 @@ export async function handleRespond(
           phoneNumber,
           error: getErrorMessage(error),
         });
-        const errorMessage = getPhrase("en", "error", config.languageDir);
+        // Resolved here rather than above: the failed turn may still have
+        // detected a language before it threw, and this apology is the next
+        // thing the caller hears.
+        const errorLanguage = resolveLanguage(phoneNumber);
+        const errorMessage = getPhrase(errorLanguage, "error", config.languageDir);
         tapOutbound(errorMessage);
         const pending = getPending(phoneNumber);
         if (pending) {
           pending.resolve({
-            twiml: sayTwiml(errorMessage, "en", config),
+            twiml: sayTwiml(errorMessage, errorLanguage, config),
           });
         }
       });
 
-    const ackMessage = getPhrase("en", "acknowledgment", config.languageDir);
+    // The acknowledgment is spoken before processing, so on a first turn
+    // there is nothing detected yet and this is the default language. A
+    // second acknowledged turn (a host that enables it beyond the first
+    // message) picks up the language the caller has been speaking.
+    const ackLanguage = resolveLanguage(phoneNumber);
+    const ackMessage = getPhrase(ackLanguage, "acknowledgment", config.languageDir);
     tapOutbound(ackMessage);
-    return c.text(acknowledgmentTwiml("en", config, ackMessage), 200, {
+    return c.text(acknowledgmentTwiml(ackLanguage, config, ackMessage), 200, {
       "Content-Type": "text/xml",
     });
   }
@@ -110,9 +120,10 @@ export async function handleRespond(
     return c.text(twiml, 200, { "Content-Type": "text/xml" });
   } catch (error) {
     logger.error("call processing error", { error: getErrorMessage(error) });
-    const errorMessage = getPhrase("en", "error", config.languageDir);
+    const language = resolveLanguage(phoneNumber);
+    const errorMessage = getPhrase(language, "error", config.languageDir);
     tapOutbound(errorMessage);
-    const twiml = sayTwiml(errorMessage, "en", config);
+    const twiml = sayTwiml(errorMessage, language, config);
     return c.text(twiml, 200, { "Content-Type": "text/xml" });
   }
 }

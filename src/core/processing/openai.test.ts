@@ -9,6 +9,8 @@
  */
 
 import { describe, expect, it } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   DEFAULT_OPENAI_API_URL,
   DEFAULT_OPENAI_REQUEST_TIMEOUT_MS,
@@ -49,5 +51,17 @@ describe("resolveOpenAIRequestConfig", () => {
       apiUrl: DEFAULT_OPENAI_API_URL,
       timeoutMs: DEFAULT_OPENAI_REQUEST_TIMEOUT_MS,
     });
+  });
+
+  // The number above is internal; the one a host reads is the `Default:` in
+  // `ProcessingConfig.requestTimeoutMs`'s JSDoc, which ships in the .d.ts and
+  // is what a consumer budgets their webhook against. The two drifted once
+  // (the doc kept saying 8000 after the default moved to 5000), so the doc is
+  // pinned to the constant here rather than left to review.
+  it("documents the same default in the published ProcessingConfig JSDoc", () => {
+    const types = readFileSync(join(import.meta.dir, "..", "..", "types.ts"), "utf8");
+    const doc = types.slice(0, types.indexOf("requestTimeoutMs?: number;"));
+    const documented = [...doc.matchAll(/Default: (\d+)/g)].at(-1)?.[1];
+    expect(documented).toBe(String(DEFAULT_OPENAI_REQUEST_TIMEOUT_MS));
   });
 });

@@ -14,6 +14,8 @@
   "error": "Desole, j'ai rencontre une erreur. Veuillez reessayer plus tard. Au revoir.",
   "timeout": "Desole, j'ai mis trop de temps a repondre. Veuillez reessayer. Au revoir.",
   "lostQuestion": "Je suis desole, j'ai perdu le fil de votre question. Pourriez-vous repeter?",
+  "rateLimited": "Veuillez reessayer dans un instant.",
+  "chatError": "Desole, j'ai rencontre une erreur en traitant votre question.",
   "flow": {
     "cancelled": "Pas de probleme! J'ai annule ca. Comment puis-je vous aider?",
     "error": "Desole, quelque chose s'est mal passe. Recommencons - comment puis-je vous aider?",

@@ -6,7 +6,7 @@
  */
 
 import type { Context } from "hono";
-import { getDetectedLanguage, getLastPrompt, incrementNoSpeechRetries } from "../../core/context";
+import { getLastPrompt, incrementNoSpeechRetries, resolveLanguage } from "../../core/context";
 import { logger } from "../../core/logger";
 import { emitMessageTap } from "../../core/message-tap";
 import { getPhrase } from "../../core/phrases";
@@ -20,7 +20,7 @@ export async function handleNoSpeech(c: Context, config: TalkerConfig): Promise<
   const maxRetries = config.maxNoSpeechRetries ?? 3;
 
   const retryCount = incrementNoSpeechRetries(phoneNumber);
-  const language = getDetectedLanguage(phoneNumber) || "en";
+  const language = resolveLanguage(phoneNumber);
 
   if (retryCount > maxRetries) {
     logger.info("max retries reached, ending call", { phoneNumber, retryCount });

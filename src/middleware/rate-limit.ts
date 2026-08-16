@@ -6,7 +6,11 @@
  */
 
 import type { Context, Next } from "hono";
+import { resolveLanguage } from "../core/context";
 import { logger } from "../core/logger";
+import { getPhrase } from "../core/phrases";
+import { sayTwiml } from "../core/twiml";
+import type { TalkerConfig } from "../types";
 
 export const DEFAULT_MAX_REQUESTS = 30;
 export const DEFAULT_WINDOW_MS = 60_000; // 1 minute
@@ -101,8 +105,19 @@ export function checkRateLimit(
  *
  * Limits requests per phone number (from body.From).
  * Returns a 429 TwiML response when the limit is exceeded.
+ *
+ * `talkerConfig` is what makes that response speak: the `rateLimited` phrase
+ * is looked up in the caller's detected language and rendered by `sayTwiml`,
+ * so it carries the configured voice and is escaped like every other spoken
+ * string. It stays optional because the middleware is exported for hosts to
+ * mount on their own routes; without it the phrase still resolves (built-in
+ * copy, default voice), only a host's `languageDir` and `voices` overrides
+ * are missed.
  */
-export function rateLimitMiddleware(config?: { maxRequests?: number; windowMs?: number }) {
+export function rateLimitMiddleware(
+  config?: { maxRequests?: number; windowMs?: number },
+  talkerConfig?: TalkerConfig,
+) {
   const maxRequests = config?.maxRequests ?? DEFAULT_MAX_REQUESTS;
   const windowMs = config?.windowMs ?? DEFAULT_WINDOW_MS;
 
@@ -114,11 +129,10 @@ export function rateLimitMiddleware(config?: { maxRequests?: number; windowMs?: 
 
     if (!checkRateLimit(phoneNumber, maxRequests, windowMs)) {
       logger.warn("rate limit exceeded", { phoneNumber, path: c.req.path });
-      const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say>Please try again in a moment.</Say>
-</Response>`;
-      return c.text(twiml, 429, { "Content-Type": "text/xml" });
+      const resolved = talkerConfig ?? {};
+      const language = resolveLanguage(phoneNumber);
+      const message = getPhrase(language, "rateLimited", resolved.languageDir);
+      return c.text(sayTwiml(message, language, resolved), 429, { "Content-Type": "text/xml" });
     }
 
     return next();

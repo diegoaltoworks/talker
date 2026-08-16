@@ -42,6 +42,19 @@ export interface Phrases {
   rateLimited: PhraseValue;
   /** Spoken or sent when the chat backend fails or returns nothing usable. */
   chatError: PhraseValue;
+  /**
+   * Appended to the outgoing prompt's instructions when `TalkerConfig.replyLanguages`
+   * narrows the reply away from the caller's detected language. Written in
+   * this file's own language (the language the reply actually lands in), so
+   * it needs no runtime substitution - it tells the LLM to briefly
+   * acknowledge the mismatch, then continue in the language the prompt
+   * already named (`Respond in: ...`), rather than naming a language
+   * directly: `loadPhrases` falls a missing key back to this English copy,
+   * and a fallback that named "English" would contradict a `Respond in: pt`
+   * instruction on the same prompt for a language whose file predates this
+   * key, or one that was never shipped at all.
+   */
+  replyLanguageMismatch: PhraseValue;
   flow: {
     cancelled: PhraseValue;
     error: PhraseValue;
@@ -202,6 +215,8 @@ const ENGLISH_FALLBACK: Phrases = {
   lostQuestion: "I'm sorry, I lost track of your question. Could you please repeat?",
   rateLimited: "Please try again in a moment.",
   chatError: "Sorry, I encountered an error processing your question.",
+  replyLanguageMismatch:
+    "Briefly and politely acknowledge that you can't reply in the caller's language, then continue your reply in the language specified above.",
   flow: {
     cancelled: "No problem! I've cancelled that. What else would you like to know?",
     error: "Sorry, something went wrong with that. Let's start over - what would you like to know?",
@@ -304,7 +319,8 @@ type SimplePhraseKey =
   | "timeout"
   | "lostQuestion"
   | "rateLimited"
-  | "chatError";
+  | "chatError"
+  | "replyLanguageMismatch";
 
 /**
  * Get a simple phrase by key

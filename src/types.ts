@@ -186,6 +186,24 @@ export interface TalkerConfig {
   /** Directory containing language phrase files (en.json, fr.json, etc.) */
   languageDir?: string;
 
+  /**
+   * Languages `processOutgoing` is willing to reply in. Language detection
+   * (a fixed list, see `prompts/incoming.md`) is unaffected either way -
+   * this only narrows which of the detected languages the reply text comes
+   * back in, and only the LLM-generated reply text: the TTS voice, the
+   * `<Gather>` speech-recognition language and every other phrase (retries,
+   * errors, farewells) still follow the caller's actual detected language.
+   * Unset (the default): unrestricted, replies land in the detected
+   * language, current behavior is unchanged. Set: an exact match (entries
+   * must be the lowercase codes detection emits, e.g. `en`, not `EN`)
+   * replies in kind; anything else replies in the list's first entry and
+   * the reply opens with a brief acknowledgment that it can't continue in
+   * the caller's language, via `phrases.replyLanguageMismatch` (see
+   * `language/en.json`). Useful for an operator who can only staff replies
+   * in a subset of the languages they can be reached in, e.g. `['en', 'pt']`.
+   */
+  replyLanguages?: string[];
+
   /** Processing pipeline configuration */
   processing?: ProcessingConfig;
 

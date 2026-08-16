@@ -16,6 +16,7 @@
   "lostQuestion": "Je suis desole, j'ai perdu le fil de votre question. Pourriez-vous repeter?",
   "rateLimited": "Veuillez reessayer dans un instant.",
   "chatError": "Desole, j'ai rencontre une erreur en traitant votre question.",
+  "replyLanguageMismatch": "Reconnaissez brievement et poliment que vous ne pouvez pas repondre dans la langue de l'appelant, puis continuez votre reponse dans la langue indiquee ci-dessus.",
   "flow": {
     "cancelled": "Pas de probleme! J'ai annule ca. Comment puis-je vous aider?",
     "error": "Desole, quelque chose s'est mal passe. Recommencons - comment puis-je vous aider?",

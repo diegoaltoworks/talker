@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { DEFAULT_LANGUAGE, isValidLanguageCode, normalizeLanguage } from "./language";
+import {
+  DEFAULT_LANGUAGE,
+  isValidLanguageCode,
+  normalizeLanguage,
+  resolveReplyLanguage,
+} from "./language";
 
 describe("isValidLanguageCode", () => {
   it("should accept two- and three-letter codes", () => {
@@ -49,5 +54,48 @@ describe("normalizeLanguage", () => {
     expect(normalizeLanguage("constructor", "test")).toBe(DEFAULT_LANGUAGE);
     expect(normalizeLanguage(undefined, "test")).toBe(DEFAULT_LANGUAGE);
     expect(normalizeLanguage("", "test")).toBe(DEFAULT_LANGUAGE);
+  });
+});
+
+describe("resolveReplyLanguage", () => {
+  it("passes the detected language through unrestricted when replyLanguages is unset", () => {
+    expect(resolveReplyLanguage("fr")).toEqual({ replyLanguage: "fr", mismatch: false });
+  });
+
+  it("passes the detected language through unrestricted when replyLanguages is empty", () => {
+    expect(resolveReplyLanguage("fr", [])).toEqual({ replyLanguage: "fr", mismatch: false });
+  });
+
+  it("replies in kind when the detected language is in the allowlist", () => {
+    expect(resolveReplyLanguage("pt", ["en", "pt"])).toEqual({
+      replyLanguage: "pt",
+      mismatch: false,
+    });
+  });
+
+  it("narrows to the allowlist's first entry when the detected language is outside it", () => {
+    expect(resolveReplyLanguage("fr", ["en", "pt"])).toEqual({
+      replyLanguage: "en",
+      mismatch: true,
+    });
+    expect(resolveReplyLanguage("nl", ["en", "pt"])).toEqual({
+      replyLanguage: "en",
+      mismatch: true,
+    });
+    expect(resolveReplyLanguage("de", ["en", "pt"])).toEqual({
+      replyLanguage: "en",
+      mismatch: true,
+    });
+    expect(resolveReplyLanguage("es", ["en", "pt"])).toEqual({
+      replyLanguage: "en",
+      mismatch: true,
+    });
+  });
+
+  it("honours a non-English default as the allowlist's first entry", () => {
+    expect(resolveReplyLanguage("fr", ["pt", "en"])).toEqual({
+      replyLanguage: "pt",
+      mismatch: true,
+    });
   });
 });

@@ -111,9 +111,11 @@ per mount by `resolveStore` (`src/db/resolve-store.ts`) into
 the same wrapping chatter's own already-connected database
 (`ServerDependencies.db`) rather than opening a second connection to it, else
 a no-op store. Route handlers read `deps.store` directly; only
-`src/db/persist.ts` and `src/db/sessions.ts`'s deprecated no-`deps` exports
-still fall back to the legacy singleton client (`src/db/client.ts`) when no
-store was passed.
+`src/db/persist.ts` still falls back to the legacy singleton client
+(`src/db/client.ts`) when no store was passed. A half-filled `database`
+config (a url with an empty auth token, or the reverse) warns and falls
+through to the next option rather than mounting a silently non-persisting
+store.
 
 - Implementation: `src/voice/synthesize.ts`, `src/voice/transcribe.ts`,
   `src/db/client.ts`, `src/db/resolve-store.ts`, `src/db/libsql-store.ts`,

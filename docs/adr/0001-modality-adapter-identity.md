@@ -31,7 +31,7 @@ Concretely, talker owns:
   speakable voice phrasing, SMS/WhatsApp text, and the
   ack-then-deliver-out-of-band pattern for slow handlers; directory loading
   (`src/flows/loader.ts`), the registry, and session persistence
-  (`src/db/sessions.ts`) also stay in talker, since they're specific to how
+  (`src/db/store.ts`) also stay in talker, since they're specific to how
   *this* package discovers and tracks a flow, not brain logic
 
 Brain concerns move to chatter, which owns them for every channel chatter

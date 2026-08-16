@@ -1,7 +1,7 @@
 {
   "name": "@diegoaltoworks/talker",
   "version": "0.45.0",
-  "description": "Telephony plugin for Chatter — adds voice call and SMS support via Twilio",
+  "description": "Telephony plugin for Chatter: adds voice call, SMS and WhatsApp support via Twilio",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -34,6 +34,7 @@
     "build:cjs": "esbuild src/index.ts src/adapters/twilio.ts --bundle --format=cjs --outdir=dist --outbase=src --external:hono --external:openai --external:@diegoaltoworks/chatter --external:@diegoaltoworks/chatter/* --external:@libsql/client --platform=node --target=node24",
     "check:bundle-budgets": "bun scripts/bundle-budgets.ts",
     "check:em-dashes": "bun scripts/check-em-dashes.ts",
+    "check:deprecations": "bun scripts/deprecations.ts",
     "test": "bun test",
     "test:unit": "bun test src/",
     "test:integration": "bun test test/integration/**/*.test.ts",
@@ -47,7 +48,7 @@
     "security:audit": "bun audit",
     "security:audit:fix": "bun update",
     "security:check": "bun audit --audit-level=moderate",
-    "check": "bun run typecheck && bun run lint && bun run test && bun run security:check && bun run check:em-dashes",
+    "check": "bun run typecheck && bun run lint && bun run test && bun run security:check && bun run check:em-dashes && bun run check:deprecations",
     "work": "bun ./.claude/work.ts run",
     "work:continuous": "bun ./.claude/work.ts run --continuous",
     "work:status": "bun ./.claude/work.ts status",
@@ -55,7 +56,7 @@
     "work:watch": "bun ./.claude/work.ts watch",
     "work:resume": "bun ./.claude/work.ts resume",
     "work:halt": "bun ./.claude/work.ts halt",
-    "prepublishOnly": "bun run lint && bun run typecheck && bun run test && bun run security:check && bun run check:em-dashes && bun run build",
+    "prepublishOnly": "bun run lint && bun run typecheck && bun run test && bun run security:check && bun run check:em-dashes && bun run check:deprecations && bun run build",
     "prepare": "(husky || true) && bun run build"
   },
   "keywords": [

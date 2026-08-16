@@ -6,7 +6,9 @@
  * 2. `config.database` - talker's own explicit Turso/libSQL connection, via
  *    the legacy singleton client (`initDbClient` only dials once - a second
  *    mount with a *different* `database` config in the same process reuses
- *    the first mount's connection rather than opening its own).
+ *    the first mount's connection rather than opening its own). A half-filled
+ *    `database` (a url with no auth token, or the reverse) is not a
+ *    connection: it warns and falls through to the options below.
  * 3. `liveClient` - a connection to reuse (chatter's `deps.db` in plugin
  *    mode) instead of opening a second connection to the same database. This
  *    is the fix for the historical bug where plugin mode always dialed its
@@ -15,6 +17,7 @@
  */
 
 import type { Client } from "@libsql/client";
+import { logger } from "../core/logger";
 import type { TalkerConfig } from "../types";
 import { getDbClient, initDbClient } from "./client";
 import { createLibsqlTalkerStore } from "./libsql-store";
@@ -33,6 +36,18 @@ export async function resolveStore(
     if (!client) return createNullTalkerStore();
     await runMigrations(client);
     return createLibsqlTalkerStore(client);
+  }
+
+  // Half a database config is a typo, not a choice. Falling through silently
+  // here is what made it invisible: the mount comes up, every route answers,
+  // and nothing persists until somebody goes looking for sessions that were
+  // never written. Say so once, at mount time, then fall through as before -
+  // a missing credential is not worth refusing to answer calls over.
+  if (config.database?.url || config.database?.authToken) {
+    logger.warn("database config is incomplete, sessions will not be persisted through it", {
+      hasUrl: !!config.database?.url,
+      hasAuthToken: !!config.database?.authToken,
+    });
   }
 
   if (liveClient) {

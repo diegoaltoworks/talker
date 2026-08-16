@@ -87,7 +87,7 @@ export async function processIncoming(
     setDetectedLanguage(phoneNumber, detectedLang);
     const storedLanguage = getDetectedLanguage(phoneNumber) || DEFAULT_LANGUAGE;
 
-    logger.info("INCOMING", {
+    logger.info("incoming message processed", {
       phoneNumber,
       channel,
       in: userMessage,

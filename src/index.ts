@@ -42,13 +42,11 @@ export type { SendMessageOptions } from "./adapters/twilio";
 export { sendSMS, sendWhatsApp, stripWhatsAppPrefix } from "./adapters/twilio";
 export type { ContextStore, TelephonyContext } from "./core/context";
 // clearAllContexts, incrementNoSpeechRetries and resetNoSpeechRetries are
-// internal helpers of ./core/context (see their @deprecated tags there)
-// re-exported here only because this barrel re-exports the whole module;
-// they are candidates for removal from this barrel in a future release.
+// internal helpers of ./core/context and are deliberately not re-exported
+// here: they are call-flow bookkeeping and a test-only reset, not host API.
 export {
   addMessage,
   clearActiveFlow,
-  clearAllContexts,
   clearContext,
   configureContextStore,
   createInMemoryContextStore,
@@ -58,8 +56,6 @@ export {
   getLastPrompt,
   getMessageHistory,
   getOrCreateContext,
-  incrementNoSpeechRetries,
-  resetNoSpeechRetries,
   resolveLanguage,
   setActiveFlow,
   setDetectedLanguage,
@@ -108,7 +104,6 @@ export { createLibsqlTalkerStore } from "./db/libsql-store";
 export { runMigrations } from "./db/migrate";
 export { persistFinalSession, persistSession } from "./db/persist";
 export { resolveStore } from "./db/resolve-store";
-export { upsertMessageStatus } from "./db/sessions";
 export type { MessageRecord, MessageStatusRecord, SessionRecord, TalkerStore } from "./db/store";
 export { createNullTalkerStore } from "./db/store";
 export { loadFlowsFromDirectory } from "./flows/loader";
@@ -141,7 +136,7 @@ export { createTelephonyRoutes } from "./plugin";
 
 // Route factories (for custom setup)
 export { callRoutes } from "./routes/call";
-export { messagingRoutes, smsRoutes, whatsappRoutes } from "./routes/messaging";
+export { messagingRoutes } from "./routes/messaging";
 export { handleFallback } from "./routes/shared/handle-fallback";
 // Shared handlers (for custom route setups)
 export { handleStatusCallback } from "./routes/shared/handle-status-callback";
@@ -192,10 +187,7 @@ export {
   DEFAULT_PER_NUMBER_DAILY_LIMIT,
   DEFAULT_TRANSCRIPT_MAX_CHARS,
   findSuspiciousOggComments,
-  GLOBAL_LIMIT_KEY,
   parseOggOpus,
-  pickDailyLimit,
   resolveVoiceLimitsConfig,
   runVoiceReply,
-  utcDayKey,
 } from "./voice";

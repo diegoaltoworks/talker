@@ -7,25 +7,43 @@
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { type Client, createClient } from "@libsql/client";
-import { clearAllContexts, stopCleanup } from "../../src/core/context";
-import { setDbClient } from "../../src/db/client";
-import { runMigrations } from "../../src/db/migrate";
-import type { SessionRecord } from "../../src/db/sessions";
 import {
-  generateSessionId,
-  insertMessage,
-  saveSessionWithMessages,
-  updateSessionIncremental,
-  upsertSession,
-} from "../../src/db/sessions";
+  addMessage,
+  clearAllContexts,
+  getOrCreateContext,
+  stopCleanup,
+} from "../../src/core/context";
+import { setDbClient } from "../../src/db/client";
+import { resolveDefaultStore } from "../../src/db/default-store";
+import { createLibsqlTalkerStore } from "../../src/db/libsql-store";
+import { runMigrations } from "../../src/db/migrate";
+import { persistFinalSession, persistSession } from "../../src/db/persist";
+import { generateSessionId, type SessionRecord, type TalkerStore } from "../../src/db/store";
 
 let db: Client;
+/**
+ * The store under test. Exercising the `TalkerStore` seam directly is the
+ * point: route handlers reach persistence through `deps.store`, so these
+ * tests run the same path production does rather than a convenience wrapper
+ * over the legacy singleton client.
+ */
+let store: TalkerStore;
+
+/**
+ * `persistSession` awaits the session row but fires message inserts without
+ * awaiting them, so a test that reads the messages back has to let those
+ * microtasks settle first.
+ */
+async function settleWrites(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 20));
+}
 
 describe("Database Integration", () => {
   beforeAll(async () => {
     db = createClient({ url: ":memory:" });
     await runMigrations(db);
     setDbClient(db);
+    store = createLibsqlTalkerStore(db);
   });
 
   afterEach(() => {
@@ -81,7 +99,7 @@ describe("Database Integration", () => {
         durationMs: 60000,
       };
 
-      const result = await upsertSession(session);
+      const result = await store.upsertSession(session);
       expect(result).toBe(true);
 
       const rows = await db.execute({
@@ -107,9 +125,9 @@ describe("Database Integration", () => {
         durationMs: 30000,
       };
 
-      await upsertSession(session);
+      await store.upsertSession(session);
 
-      await upsertSession({
+      await store.upsertSession({
         ...session,
         reason: "redirected",
         endedAt: 1060000,
@@ -140,7 +158,7 @@ describe("Database Integration", () => {
         conversationId: "conv-abc-123",
       };
 
-      await upsertSession(session);
+      await store.upsertSession(session);
 
       const rows = await db.execute({
         sql: "SELECT conversation_id FROM talker_sessions WHERE id = ?",
@@ -152,7 +170,7 @@ describe("Database Integration", () => {
 
   describe("insertMessage", () => {
     it("should insert a message linked to a session", async () => {
-      await upsertSession({
+      await store.upsertSession({
         id: "test-msg-session-1",
         phoneNumber: "1111111111",
         channel: "call",
@@ -163,7 +181,7 @@ describe("Database Integration", () => {
         durationMs: 60000,
       });
 
-      const result = await insertMessage({
+      const result = await store.insertMessage({
         id: "test-msg-1",
         sessionId: "test-msg-session-1",
         role: "user",
@@ -182,7 +200,7 @@ describe("Database Integration", () => {
     });
 
     it("should be idempotent via INSERT OR IGNORE", async () => {
-      await upsertSession({
+      await store.upsertSession({
         id: "test-idem-session-1",
         phoneNumber: "2222222222",
         channel: "call",
@@ -193,7 +211,7 @@ describe("Database Integration", () => {
         durationMs: 60000,
       });
 
-      await insertMessage({
+      await store.insertMessage({
         id: "test-idem-msg-1",
         sessionId: "test-idem-session-1",
         role: "user",
@@ -202,7 +220,7 @@ describe("Database Integration", () => {
       });
 
       // Same ID again — should not fail or duplicate
-      const result = await insertMessage({
+      const result = await store.insertMessage({
         id: "test-idem-msg-1",
         sessionId: "test-idem-session-1",
         role: "user",
@@ -220,8 +238,8 @@ describe("Database Integration", () => {
     });
   });
 
-  describe("saveSessionWithMessages", () => {
-    it("should save session and all messages atomically", async () => {
+  describe("a session and its messages written together", () => {
+    it("should save the session row and every message", async () => {
       const session: SessionRecord = {
         id: "test-batch-1",
         phoneNumber: "3333333333",
@@ -239,8 +257,18 @@ describe("Database Integration", () => {
         { role: "user" as const, content: "Obrigado", timestamp: 5003000 },
       ];
 
-      const result = await saveSessionWithMessages(session, messages);
-      expect(result).toBe(true);
+      expect(await store.upsertSession(session)).toBe(true);
+      for (const msg of messages) {
+        expect(
+          await store.insertMessage({
+            id: `${session.id}-${msg.timestamp}-${msg.role}`,
+            sessionId: session.id,
+            role: msg.role,
+            content: msg.content,
+            timestamp: msg.timestamp,
+          }),
+        ).toBe(true);
+      }
 
       const sessionRows = await db.execute({
         sql: "SELECT * FROM talker_sessions WHERE id = ?",
@@ -260,32 +288,23 @@ describe("Database Integration", () => {
     });
   });
 
-  describe("updateSessionIncremental", () => {
-    it("should create session and messages from phone/context", async () => {
+  describe("persistSession", () => {
+    it("should create the session and its messages from the live context", async () => {
       const phoneNumber = "+447700900001";
-      const startTime = 6000000;
-      const messages = [
-        { role: "user" as const, content: "What time is it?", timestamp: 6001000 },
-        { role: "assistant" as const, content: "It's about noon.", timestamp: 6002000 },
-      ];
+      const context = getOrCreateContext(phoneNumber);
+      addMessage(phoneNumber, "user", "What time is it?", "call");
+      addMessage(phoneNumber, "assistant", "It's about noon.", "call");
 
-      const result = await updateSessionIncremental(
-        phoneNumber,
-        "call",
-        { createdAt: startTime },
-        "en",
-        messages,
-        "conv-xyz",
-      );
-      expect(result).toBe(true);
+      await persistSession(phoneNumber, "call", store);
+      await settleWrites();
 
-      const sessionId = generateSessionId(phoneNumber, startTime);
+      const sessionId = generateSessionId(phoneNumber, context.createdAt);
       const sessionRows = await db.execute({
         sql: "SELECT * FROM talker_sessions WHERE id = ?",
         args: [sessionId],
       });
       expect(sessionRows.rows).toHaveLength(1);
-      expect(sessionRows.rows[0].conversation_id).toBe("conv-xyz");
+      expect(sessionRows.rows[0].phone_number).toBe("447700900001");
 
       const msgRows = await db.execute({
         sql: "SELECT * FROM talker_messages WHERE session_id = ?",
@@ -294,31 +313,26 @@ describe("Database Integration", () => {
       expect(msgRows.rows).toHaveLength(2);
     });
 
-    it("should update session and not duplicate messages on subsequent calls", async () => {
+    it("should not duplicate messages when called again for the same context", async () => {
       const phoneNumber = "+447700900002";
-      const startTime = 7000000;
+      const context = getOrCreateContext(phoneNumber);
+      addMessage(phoneNumber, "user", "Hello", "call");
 
-      await updateSessionIncremental(phoneNumber, "call", { createdAt: startTime }, "en", [
-        { role: "user", content: "Hello", timestamp: 7001000 },
-      ]);
+      await persistSession(phoneNumber, "call", store);
+      await settleWrites();
 
-      await updateSessionIncremental(phoneNumber, "call", { createdAt: startTime }, "en", [
-        { role: "user", content: "Hello", timestamp: 7001000 },
-        { role: "assistant", content: "Hi!", timestamp: 7002000 },
-        { role: "user", content: "Thanks", timestamp: 7060000 },
-      ]);
+      addMessage(phoneNumber, "assistant", "Hi!", "call");
+      addMessage(phoneNumber, "user", "Thanks", "call");
+      await persistSession(phoneNumber, "call", store);
+      await settleWrites();
 
-      const sessionId = generateSessionId(phoneNumber, startTime);
-
-      // Session should exist once with updated times
+      const sessionId = generateSessionId(phoneNumber, context.createdAt);
       const sessionRows = await db.execute({
         sql: "SELECT * FROM talker_sessions WHERE id = ?",
         args: [sessionId],
       });
       expect(sessionRows.rows).toHaveLength(1);
-      expect(Number(sessionRows.rows[0].duration_ms)).toBeGreaterThan(0);
 
-      // Messages should not be duplicated (INSERT OR IGNORE)
       const msgRows = await db.execute({
         sql: "SELECT * FROM talker_messages WHERE session_id = ?",
         args: [sessionId],
@@ -326,15 +340,38 @@ describe("Database Integration", () => {
       expect(msgRows.rows).toHaveLength(3);
     });
 
-    it("should return false for empty messages", async () => {
-      const result = await updateSessionIncremental(
-        "+447700900003",
-        "call",
-        { createdAt: 8000000 },
-        "en",
-        [],
-      );
-      expect(result).toBe(false);
+    it("should write nothing when the context has no messages", async () => {
+      const phoneNumber = "+447700900003";
+      const context = getOrCreateContext(phoneNumber);
+
+      await persistSession(phoneNumber, "call", store);
+
+      const sessionId = generateSessionId(phoneNumber, context.createdAt);
+      const sessionRows = await db.execute({
+        sql: "SELECT * FROM talker_sessions WHERE id = ?",
+        args: [sessionId],
+      });
+      expect(sessionRows.rows).toHaveLength(0);
+    });
+
+    it("persistFinalSession should record the transfer reason on the same row", async () => {
+      const phoneNumber = "+447700900004";
+      const context = getOrCreateContext(phoneNumber);
+      addMessage(phoneNumber, "user", "Put me through", "call");
+
+      await persistSession(phoneNumber, "call", store);
+      persistFinalSession(phoneNumber, "call", "redirected", "user requested transfer", store);
+      // persistFinalSession is fire-and-forget too.
+      await settleWrites();
+
+      const sessionId = generateSessionId(phoneNumber, context.createdAt);
+      const rows = await db.execute({
+        sql: "SELECT * FROM talker_sessions WHERE id = ?",
+        args: [sessionId],
+      });
+      expect(rows.rows).toHaveLength(1);
+      expect(rows.rows[0].reason).toBe("redirected");
+      expect(rows.rows[0].transfer_reason).toBe("user requested transfer");
     });
   });
 
@@ -378,7 +415,7 @@ describe("Database Integration", () => {
       });
 
       // Run a talker operation
-      await upsertSession({
+      await store.upsertSession({
         id: "test-isolation-1",
         phoneNumber: "0000000000",
         channel: "call",
@@ -396,11 +433,12 @@ describe("Database Integration", () => {
     });
   });
 
-  describe("No data returned when db is not configured", () => {
-    it("should return false for all operations when client is null", async () => {
+  describe("No data written when db is not configured", () => {
+    it("should return false for every operation on the default store", async () => {
       setDbClient(null);
+      const nullStore = resolveDefaultStore();
 
-      const upsertResult = await upsertSession({
+      const upsertResult = await nullStore.upsertSession({
         id: "test-null-1",
         phoneNumber: "0000000000",
         channel: "call",
@@ -412,7 +450,7 @@ describe("Database Integration", () => {
       });
       expect(upsertResult).toBe(false);
 
-      const msgResult = await insertMessage({
+      const msgResult = await nullStore.insertMessage({
         id: "test-null-msg-1",
         sessionId: "test-null-1",
         role: "user",
@@ -421,14 +459,17 @@ describe("Database Integration", () => {
       });
       expect(msgResult).toBe(false);
 
-      const incrementalResult = await updateSessionIncremental(
-        "+440000000000",
-        "call",
-        { createdAt: 0 },
-        "en",
-        [{ role: "user", content: "hello", timestamp: 0 }],
-      );
-      expect(incrementalResult).toBe(false);
+      const statusResult = await nullStore.upsertMessageStatus({
+        messageSid: "SM-null",
+        phoneNumber: "0000000000",
+        channel: "sms",
+        status: "failed",
+        timestamp: 0,
+      });
+      expect(statusResult).toBe(false);
+
+      const rows = await db.execute("SELECT * FROM talker_sessions WHERE id = 'test-null-1'");
+      expect(rows.rows).toHaveLength(0);
 
       // Restore for other tests
       setDbClient(db);

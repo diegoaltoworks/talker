@@ -3,6 +3,7 @@ import {
   DEFAULT_LANGUAGE,
   isValidLanguageCode,
   normalizeLanguage,
+  normalizeReplyLanguages,
   resolveReplyLanguage,
 } from "./language";
 
@@ -95,6 +96,59 @@ describe("resolveReplyLanguage", () => {
   it("honours a non-English default as the allowlist's first entry", () => {
     expect(resolveReplyLanguage("fr", ["pt", "en"])).toEqual({
       replyLanguage: "pt",
+      mismatch: true,
+    });
+  });
+});
+
+describe("normalizeReplyLanguages", () => {
+  it("returns undefined for unset or empty, which is the unrestricted default", () => {
+    expect(normalizeReplyLanguages(undefined)).toBeUndefined();
+    expect(normalizeReplyLanguages([])).toBeUndefined();
+  });
+
+  it("passes an already-correct list through unchanged", () => {
+    expect(normalizeReplyLanguages(["en", "pt"])).toEqual(["en", "pt"]);
+    expect(normalizeReplyLanguages(["pt-BR"])).toEqual(["pt-BR"]);
+  });
+
+  it("lowercases the base code so an uppercase entry stops silently narrowing every reply", () => {
+    expect(normalizeReplyLanguages(["EN", "PT"])).toEqual(["en", "pt"]);
+  });
+
+  it("uppercases the region subtag", () => {
+    expect(normalizeReplyLanguages(["pt-br", "EN-gb"])).toEqual(["pt-BR", "en-GB"]);
+  });
+
+  it("trims surrounding whitespace", () => {
+    expect(normalizeReplyLanguages([" en ", "pt "])).toEqual(["en", "pt"]);
+  });
+
+  it("drops entries that cannot be a language code, keeping the valid ones", () => {
+    expect(normalizeReplyLanguages(["en", "../secret", "e", "portuguese"])).toEqual(["en"]);
+  });
+
+  it("deduplicates entries that normalize to the same code, preserving order", () => {
+    expect(normalizeReplyLanguages(["EN", "en", "pt"])).toEqual(["en", "pt"]);
+  });
+
+  it("returns undefined when nothing survives, rather than a list that can never match", () => {
+    expect(normalizeReplyLanguages(["portuguese", "!!"])).toBeUndefined();
+  });
+
+  it("survives a non-string entry from an untyped host config", () => {
+    expect(normalizeReplyLanguages(["en", 42 as unknown as string])).toEqual(["en"]);
+  });
+
+  it("produces a list resolveReplyLanguage actually matches", () => {
+    const configured = normalizeReplyLanguages(["EN", "PT"]);
+    expect(resolveReplyLanguage("pt", configured)).toEqual({
+      replyLanguage: "pt",
+      mismatch: false,
+    });
+    // The same list unnormalized narrows every caller to a code nothing matches.
+    expect(resolveReplyLanguage("pt", ["EN", "PT"])).toEqual({
+      replyLanguage: "EN",
       mismatch: true,
     });
   });

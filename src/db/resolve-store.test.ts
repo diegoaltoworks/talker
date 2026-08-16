@@ -7,8 +7,9 @@
  * mode - the fix for the historical double-connection bug), then a no-op.
  */
 
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, spyOn } from "bun:test";
 import type { Client } from "@libsql/client";
+import { logger } from "../core/logger";
 import { getDbClient, setDbClient } from "./client";
 import { resolveStore } from "./resolve-store";
 import type { TalkerStore } from "./store";
@@ -104,6 +105,52 @@ describe("resolveStore", () => {
     expect(rows?.rows.length).toBe(1);
 
     getDbClient()?.close();
+  });
+
+  it("warns and falls through when only half a database config is set", async () => {
+    const warnings: string[] = [];
+    const warn = spyOn(logger, "warn").mockImplementation((message: string) => {
+      warnings.push(message);
+    });
+
+    try {
+      // The realistic shape: both keys typed and present, one of them read
+      // from an env var that was never set.
+      const store = await resolveStore({ database: { url: "libsql://only-a-url", authToken: "" } });
+
+      // Falls through rather than refusing to mount: a missing credential is
+      // not worth declining to answer calls over.
+      expect(
+        await store.upsertSession({
+          id: "s1",
+          phoneNumber: "1",
+          channel: "call",
+          reason: "ended",
+          language: "en",
+          startedAt: 0,
+          endedAt: 1,
+          durationMs: 1,
+        }),
+      ).toBe(false);
+      expect(getDbClient()).toBeNull();
+      expect(warnings.join("\n")).toContain("database config is incomplete");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("stays silent when no database config is set at all", async () => {
+    const warnings: string[] = [];
+    const warn = spyOn(logger, "warn").mockImplementation((message: string) => {
+      warnings.push(message);
+    });
+
+    try {
+      await resolveStore({});
+      expect(warnings).toEqual([]);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it("returns a no-op store when nothing is configured", async () => {

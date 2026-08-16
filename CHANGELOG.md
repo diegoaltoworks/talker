@@ -29,6 +29,52 @@ the version they actually shipped in.
   instrumentation, a fake for tests); `createLibsqlTalkerStore` is the
   default Turso/libSQL implementation, exported for hosts that want it over
   a client they manage themselves. See the README's "Custom Session Store".
+- `getPromptPhrase(language, key, languageDir)` - reads the new `prompts`
+  namespace in `language/*.json`, which holds per-language instructions handed
+  to the LLM rather than copy a caller ever hears.
+- `normalizeReplyLanguages` - puts a configured `TalkerConfig.replyLanguages`
+  into the shape reply-language matching expects. Applied automatically by
+  `createTelephonyRoutes` and `createStandaloneServer`, so `['EN', 'pt-br']`
+  now works where it previously matched nothing and narrowed every reply.
+- `bun run check:deprecations` (`scripts/deprecations.ts`, part of `bun run
+  check`) - fails when a `@deprecated` tag in `src/` names no removal version
+  or hedges with without-notice language. See CONTRIBUTING.md's "Deprecating
+  a public name".
+
+### Removed
+
+Everything below was deprecated during the 0.x window and is removed here,
+ahead of the 1.0 API freeze. Names still reachable from the package root
+(`getSmsPhrase`, `getWhatsAppPhrase`, `getExitMessage`,
+`inputSanitizeMiddleware`) keep working and now carry a literal
+`Removed in 1.0.0.` in their deprecation notice.
+
+- `src/db/sessions.ts` and its no-`deps` exports (`upsertSession`,
+  `insertMessage`, `upsertMessageStatus`, `saveSessionWithMessages`,
+  `updateSessionIncremental`). Use `TalkerDependencies.store` (a
+  `TalkerStore`), or `createLibsqlTalkerStore` over a client you manage.
+  `generateId`/`generateSessionId` and the record types moved to
+  `src/db/store.ts` and are re-exported from `@diegoaltoworks/talker` as
+  before. Only `upsertMessageStatus` was reachable from the package root.
+- `smsRoutes` / `whatsappRoutes`. Use `messagingRoutes(deps, registry, "sms")`
+  and `messagingRoutes(deps, registry, "whatsapp")`.
+- `getSanitizedBody`. Use `getTruncatedBody`. It was never exported from the
+  package root.
+- The compatibility type re-exports in `src/types.ts` (`TelephonyContext`,
+  `Phrases`, `PhraseValue`, `IncomingResult` and the flow types). Every one of
+  them is still exported from the package root, from the module that owns it,
+  so no consumer import changes.
+- The package root no longer re-exports this package's internal helpers:
+  `clearAllContexts`, `incrementNoSpeechRetries`, `resetNoSpeechRetries`,
+  `GLOBAL_LIMIT_KEY`, `pickDailyLimit` and `utcDayKey`. They remain exported
+  from their own modules for this package's tests. Configure limits through
+  `resolveVoiceLimitsConfig` and `createVoiceLimiter`.
+- `phrases.replyLanguageMismatch` moved to `phrases.prompts.replyLanguageMismatch`.
+  It is an instruction to the model, not copy anyone hears, and keeping it in
+  the top-level shape invited a host to rewrite it as a greeting. A custom
+  language file that still sets the old top-level key falls back to the
+  built-in English instruction; move the key under `prompts` to keep the
+  override.
 
 ### Changed
 
@@ -51,13 +97,11 @@ the version they actually shipped in.
   every mount. It now reuses chatter's connection by default; set
   `TalkerConfig.database` explicitly if talker should persist to a
   *different* database than chatter's. One consequence: the legacy
-  singleton client (`getDbClient()`, and the deprecated `upsertSession`/
-  `insertMessage`/`upsertMessageStatus`/`persistSession`/`persistFinalSession`
-  exports that read it when called without their new trailing `store`
-  argument) is populated in plugin mode only when `database` is set - a host
-  calling those directly, relying on chatter's connection being reused
-  implicitly, now needs its own `database` config or should migrate to
-  `deps.store`.
+  singleton client (`getDbClient()`, and `persistSession`/
+  `persistFinalSession` when called without their trailing `store` argument)
+  is populated in plugin mode only when `database` is set - a host relying on
+  chatter's connection being reused implicitly now needs its own `database`
+  config or should migrate to `deps.store`.
 - `runMigrations` now takes an explicit `Client` argument (`resolveStore`
   always passes one). The no-argument call shape still works, falling back
   to the legacy singleton client exactly as before.
@@ -65,6 +109,22 @@ the version they actually shipped in.
   now actually enables permissive CORS by default via `hono/cors`, matching
   its documented `Default: true`. Set `cors: false` to keep the previous
   no-CORS behavior.
+- The shipped `language/*.json` files carry their native orthography again
+  (accents in `de`/`es`/`fr`/`pt`, the Dutch `Één`, Spanish `¿`/`¡`). These
+  strings are read aloud by TTS, where a stripped accent changes the vowel
+  and a missing opening `¿` loses the intonation cue for the whole question.
+  `src/core/phrase-files.test.ts` pins the spellings per file.
+- A breaking change now ships a major version once the package is past 1.0
+  (`feat!:`, or a `BREAKING CHANGE:` footer). Below 1.0.0 it still reaches
+  minor and no further. See `scripts/next-version.ts`.
+- `resolveStore` warns when `TalkerConfig.database` is half-filled (a url
+  with an empty auth token, or the reverse) instead of silently mounting a
+  store that persists nothing.
+- The `INCOMING`, `OUTGOING` and `FLOW RESULT` log messages are now
+  `incoming message processed`, `outgoing response processed` and
+  `flow result`, matching the lower-case prose every other log line uses. Log
+  *fields* are unchanged; a consumer matching on the old message strings
+  needs updating.
 
 ## [0.54.0] - 2026-08-16
 

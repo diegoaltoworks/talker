@@ -1,57 +1,59 @@
 {
-  "greeting": "Bonjour! Je suis votre assistant vocal. Comment puis-je vous aider aujourd'hui?",
-  "didNotCatch": "Je n'ai pas compris. Pourriez-vous repeter, s'il vous plait?",
+  "greeting": "Bonjour ! Je suis votre assistant vocal. Comment puis-je vous aider aujourd'hui ?",
+  "didNotCatch": "Je n'ai pas compris. Pourriez-vous répéter, s'il vous plaît ?",
   "didNotHear": "Je n'ai rien entendu. Au revoir.",
-  "didNotHearRetry": "Desolee, je n'ai pas compris. Pourriez-vous reessayer?",
-  "didNotHearFinal": "Je suis vraiment desolee mais je n'arrive pas a entendre ce que vous dites. Veuillez rappeler. A bientot.",
-  "transfer": "Pas de probleme, je vous transfiere.",
-  "acknowledgment": "Un instant, s'il vous plait.",
+  "didNotHearRetry": "Désolée, je n'ai pas compris. Pourriez-vous réessayer ?",
+  "didNotHearFinal": "Je suis vraiment désolée mais je n'arrive pas à entendre ce que vous dites. Veuillez rappeler. À bientôt.",
+  "transfer": "Pas de problème, je vous transfère.",
+  "acknowledgment": "Un instant, s'il vous plaît.",
   "farewell": {
-    "morning": "Je vous en prie! Passez une excellente journee. Au revoir!",
-    "afternoon": "Je vous en prie! Passez un bon apres-midi. Au revoir!",
-    "evening": "Je vous en prie! Passez une bonne soiree. Au revoir!"
+    "morning": "Je vous en prie ! Passez une excellente journée. Au revoir !",
+    "afternoon": "Je vous en prie ! Passez un bon après-midi. Au revoir !",
+    "evening": "Je vous en prie ! Passez une bonne soirée. Au revoir !"
   },
-  "error": "Desole, j'ai rencontre une erreur. Veuillez reessayer plus tard. Au revoir.",
-  "timeout": "Desole, j'ai mis trop de temps a repondre. Veuillez reessayer. Au revoir.",
-  "lostQuestion": "Je suis desole, j'ai perdu le fil de votre question. Pourriez-vous repeter?",
-  "rateLimited": "Veuillez reessayer dans un instant.",
-  "chatError": "Desole, j'ai rencontre une erreur en traitant votre question.",
-  "replyLanguageMismatch": "Reconnaissez brievement et poliment que vous ne pouvez pas repondre dans la langue de l'appelant, puis continuez votre reponse dans la langue indiquee ci-dessus.",
+  "error": "Désolé, j'ai rencontré une erreur. Veuillez réessayer plus tard. Au revoir.",
+  "timeout": "Désolé, j'ai mis trop de temps à répondre. Veuillez réessayer. Au revoir.",
+  "lostQuestion": "Je suis désolé, j'ai perdu le fil de votre question. Pourriez-vous répéter ?",
+  "rateLimited": "Veuillez réessayer dans un instant.",
+  "chatError": "Désolé, j'ai rencontré une erreur en traitant votre question.",
   "flow": {
-    "cancelled": "Pas de probleme! J'ai annule ca. Comment puis-je vous aider?",
-    "error": "Desole, quelque chose s'est mal passe. Recommencons - comment puis-je vous aider?",
-    "needMoreDetails": "Pourriez-vous me donner plus de details?",
+    "cancelled": "Pas de problème ! J'ai annulé ça. Comment puis-je vous aider ?",
+    "error": "Désolé, quelque chose s'est mal passé. Recommençons - comment puis-je vous aider ?",
+    "needMoreDetails": "Pourriez-vous me donner plus de détails ?",
     "cancellationKeywords": [
       "annuler",
-      "annule",
+      "annulé",
       "annulez",
       "laisse tomber",
       "laissez tomber",
-      "arrete",
-      "arretez",
+      "arrête",
+      "arrêtez",
       "stop",
       "cancel"
     ]
   },
   "sms": {
-    "greeting": "Bonjour! Je suis votre assistant vocal. Comment puis-je vous aider?",
-    "greetingShort": "Bonjour! Envoyez-moi votre question!",
+    "greeting": "Bonjour ! Je suis votre assistant vocal. Comment puis-je vous aider ?",
+    "greetingShort": "Bonjour ! Envoyez-moi votre question !",
     "callForHelp": "Pour des questions complexes, appelez-nous directement.",
-    "processingError": "J'ai du mal a traiter cela. Veuillez reessayer ou nous appeler.",
-    "genericError": "Desole, quelque chose s'est mal passe. Veuillez reessayer."
+    "processingError": "J'ai du mal à traiter cela. Veuillez réessayer ou nous appeler.",
+    "genericError": "Désolé, quelque chose s'est mal passé. Veuillez réessayer."
   },
   "whatsapp": {
-    "greeting": "Bonjour! Je suis votre assistant. Envoyez-moi un message et je vous aiderai!",
-    "greetingShort": "Bonjour! Comment puis-je vous aider?",
-    "callForHelp": "Pour des questions complexes, appelez-nous ou repondez ici avec plus de details.",
-    "processingError": "J'ai du mal a traiter cela. Veuillez renvoyer votre message.",
-    "genericError": "Desole, quelque chose s'est mal passe. Veuillez reessayer."
+    "greeting": "Bonjour ! Je suis votre assistant. Envoyez-moi un message et je vous aiderai !",
+    "greetingShort": "Bonjour ! Comment puis-je vous aider ?",
+    "callForHelp": "Pour des questions complexes, appelez-nous ou répondez ici avec plus de détails.",
+    "processingError": "J'ai du mal à traiter cela. Veuillez renvoyer votre message.",
+    "genericError": "Désolé, quelque chose s'est mal passé. Veuillez réessayer."
   },
   "voice": {
-    "overCapPerNumber": "Vous avez atteint la limite quotidienne de reponses vocales. Veuillez plutot taper votre message.",
-    "overCapGlobal": "Les reponses vocales sont a pleine capacite en ce moment. Veuillez plutot taper votre message.",
-    "limitUnavailable": "Je ne peux pas verifier la disponibilite vocale en ce moment. Veuillez plutot taper votre message.",
-    "unintelligible": "Je n'ai pas compris cet audio. Pourriez-vous reessayer, ou taper votre message?",
-    "answerFailed": "Un probleme est survenu lors de la preparation d'une reponse. Veuillez reessayer."
+    "overCapPerNumber": "Vous avez atteint la limite quotidienne de réponses vocales. Veuillez plutôt taper votre message.",
+    "overCapGlobal": "Les réponses vocales sont à pleine capacité en ce moment. Veuillez plutôt taper votre message.",
+    "limitUnavailable": "Je ne peux pas vérifier la disponibilité vocale en ce moment. Veuillez plutôt taper votre message.",
+    "unintelligible": "Je n'ai pas compris cet audio. Pourriez-vous réessayer, ou taper votre message ?",
+    "answerFailed": "Un problème est survenu lors de la préparation d'une réponse. Veuillez réessayer."
+  },
+  "prompts": {
+    "replyLanguageMismatch": "Reconnaissez brièvement et poliment que vous ne pouvez pas répondre dans la langue de l'appelant, puis continuez votre réponse dans la langue indiquée ci-dessus."
   }
 }

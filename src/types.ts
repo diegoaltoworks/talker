@@ -195,10 +195,12 @@ export interface TalkerConfig {
    * errors, farewells) still follow the caller's actual detected language.
    * Unset (the default): unrestricted, replies land in the detected
    * language, current behavior is unchanged. Set: an exact match (entries
-   * must be the lowercase codes detection emits, e.g. `en`, not `EN`)
+   * are the codes detection emits, e.g. `en`; casing is normalized and an
+   * unusable entry dropped when the mount is built, see
+   * `normalizeReplyLanguages`)
    * replies in kind; anything else replies in the list's first entry and
    * the reply opens with a brief acknowledgment that it can't continue in
-   * the caller's language, via `phrases.replyLanguageMismatch` (see
+   * the caller's language, via `prompts.replyLanguageMismatch` (see
    * `language/en.json`). Useful for an operator who can only staff replies
    * in a subset of the languages they can be reached in, e.g. `['en', 'pt']`.
    */
@@ -381,48 +383,15 @@ export interface TalkerDependencies {
    * Session/message/status persistence. `createTelephonyRoutes`/
    * `createStandaloneServer` always populate this before mounting (see
    * `src/db/resolve-store.ts`), so it is only left `undefined` when a caller
-   * builds `TalkerDependencies` by hand (mainly tests) - `db/persist.ts` and
-   * `db/sessions.ts`'s deprecated no-deps exports fall back to the legacy
-   * singleton client in that case. Route handlers read `deps.store` directly.
+   * builds `TalkerDependencies` by hand (mainly tests) - `db/persist.ts`
+   * falls back to the legacy singleton client in that case. Route handlers
+   * read `deps.store` directly.
    */
   store?: TalkerStore;
 }
 
-/**
- * Conversation context stored per phone number.
- * Co-located with the store that owns it; re-exported here for compatibility.
- * @deprecated Import from `./core/context` instead.
- */
-export type { TelephonyContext } from "./core/context";
-/**
- * Phrase file structure for each language, co-located with the loader that
- * validates it; re-exported here for compatibility.
- * @deprecated Import from `./core/phrases` instead.
- */
-export type { Phrases, PhraseValue } from "./core/phrases";
-/**
- * Result from the incoming message pre-processor.
- * Co-located with its one producer; re-exported here for compatibility.
- * @deprecated Import from `./core/processing/incoming` instead.
- */
-export type { IncomingResult } from "./core/processing/incoming";
-/**
- * Flow-related types, co-located with the flow presentation layer;
- * re-exported here for compatibility.
- * @deprecated Import from `./flows/types` instead.
- */
-export type {
-  FlowDefinition,
-  FlowExtractionResult,
-  FlowHandler,
-  FlowHandlerContext,
-  FlowHandlerResult,
-  FlowPrefill,
-  FlowResult,
-  FlowSchema,
-  FlowSchemaProperty,
-  FlowState,
-  IntentDetection,
-  LoadedFlow,
-} from "./flows/types";
-export { CURRENT_FLOW_CONTRACT_VERSION, LEGACY_FLOW_CONTRACT_VERSION } from "./flows/types";
+// Every type this module once re-exported for compatibility now lives with the
+// code that owns it: `TelephonyContext` in ./core/context, `Phrases`/
+// `PhraseValue` in ./core/phrases, `IncomingResult` in
+// ./core/processing/incoming, and the flow types in ./flows/types. The package
+// root re-exports all of them from those homes, so no consumer import changes.

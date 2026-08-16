@@ -1,11 +1,11 @@
 {
-  "greeting": "Hallo! Ik ben uw spraakassistent. Hoe kan ik u helpen vandaag?",
+  "greeting": "Hallo! Ik ben uw spraakassistent. Hoe kan ik u vandaag helpen?",
   "didNotCatch": "Ik heb dat niet verstaan. Kunt u het herhalen?",
   "didNotHear": "Ik heb niets gehoord. Tot ziens.",
   "didNotHearRetry": "Sorry, ik heb dat niet verstaan. Kunt u het nog een keer proberen?",
   "didNotHearFinal": "Het spijt me echt maar ik kan niet horen wat u zegt. Bel alstublieft opnieuw. Tot snel.",
   "transfer": "Geen probleem, ik verbind u door.",
-  "acknowledgment": "Een moment alstublieft.",
+  "acknowledgment": "Één moment alstublieft.",
   "farewell": {
     "morning": "Graag gedaan! Fijne dag nog. Tot ziens!",
     "afternoon": "Graag gedaan! Fijne middag nog. Tot ziens!",
@@ -16,10 +16,9 @@
   "lostQuestion": "Sorry, ik ben uw vraag kwijt. Kunt u het herhalen?",
   "rateLimited": "Probeer het over een moment opnieuw.",
   "chatError": "Sorry, er is een fout opgetreden bij het verwerken van uw vraag.",
-  "replyLanguageMismatch": "Erken kort en beleefd dat u niet kunt antwoorden in de taal van de beller, en ga daarna verder in de hierboven aangegeven taal.",
   "flow": {
-    "cancelled": "Geen probleem! Ik heb dat geannuleerd. Waarmee kan ik je helpen?",
-    "error": "Sorry, daar ging iets mis. Laten we opnieuw beginnen - waarmee kan ik je helpen?",
+    "cancelled": "Geen probleem! Ik heb dat geannuleerd. Waarmee kan ik u helpen?",
+    "error": "Sorry, daar ging iets mis. Laten we opnieuw beginnen - waarmee kan ik u helpen?",
     "needMoreDetails": "Kunt u meer details geven?",
     "cancellationKeywords": [
       "annuleren",
@@ -50,5 +49,8 @@
     "limitUnavailable": "Ik kan de beschikbaarheid van spraak nu niet controleren. Typ uw bericht in plaats daarvan.",
     "unintelligible": "Ik kon die audio niet verstaan. Kunt u het opnieuw proberen, of uw bericht typen?",
     "answerFailed": "Er ging iets mis bij het voorbereiden van een antwoord. Probeer het opnieuw."
+  },
+  "prompts": {
+    "replyLanguageMismatch": "Erken kort en beleefd dat u niet kunt antwoorden in de taal van de beller, en ga daarna verder in de hierboven aangegeven taal."
   }
 }

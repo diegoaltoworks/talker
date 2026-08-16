@@ -81,7 +81,7 @@ export async function processCall(
     flowResult.cancelled ||
     flowResult.error
   ) {
-    logger.info("FLOW RESULT", {
+    logger.info("flow result", {
       phoneNumber,
       active: flowResult.isFlowActive,
       done: flowResult.flowCompleted,

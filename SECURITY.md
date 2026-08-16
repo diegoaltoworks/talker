@@ -8,6 +8,11 @@ We release patches for security vulnerabilities for the following versions:
 | ------- | ------------------ |
 | 0.x     | :white_check_mark: |
 
+Only the latest published version is patched. A fix ships as a new release,
+not as a backport to an older line: while the package is pre-1.0 there is no
+stable line to backport to, and after 1.0 this table gains a row per supported
+major rather than implying that every 0.x ever published still gets fixes.
+
 ## Reporting a Vulnerability
 
 **Please do not report security vulnerabilities through public GitHub issues.**

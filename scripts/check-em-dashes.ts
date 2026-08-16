@@ -11,7 +11,9 @@
  * scanned too) under the directories below - source, scripts, tests,
  * examples, docs, CI workflows and root-level project docs - for every
  * `.ts`, `.md`, `.yml`/`.yaml` and `.sh` file, excluding `node_modules` and
- * `dist`, and counts the U+2014 EM DASH character in each.
+ * `dist`, plus the named root files below (`package.json` among them, since
+ * its `description` is published to npm), and counts the U+2014 EM DASH
+ * character in each.
  */
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -19,7 +21,16 @@ import { join, relative } from "node:path";
 
 const EM_DASH = "\u2014";
 const SCAN_ROOTS = ["src", "scripts", "test", "examples", "docs", ".github"];
-const SCAN_FILES = ["README.md", "CONTRIBUTING.md", "CHANGELOG.md", "SECURITY.md"];
+const SCAN_FILES = [
+  "README.md",
+  "CONTRIBUTING.md",
+  "CHANGELOG.md",
+  "SECURITY.md",
+  // The manifest ships to npm: its `description` is the one string in this
+  // repo that renders on the package page, so it is scanned even though no
+  // scan root sweeps up `.json`.
+  "package.json",
+];
 const SCAN_EXTENSIONS = [".ts", ".md", ".yml", ".yaml", ".sh"];
 
 /**
@@ -27,7 +38,7 @@ const SCAN_EXTENSIONS = [".ts", ".md", ".yml", ".yaml", ".sh"];
  * was introduced. A PR that adds em-dashes without removing at least as many
  * elsewhere pushes the total over this and fails the gate.
  */
-export const BASELINE = 120;
+export const BASELINE = 117;
 
 function walk(dir: string, repoRoot: string): string[] {
   const found: string[] = [];

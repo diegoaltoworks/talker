@@ -42,19 +42,6 @@ export interface Phrases {
   rateLimited: PhraseValue;
   /** Spoken or sent when the chat backend fails or returns nothing usable. */
   chatError: PhraseValue;
-  /**
-   * Appended to the outgoing prompt's instructions when `TalkerConfig.replyLanguages`
-   * narrows the reply away from the caller's detected language. Written in
-   * this file's own language (the language the reply actually lands in), so
-   * it needs no runtime substitution - it tells the LLM to briefly
-   * acknowledge the mismatch, then continue in the language the prompt
-   * already named (`Respond in: ...`), rather than naming a language
-   * directly: `loadPhrases` falls a missing key back to this English copy,
-   * and a fallback that named "English" would contradict a `Respond in: pt`
-   * instruction on the same prompt for a language whose file predates this
-   * key, or one that was never shipped at all.
-   */
-  replyLanguageMismatch: PhraseValue;
   flow: {
     cancelled: PhraseValue;
     error: PhraseValue;
@@ -88,6 +75,28 @@ export interface Phrases {
     limitUnavailable: PhraseValue;
     unintelligible: PhraseValue;
     answerFailed: PhraseValue;
+  };
+  /**
+   * Per-language instructions handed to the LLM, never spoken or sent to a
+   * caller. Kept in its own namespace because everything else in this file is
+   * copy a host might reasonably rewrite for tone, while these are directions
+   * the pipeline depends on: mixing them into the top-level shape invited a
+   * host to "translate" an instruction into a greeting.
+   */
+  prompts: {
+    /**
+     * Appended to the outgoing prompt's instructions when
+     * `TalkerConfig.replyLanguages` narrows the reply away from the caller's
+     * detected language. Written in this file's own language (the language the
+     * reply actually lands in), so it needs no runtime substitution - it tells
+     * the LLM to briefly acknowledge the mismatch, then continue in the
+     * language the prompt already named (`Respond in: ...`), rather than
+     * naming a language directly: `loadPhrases` falls a missing key back to
+     * this English copy, and a fallback that named "English" would contradict
+     * a `Respond in: pt` instruction on the same prompt for a language whose
+     * file predates this key, or one that was never shipped at all.
+     */
+    replyLanguageMismatch: PhraseValue;
   };
 }
 
@@ -215,8 +224,6 @@ const ENGLISH_FALLBACK: Phrases = {
   lostQuestion: "I'm sorry, I lost track of your question. Could you please repeat?",
   rateLimited: "Please try again in a moment.",
   chatError: "Sorry, I encountered an error processing your question.",
-  replyLanguageMismatch:
-    "Briefly and politely acknowledge that you can't reply in the caller's language, then continue your reply in the language specified above.",
   flow: {
     cancelled: "No problem! I've cancelled that. What else would you like to know?",
     error: "Sorry, something went wrong with that. Let's start over - what would you like to know?",
@@ -245,6 +252,10 @@ const ENGLISH_FALLBACK: Phrases = {
       "I can't check voice availability right now. Please type your message instead.",
     unintelligible: "I couldn't understand that audio. Could you try again, or type your message?",
     answerFailed: "Something went wrong preparing a reply. Please try again.",
+  },
+  prompts: {
+    replyLanguageMismatch:
+      "Briefly and politely acknowledge that you can't reply in the caller's language, then continue your reply in the language specified above.",
   },
 };
 
@@ -319,8 +330,7 @@ type SimplePhraseKey =
   | "timeout"
   | "lostQuestion"
   | "rateLimited"
-  | "chatError"
-  | "replyLanguageMismatch";
+  | "chatError";
 
 /**
  * Get a simple phrase by key
@@ -415,7 +425,7 @@ export function getChannelPhrase(
 
 /**
  * Get an SMS-specific phrase.
- * @deprecated Use `getChannelPhrase("sms", language, key, languageDir)`.
+ * @deprecated Removed in 1.0.0. Use `getChannelPhrase("sms", language, key, languageDir)`.
  */
 export function getSmsPhrase(
   language: string,
@@ -429,7 +439,7 @@ export function getSmsPhrase(
  * Get a WhatsApp-specific phrase.
  * Falls back to this language's sms copy, then to English - see
  * `getChannelPhrase`.
- * @deprecated Use `getChannelPhrase("whatsapp", language, key, languageDir)`.
+ * @deprecated Removed in 1.0.0. Use `getChannelPhrase("whatsapp", language, key, languageDir)`.
  */
 export function getWhatsAppPhrase(
   language: string,
@@ -452,4 +462,23 @@ export function getVoicePhrase(
 ): string {
   const phrases = loadPhrases(language, languageDir);
   return pick(phrases.voice[key]);
+}
+
+/**
+ * Get an LLM-facing prompt instruction for a language.
+ *
+ * Separate from `getPhrase` on purpose: nothing under `prompts` is ever spoken
+ * to or sent to a caller, so a host reading the phrase surface can tell at a
+ * glance which strings are copy and which are directions to the model.
+ * `loadPhrases` fills a missing `prompts` key from the built-in English copy
+ * at load time, so this reads the namespace directly - including for phrase
+ * files that predate it.
+ */
+export function getPromptPhrase(
+  language: string,
+  key: keyof Phrases["prompts"],
+  languageDir?: string,
+): string {
+  const phrases = loadPhrases(language, languageDir);
+  return pick(phrases.prompts[key]);
 }

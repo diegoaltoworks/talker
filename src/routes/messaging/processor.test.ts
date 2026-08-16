@@ -9,7 +9,8 @@
 
 import { afterEach, describe, expect, it, mock } from "bun:test";
 import type { ServerDependencies } from "@diegoaltoworks/chatter";
-import type { FlowResult, TalkerDependencies } from "../../types";
+import type { FlowResult } from "../../flows/types";
+import type { TalkerDependencies } from "../../types";
 import type { MessagingChannel } from "./processor";
 
 let flowResultToReturn: FlowResult = { isFlowActive: false, response: "", flowCompleted: false };

@@ -147,3 +147,28 @@ describe.each(GUARDS)("$name confined to its allowlisted files", ({ needle, allo
     expect(violations).toEqual([]);
   });
 });
+
+/**
+ * `replyLanguages` is normalized where a mount is built, not per request.
+ * Matching in `resolveReplyLanguage` is exact, so a mis-cased entry that
+ * reaches it narrows every reply to a code nothing matches and apologizes for
+ * it, with no error anywhere. Both entry points have to apply the
+ * normalization; a new one that forgets is the failure this catches, and it
+ * is a call site rather than a wrong return value, so it is checked here
+ * beside the other structural guards.
+ */
+describe("replyLanguages is normalized at mount time", () => {
+  for (const entryPoint of ["plugin.ts", "standalone.ts"]) {
+    it(`${entryPoint} runs its config through normalizeReplyLanguages`, () => {
+      const source = stripComments(readFileSync(join(SRC, entryPoint), "utf-8"));
+      expect(source).toContain("replyLanguages: normalizeReplyLanguages(config.replyLanguages)");
+    });
+  }
+
+  it("hands the normalized config to the mount, not the raw one", () => {
+    const plugin = stripComments(readFileSync(join(SRC, "plugin.ts"), "utf-8"));
+    expect(plugin).toContain("config: resolvedConfig");
+    const standalone = stripComments(readFileSync(join(SRC, "standalone.ts"), "utf-8"));
+    expect(standalone).toContain("config: resolvedConfig");
+  });
+});

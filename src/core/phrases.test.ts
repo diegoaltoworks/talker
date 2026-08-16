@@ -7,6 +7,7 @@ import {
   getFarewellPhrase,
   getFlowPhrase,
   getPhrase,
+  getPromptPhrase,
   getSmsPhrase,
   getVoicePhrase,
   getWhatsAppPhrase,
@@ -52,7 +53,7 @@ describe("Phrases", () => {
         expect(phrases.flow.cancelled).toBeDefined();
         expect(phrases.whatsapp.greeting).toBeDefined();
         expect(phrases.whatsapp.callForHelp).toBeDefined();
-        expect(phrases.replyLanguageMismatch).toBeDefined();
+        expect(phrases.prompts.replyLanguageMismatch).toBeDefined();
       }
     });
 
@@ -92,16 +93,16 @@ describe("Phrases", () => {
     });
 
     it("should return the reply-language-mismatch instruction, written in the requested language", () => {
-      expect(getPhrase("en", "replyLanguageMismatch")).toContain("language");
-      expect(getPhrase("pt", "replyLanguageMismatch")).toContain("idioma");
-      expect(getPhrase("pt", "replyLanguageMismatch")).not.toBe(
-        getPhrase("en", "replyLanguageMismatch"),
+      expect(getPromptPhrase("en", "replyLanguageMismatch")).toContain("language");
+      expect(getPromptPhrase("pt", "replyLanguageMismatch")).toContain("idioma");
+      expect(getPromptPhrase("pt", "replyLanguageMismatch")).not.toBe(
+        getPromptPhrase("en", "replyLanguageMismatch"),
       );
     });
 
     it("should not name a specific language, since a missing key falls back to this English copy on any language's prompt", () => {
       for (const language of ["en", "fr", "nl", "de", "es", "pt"]) {
-        const phrase = getPhrase(language, "replyLanguageMismatch").toLowerCase();
+        const phrase = getPromptPhrase(language, "replyLanguageMismatch").toLowerCase();
         for (const name of [
           "english",
           "francais",

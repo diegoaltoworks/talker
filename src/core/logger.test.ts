@@ -112,7 +112,9 @@ describe("Logger", () => {
 
     it("previews a long string field by default and never logs it verbatim", () => {
       const longMessage = `${"a".repeat(200)} secret`;
-      const entry = loggedEntry(() => logger.info("INCOMING", { in: longMessage }));
+      const entry = loggedEntry(() =>
+        logger.info("incoming message processed", { in: longMessage }),
+      );
       expect(entry.in).toBe(`${"a".repeat(160)}...`);
       expect(entry.in).not.toContain("secret");
     });
@@ -120,7 +122,9 @@ describe("Logger", () => {
     it("logs full content when TALKER_LOG_VERBOSE=true", () => {
       process.env.TALKER_LOG_VERBOSE = "true";
       const longMessage = `${"a".repeat(200)} secret`;
-      const entry = loggedEntry(() => logger.info("INCOMING", { in: longMessage }));
+      const entry = loggedEntry(() =>
+        logger.info("incoming message processed", { in: longMessage }),
+      );
       expect(entry.in).toBe(longMessage);
     });
 
@@ -161,7 +165,9 @@ describe("Logger", () => {
     it("previews a long string without splitting a surrogate pair at the boundary", () => {
       // 160 "a"s land the cut exactly on an astral emoji (a surrogate pair).
       const longMessage = `${"a".repeat(160)}\u{1F600}`;
-      const entry = loggedEntry(() => logger.info("INCOMING", { in: longMessage }));
+      const entry = loggedEntry(() =>
+        logger.info("incoming message processed", { in: longMessage }),
+      );
       expect(entry.in).toBe(`${"a".repeat(160)}...`);
     });
 

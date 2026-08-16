@@ -136,7 +136,14 @@ talker/
 1. **Update Documentation**: Update README.md and relevant docs for any new features
 2. **Add Tests**: Ensure new code is covered by tests
 3. **Pass CI**: All tests, linting, and type checks must pass
-4. **Update Changelog**: Add entry to CHANGELOG.md under "Unreleased"
+4. **Update Changelog** (notable or breaking changes only): add an entry under
+   `[Unreleased]` in CHANGELOG.md. Every merge to `main` publishes immediately
+   (see below), so the version your change ships as is not known at PR time —
+   a maintainer moves the entry from `[Unreleased]` into a versioned section
+   once the release tag exists. Most day-to-day fixes don't need an entry at
+   all: from `v0.46.0` onward, [GitHub Releases](https://github.com/diegoaltoworks/talker/releases)
+   auto-generates the complete per-version log from every merged PR title, and
+   CHANGELOG.md exists to curate the subset worth a human-written summary.
 5. **Request Review**: Tag maintainers for review
 
 ## Release Process

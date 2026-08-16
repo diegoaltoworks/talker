@@ -5,7 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+Every merge to `main` publishes automatically (see [CONTRIBUTING.md](CONTRIBUTING.md#release-process)),
+so this file cannot track every release one-for-one. From `v0.46.0` onward,
+GitHub auto-generates a [release page](https://github.com/diegoaltoworks/talker/releases)
+per tag with the complete per-version commit list; earlier tags have no
+release page (the listener that was meant to generate them never fired — see
+`v0.46.0`'s own release for the fix). This file curates the notable and
+breaking changes, grouped under the version they actually shipped in.
+
 ## [Unreleased]
+
+## [0.43.0] - 2026-08-16
 
 ### Fixed
 
@@ -30,6 +40,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   strip formatting characters for session-id stability, not for privacy; the
   number is stored as plaintext in `talker_sessions.phone_number` either way.
   No behavior change.
+
+## [0.40.0] - 2026-08-15
+
+### Changed
+
 - SMS and WhatsApp routing collapsed into a single parameterized
   `src/routes/messaging/` factory (`messagingRoutes(deps, registry, channel)`)
   instead of two near-identical route trees. `smsRoutes` and `whatsappRoutes`
@@ -44,16 +59,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   keywords as substrings, so a word like "personality" incorrectly triggered
   the handoff on the "person" keyword. Matching is now word-bounded.
 
-### Changed
+## [0.39.0] - 2026-08-15
 
-- **Breaking:** telephony webhooks now fail closed without a Twilio auth token.
-  `createTelephonyRoutes` and `createStandaloneServer` throw when
-  `twilio.authToken` is absent, and `twilioSignatureMiddleware` rejects every
-  request with 403 instead of passing it through. Previously a deployment that
-  forgot the token exposed `/call`, `/sms` and `/whatsapp` to anyone who could
-  reach them, with no signal that signatures were not being checked. Set
-  `twilio.authToken`, or set `allowUnsignedWebhooks: true` to keep the old
-  behaviour for development — that path mounts with a loud warning.
+### Fixed
+
+- The last prompt stored for the no-speech retry ladder is now the unescaped
+  text. The call processor used to escape before handing the prompt to
+  `gatherTwiml`, so a retry concatenated escaped and unescaped copies and the
+  `onMessage` tap reported bodies containing `&amp;` entities instead of what
+  the caller heard.
+
+## [0.36.0] - 2026-08-15
 
 ### Fixed
 
@@ -67,15 +83,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `escapeXml` also escapes apostrophes (`&apos;`), completing the five XML
   predefined entities.
 
-- The last prompt stored for the no-speech retry ladder is now the unescaped
-  text. The call processor used to escape before handing the prompt to
-  `gatherTwiml`, so a retry concatenated escaped and unescaped copies and the
-  `onMessage` tap reported bodies containing `&amp;` entities instead of what
-  the caller heard.
+## [0.35.0] - 2026-08-15
+
+### Changed
+
+- **Breaking:** telephony webhooks now fail closed without a Twilio auth token.
+  `createTelephonyRoutes` and `createStandaloneServer` throw when
+  `twilio.authToken` is absent, and `twilioSignatureMiddleware` rejects every
+  request with 403 instead of passing it through. Previously a deployment that
+  forgot the token exposed `/call`, `/sms` and `/whatsapp` to anyone who could
+  reach them, with no signal that signatures were not being checked. Set
+  `twilio.authToken`, or set `allowUnsignedWebhooks: true` to keep the old
+  behaviour for development — that path mounts with a loud warning.
+
+### Fixed
 
 - Twilio signature validation no longer drops the query string when `publicUrl`
   is configured. Twilio signs the full URL it called, so a webhook configured
   with query parameters failed validation and was rejected as forged.
+
+## [0.34.0] - 2026-08-15
+
+### Fixed
 
 - The `@diegoaltoworks/chatter` peer range is now `>=0.32.0 <1` instead of
   `^0.32.0`. A caret on a `0.x` version resolves to `>=0.32.0 <0.33.0`, so
@@ -83,6 +112,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   of both packages produced a peer conflict for a combination that works. CI
   now runs typecheck and the suite against `chatter@latest` in a dedicated job,
   alongside the existing job that pins the bottom of the range.
+
+## [0.33.0] - 2026-08-15
+
+### Fixed
+
 - Optional peer dependencies are no longer load-bearing at import. Top-level
   value imports of `@diegoaltoworks/chatter/flows` (flow manager and registry)
   and `@libsql/client` (database client) made
@@ -116,6 +150,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`bun run test:packaged`, run in CI) installs the built artifact into a
   project holding only `hono` and imports it.
 
+## [0.32.0] - 2026-08-14
+
+### Changed
+
 - `FlowRegistry` and `processFlow` now source LLM intent detection and
   parameter extraction from chatter's flow engine
   (`@diegoaltoworks/chatter/flows`) instead of talker's own duplicate
@@ -136,6 +174,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   otherwise.
 - Flow session state stays in talker's in-memory per-caller context, as it
   always has - there is no database table to migrate.
+
+## [0.25.0] - 2026-08-14
 
 ### Added
 

@@ -30,9 +30,14 @@ Please include the following information:
 
 This project uses automated security scanning:
 
-- **Bun Audit** -- checks for known vulnerabilities in dependencies
-- **CodeQL Analysis** -- static code analysis for security patterns
-- **Dependency Review** -- reviews new dependencies on pull requests
+- **Bun Audit** -- `bun run security:check` runs on every CI build and every
+  publish, and fails the build on moderate-or-higher severity findings
+- **Dependabot** -- weekly automated dependency update PRs for npm packages
+  and GitHub Actions; minor and patch bumps auto-merge once checks pass,
+  major bumps wait for a human to review and merge
+
+No static application security testing (e.g. CodeQL) or PR-time dependency
+review currently runs in CI.
 
 ### Manual Security Checks
 

@@ -197,4 +197,34 @@ describe("sendWhatsApp", () => {
     const result = await sendWhatsApp(validConfig, "+9876", "Hello");
     expect(result).toBe(false);
   });
+
+  it("should include statusCallback via the same params builder sendSMS uses", async () => {
+    let capturedBody = "";
+
+    global.fetch = mock(async (_url: string | URL | Request, init?: RequestInit) => {
+      capturedBody = init?.body?.toString() || "";
+      return new Response(JSON.stringify({ sid: "SM345" }), { status: 201 });
+    }) as unknown as typeof fetch;
+
+    await sendWhatsApp(validConfig, "+9876543210", "Test", {
+      statusCallback: "https://example.com/status",
+    });
+
+    expect(capturedBody).toContain("StatusCallback=https%3A%2F%2Fexample.com%2Fstatus");
+  });
+
+  it("should use MessagingServiceSid over From when both are configured", async () => {
+    let capturedBody = "";
+
+    global.fetch = mock(async (_url: string | URL | Request, init?: RequestInit) => {
+      capturedBody = init?.body?.toString() || "";
+      return new Response(JSON.stringify({ sid: "SM678" }), { status: 201 });
+    }) as unknown as typeof fetch;
+
+    const configWithMsid: TwilioConfig = { ...validConfig, messagingServiceSid: "MGtest" };
+    await sendWhatsApp(configWithMsid, "+9876543210", "Test");
+
+    expect(capturedBody).toContain("MessagingServiceSid=MGtest");
+    expect(capturedBody).not.toContain("From=");
+  });
 });

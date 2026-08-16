@@ -6,8 +6,10 @@
 
 import { afterEach, describe, expect, it, mock } from "bun:test";
 import type { ServerDependencies } from "@diegoaltoworks/chatter";
+import type { Client } from "@libsql/client";
 import { Hono } from "hono";
 import { clearAllContexts, getOrCreateContext, stopCleanup } from "../../core/context";
+import { setDbClient } from "../../db/client";
 import { FlowRegistry } from "../../flows/registry";
 import { resetRateLimitStore } from "../../middleware/rate-limit";
 import type { MessageTapEvent, TalkerDependencies } from "../../types";
@@ -15,7 +17,10 @@ import type { MessageTapEvent, TalkerDependencies } from "../../types";
 // processIncoming/processOutgoing call OpenAI directly (not through chatFn) -
 // mock it so these route tests never hit the network. Incoming echoes the
 // message back unprocessed; outgoing passes the bot response through as-is,
-// matching this pipeline's own error-fallback behavior.
+// matching this pipeline's own error-fallback behavior. incomingOverride lets
+// individual tests flip shouldTransfer/shouldEndCall without an LLM in the
+// loop; reset it in afterEach so it can't leak between tests.
+let incomingOverride: { shouldTransfer?: boolean; shouldEndCall?: boolean } = {};
 const callOpenAI = mock(
   async (
     _deps: TalkerDependencies,
@@ -25,8 +30,8 @@ const callOpenAI = mock(
   ) => {
     if (context.stage === "incoming") {
       return JSON.stringify({
-        shouldTransfer: false,
-        shouldEndCall: false,
+        shouldTransfer: incomingOverride.shouldTransfer ?? false,
+        shouldEndCall: incomingOverride.shouldEndCall ?? false,
         detectedLanguage: "en",
         processedMessage: userMessage,
       });
@@ -91,6 +96,8 @@ describe("handleRespond", () => {
     clearAllContexts();
     resetRateLimitStore();
     stopCleanup();
+    incomingOverride = {};
+    setDbClient(null);
   });
 
   it("should return didNotCatch Gather TwiML when SpeechResult is missing", async () => {
@@ -264,6 +271,46 @@ describe("handleRespond", () => {
       expect(res.status).toBe(200);
       const text = await res.text();
       expect(text).toContain("<Response>");
+    });
+  });
+
+  describe("session persistence on transfer", () => {
+    // handleRespond calls persistSession unconditionally after processCall
+    // resolves, on top of whatever processCall already persisted internally
+    // for a terminal branch (transfer/end-call). Regression coverage for
+    // that interaction has to go through the actual route, not just
+    // processCall or the persist helpers in isolation - see db/persist.test.ts
+    // for the ordering contract this depends on.
+    it("keeps the redirected reason - handleRespond's own persistSession call must not clobber it back to ended", async () => {
+      incomingOverride = { shouldTransfer: true };
+      const writes: Array<{ reason: unknown; transferReason: unknown }> = [];
+      setDbClient({
+        execute: async ({ sql, args }: { sql: string; args: unknown[] }) => {
+          if (sql.includes("talker_sessions")) {
+            writes.push({ reason: args[3], transferReason: args[8] });
+          }
+          return {};
+        },
+        close: () => {},
+      } as unknown as Client);
+
+      const app = createApp();
+      getOrCreateContext("+15559990099", "call");
+
+      await postRespond(app, {
+        From: "+15559990099",
+        SpeechResult: "put me through to a person",
+      });
+      // handleRespond's post-processCall persistSession call is fire-and-forget.
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(writes.length).toBeGreaterThan(0);
+      const last = writes[writes.length - 1];
+      expect(last.reason).toBe("redirected");
+      // processIncoming wraps the raw speech in a CONVERSATION HISTORY block
+      // even on the first turn - assert the substance survived, not the
+      // exact wrapper text.
+      expect(last.transferReason).toContain("put me through to a person");
     });
   });
 });

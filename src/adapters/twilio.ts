@@ -25,14 +25,24 @@ export interface SendMessageOptions {
 }
 
 /**
+ * Prefix a phone number with `whatsapp:` unless it already has one.
+ */
+function withWhatsAppPrefix(phoneNumber: string): string {
+  return phoneNumber.startsWith("whatsapp:") ? phoneNumber : `whatsapp:${phoneNumber}`;
+}
+
+/**
  * Build the form parameters for a Twilio Messages API call.
- * Uses MessagingServiceSid when configured, otherwise From.
+ * Uses MessagingServiceSid when configured, otherwise From. `applyWhatsAppPrefix`
+ * prefixes `From` the same way the caller already prefixed `to` - shared by
+ * sendSMS and sendWhatsApp so the two send paths can't diverge.
  */
 function buildMessageParams(
   config: TwilioConfig,
   to: string,
   message: string,
   options?: SendMessageOptions,
+  applyWhatsAppPrefix = false,
 ): URLSearchParams {
   const params: Record<string, string> = {
     To: to,
@@ -43,7 +53,7 @@ function buildMessageParams(
   if (config.messagingServiceSid) {
     params.MessagingServiceSid = config.messagingServiceSid;
   } else if (config.phoneNumber) {
-    params.From = config.phoneNumber;
+    params.From = applyWhatsAppPrefix ? withWhatsAppPrefix(config.phoneNumber) : config.phoneNumber;
   }
 
   if (options?.statusCallback) {
@@ -133,26 +143,6 @@ export async function sendWhatsApp(
 
   try {
     const auth = Buffer.from(`${config.accountSid}:${config.authToken}`).toString("base64");
-    const whatsappTo = to.startsWith("whatsapp:") ? to : `whatsapp:${to}`;
-
-    // Build params with whatsapp: prefix handling
-    const params: Record<string, string> = {
-      To: whatsappTo,
-      Body: message,
-    };
-
-    if (config.messagingServiceSid) {
-      params.MessagingServiceSid = config.messagingServiceSid;
-    } else if (config.phoneNumber) {
-      const whatsappFrom = config.phoneNumber.startsWith("whatsapp:")
-        ? config.phoneNumber
-        : `whatsapp:${config.phoneNumber}`;
-      params.From = whatsappFrom;
-    }
-
-    if (options?.statusCallback) {
-      params.StatusCallback = options.statusCallback;
-    }
 
     const response = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${config.accountSid}/Messages.json`,
@@ -162,7 +152,7 @@ export async function sendWhatsApp(
           Authorization: `Basic ${auth}`,
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: new URLSearchParams(params),
+        body: buildMessageParams(config, withWhatsAppPrefix(to), message, options, true),
       },
     );
 

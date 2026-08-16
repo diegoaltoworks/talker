@@ -154,6 +154,8 @@ interface TalkerConfig {
     model?: string;              // Default: "gpt-4o-mini"
     incomingPromptPath?: string; // Custom incoming message prompt
     outgoingPromptPath?: string; // Custom outgoing response prompt
+    baseUrl?: string;            // Chat completions endpoint (Azure/gateway). Default: OpenAI's
+    requestTimeoutMs?: number;   // Abort a hung request. Default: 5000 (webhooks must return in ~15s)
   };
 
   // Feature flags
@@ -442,6 +444,13 @@ createTelephonyRoutes(app, deps, {
   },
 });
 ```
+
+The pipeline calls OpenAI's chat completions endpoint directly (not through
+chatter's client), so `processing.baseUrl` can point it at an Azure OpenAI
+deployment or a gateway instead. Each call aborts after
+`processing.requestTimeoutMs` (default 5s) so a hung upstream request can't
+hold a webhook open - `processIncoming` and `processOutgoing` each make one
+call per turn, and Twilio gives up on a webhook after ~15s.
 
 See [prompts/incoming.md](./prompts/incoming.md) and [prompts/outgoing.md](./prompts/outgoing.md) for the default prompts. `getIncomingPrompt(deps)` and `getOutgoingPrompt(deps)` return the prompt actually in force, custom path or packaged default.
 

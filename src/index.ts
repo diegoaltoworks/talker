@@ -104,7 +104,7 @@ export { processFlow, shouldExitFlow } from "./flows/manager";
 export { FlowRegistry } from "./flows/registry";
 export { getExitMessage } from "./flows/utils";
 export { inputSanitizeMiddleware } from "./middleware/input-sanitize";
-export { rateLimitMiddleware } from "./middleware/rate-limit";
+export { rateLimitMiddleware, stopRateLimitCleanup } from "./middleware/rate-limit";
 // Security middleware
 export type { TwilioSignatureOptions } from "./middleware/twilio-signature";
 export { twilioSignatureMiddleware, validateTwilioSignature } from "./middleware/twilio-signature";

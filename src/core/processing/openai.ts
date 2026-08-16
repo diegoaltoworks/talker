@@ -7,11 +7,18 @@
 
 import type { TalkerDependencies } from "../../types";
 import { logger } from "../logger";
-
-const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
+import { resolveOpenAIRequestConfig } from "./openai-request";
 
 /**
- * Call OpenAI chat completions API
+ * Call OpenAI chat completions API.
+ *
+ * A raw fetch, not the injected `OpenAI` SDK client, so this stays reachable
+ * without the `openai` peer being installed (see peer-deps.test.ts). Honours
+ * `processing.baseUrl` so a host routing through Azure OpenAI or a gateway
+ * isn't silently bypassed, and aborts after `processing.requestTimeoutMs` so
+ * a hung upstream request can't hold a /call, /sms or /whatsapp webhook open
+ * indefinitely - callers already fall back to the original text on any
+ * rejection here.
  */
 export async function callOpenAI(
   deps: TalkerDependencies,
@@ -39,10 +46,13 @@ export async function callOpenAI(
     input: userMessage,
   });
 
-  const response = await fetch(OPENAI_API_URL, {
+  const { apiUrl, timeoutMs } = resolveOpenAIRequestConfig(deps.config.processing);
+
+  const response = await fetch(apiUrl, {
     method: "POST",
     headers,
     body: JSON.stringify(requestBody),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   if (!response.ok) {

@@ -19,9 +19,28 @@ const rateLimitStore = new Map<string, RateLimitEntry>();
 
 // Periodic cleanup of stale entries
 let cleanupTimer: ReturnType<typeof setInterval> | null = null;
+let cleanupWindowMs: number | null = null;
 
+/**
+ * The timer is a module-level singleton, same as `core/context.ts`'s: a
+ * second `rateLimitMiddleware()` mount with a different `windowMs` while one
+ * is already running inherits the first's, which this logs rather than
+ * silently ignoring. Unref'd so it never keeps a standalone/CLI process
+ * alive on its own.
+ */
 function ensureCleanup(windowMs: number): void {
-  if (cleanupTimer) return;
+  if (cleanupTimer) {
+    // cleanupWindowMs is always set alongside cleanupTimer (see below), so
+    // it's non-null here by construction.
+    if (cleanupWindowMs !== windowMs) {
+      logger.warn("rate limit cleanup started again with a different windowMs - ignoring", {
+        active: cleanupWindowMs,
+        ignored: windowMs,
+      });
+    }
+    return;
+  }
+  cleanupWindowMs = windowMs;
   cleanupTimer = setInterval(() => {
     const cutoff = Date.now() - windowMs * 2;
     for (const [key, entry] of rateLimitStore) {
@@ -31,6 +50,21 @@ function ensureCleanup(windowMs: number): void {
       }
     }
   }, windowMs);
+  cleanupTimer.unref?.();
+}
+
+/**
+ * Stop the periodic cleanup timer without discarding tracked counts, so a
+ * host can release the timer on shutdown (mirrors `core/context.ts`'s
+ * `stopCleanup`) without resetting rate-limit state the way
+ * `resetRateLimitStore` does.
+ */
+export function stopRateLimitCleanup(): void {
+  if (cleanupTimer) {
+    clearInterval(cleanupTimer);
+    cleanupTimer = null;
+    cleanupWindowMs = null;
+  }
 }
 
 /**
@@ -96,8 +130,5 @@ export function rateLimitMiddleware(config?: { maxRequests?: number; windowMs?: 
  */
 export function resetRateLimitStore(): void {
   rateLimitStore.clear();
-  if (cleanupTimer) {
-    clearInterval(cleanupTimer);
-    cleanupTimer = null;
-  }
+  stopRateLimitCleanup();
 }

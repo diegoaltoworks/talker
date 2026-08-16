@@ -308,6 +308,30 @@ describe("peer dependency ranges", () => {
     }
   });
 
+  it("keeps the deliberate gap between openai 4.x and 7.1.0", () => {
+    // openai is a real runtime dependency, not just a type: standalone mode
+    // constructs a live client from it (`new OpenAI(...)` in
+    // src/standalone.ts, dynamically imported so it stays optional) and
+    // hands it to chatter's flow engine, while src/voice/transcribe.ts and
+    // src/voice/synthesize.ts use it as a type only for an injected client.
+    // 5.x rewrote the client's construction/transport layer (a move to
+    // built-in fetch across every runtime) and 6.x kept moving on that same
+    // line. Neither is exercised anywhere in this package's own CI: the
+    // devDependency pins `^7.1.0`, so only that line is actually run here;
+    // 4.x is a floor carried from this range's original declaration with no
+    // CI leg installing it. Widening the range to admit 5.x/6.x would be an
+    // unverified compatibility claim, not just a semver edit - it needs a
+    // CI leg exercising them first, the same way `chatter-latest` exists for
+    // the chatter peer.
+    const range = peers.openai;
+    for (const version of ["4.0.0", "4.104.0", "7.1.0", "7.3.0"]) {
+      expect([version, Bun.semver.satisfies(version, range)]).toEqual([version, true]);
+    }
+    for (const version of ["5.0.0", "6.0.0"]) {
+      expect([version, Bun.semver.satisfies(version, range)]).toEqual([version, false]);
+    }
+  });
+
   it("gives every peer an explicit upper bound", () => {
     // A floor like ">=0.6.0" with nothing above it admits every future
     // release, including one with a breaking change - the exact caret-pin

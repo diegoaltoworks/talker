@@ -80,6 +80,12 @@ when debugging
 locally -- do not enable it against production log output, since it defeats
 the content-preview policy (phone redaction still applies).
 
+`logger.debug` calls (a handful of high-volume, per-request sites such as raw
+inbound message/speech content) are silent unless `DEBUG=true`. That flag
+also unsilences the logger during tests, so it is easy to reach for locally
+-- avoid setting it in a production environment, since it turns those
+call sites on there too, not just in a debugger.
+
 ## Security Best Practices
 
 When deploying Talker:

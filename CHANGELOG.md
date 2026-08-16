@@ -40,6 +40,9 @@ the version they actually shipped in.
   check`) - fails when a `@deprecated` tag in `src/` names no removal version
   or hedges with without-notice language. See CONTRIBUTING.md's "Deprecating
   a public name".
+- `logger.debug` - a fourth log level, silent unless `DEBUG=true` (see
+  SECURITY.md's "Logging & Data Redaction"). High-volume, per-request content
+  (raw inbound message/speech text) now logs there instead of at `info`.
 
 ### Removed
 

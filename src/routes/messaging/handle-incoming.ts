@@ -33,7 +33,8 @@ export async function handleIncomingMessage(
   const to = stripWhatsAppPrefix((body.To as string) || "");
   const messageBody = (body.Body as string) || "";
 
-  logger.info(`${channel} message received`, { phoneNumber, messageBody });
+  logger.info(`${channel} message received`, { phoneNumber });
+  logger.debug(`${channel} message body`, { phoneNumber, messageBody });
   emitMessageTap(deps.config, {
     direction: "inbound",
     channel,

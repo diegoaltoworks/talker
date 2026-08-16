@@ -1,7 +1,28 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { logger, redactPhone } from "./logger";
+import { isLevelEnabled, logger, redactPhone } from "./logger";
 
 describe("Logger", () => {
+  describe("isLevelEnabled", () => {
+    it("suppresses every level when silent, regardless of debugEnabled", () => {
+      for (const level of ["debug", "info", "warn", "error"] as const) {
+        expect(isLevelEnabled(level, { silent: true, debugEnabled: true })).toBe(false);
+        expect(isLevelEnabled(level, { silent: true, debugEnabled: false })).toBe(false);
+      }
+    });
+
+    it("suppresses debug unless debugEnabled, when not silent", () => {
+      expect(isLevelEnabled("debug", { silent: false, debugEnabled: false })).toBe(false);
+      expect(isLevelEnabled("debug", { silent: false, debugEnabled: true })).toBe(true);
+    });
+
+    it("never suppresses info/warn/error when not silent, regardless of debugEnabled", () => {
+      for (const level of ["info", "warn", "error"] as const) {
+        expect(isLevelEnabled(level, { silent: false, debugEnabled: false })).toBe(true);
+        expect(isLevelEnabled(level, { silent: false, debugEnabled: true })).toBe(true);
+      }
+    });
+  });
+
   describe("redactPhone", () => {
     it("should redact a full phone number keeping last 4 digits", () => {
       expect(redactPhone("+15551234567")).toBe("***4567");

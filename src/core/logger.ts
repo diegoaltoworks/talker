@@ -2,6 +2,10 @@
  * Structured JSON logger
  *
  * Silent during tests unless DEBUG=true.
+ * `debug` is opt-in everywhere, test or not: it only emits when DEBUG=true,
+ * the same flag that unsilences tests, so a host enables high-volume
+ * diagnostic logging (e.g. per-request content) with one env var rather than
+ * a second one to learn.
  * Automatically redacts phone numbers (recursively, by key name, including
  * inside an array of raw phone strings) and previews every other string
  * field to a fixed length once it exceeds that length - a value at or under
@@ -14,7 +18,7 @@
 import { UNKNOWN_PHONE_NUMBER } from "./defaults";
 import { truncateGraphemeSafe } from "./text";
 
-type LogLevel = "info" | "warn" | "error";
+type LogLevel = "debug" | "info" | "warn" | "error";
 
 const PHONE_KEYS = new Set(["phoneNumber", "phone", "From", "To", "from", "to"]);
 const REDACTED_PLACEHOLDER = "[redacted]";
@@ -37,6 +41,28 @@ function isSilent(): boolean {
 
 function isVerbose(): boolean {
   return process.env.TALKER_LOG_VERBOSE === "true";
+}
+
+function isDebugEnabled(): boolean {
+  return process.env.DEBUG === "true";
+}
+
+/**
+ * Whether a log at `level` actually emits, given the silence/debug policy.
+ * Pure and exported so the "debug is suppressed outside DEBUG=true" case can
+ * be tested directly: `isTestEnv()`'s argv half is fixed at module load (see
+ * above), so under `bun test` it is always true, and `isSilent()` already
+ * swallows every level whenever `DEBUG` isn't `"true"` - there is no way to
+ * observe this function's non-test branch by spying on `console.log` from
+ * within the suite.
+ */
+export function isLevelEnabled(
+  level: LogLevel,
+  opts: { silent: boolean; debugEnabled: boolean },
+): boolean {
+  if (opts.silent) return false;
+  if (level === "debug" && !opts.debugEnabled) return false;
+  return true;
 }
 
 /**
@@ -148,7 +174,7 @@ function redactData(
 }
 
 const log = (level: LogLevel, message: string, data?: Record<string, unknown>) => {
-  if (isSilent()) return;
+  if (!isLevelEnabled(level, { silent: isSilent(), debugEnabled: isDebugEnabled() })) return;
   const entry = {
     timestamp: timestamp(),
     level,
@@ -159,6 +185,7 @@ const log = (level: LogLevel, message: string, data?: Record<string, unknown>) =
 };
 
 export const logger = {
+  debug: (message: string, data?: Record<string, unknown>) => log("debug", message, data),
   info: (message: string, data?: Record<string, unknown>) => log("info", message, data),
   warn: (message: string, data?: Record<string, unknown>) => log("warn", message, data),
   error: (message: string, data?: Record<string, unknown>) => log("error", message, data),

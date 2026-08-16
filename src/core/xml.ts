@@ -15,6 +15,20 @@
 const XML_INVALID_CONTROL_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F]/g;
 
 /**
+ * A high surrogate not immediately followed by its low surrogate, or a low
+ * surrogate not immediately preceded by its high surrogate. Either is
+ * invalid in XML 1.0 content, same as the C0 control characters above; a cut
+ * that lands inside a surrogate pair (a naive length-based truncation
+ * upstream of this function, or malformed input) leaves one behind, and a
+ * document containing one is malformed regardless of the entity-replacement
+ * below. Callers are expected to truncate with `truncateGraphemeSafe` (see
+ * core/text.ts) so this pair never happens in practice - this is the
+ * backstop for input that reaches here some other way.
+ */
+const UNPAIRED_SURROGATE =
+  /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
+
+/**
  * Escape special XML characters for safe TwiML embedding.
  *
  * Covers all five XML predefined entities. Apostrophes are included because
@@ -25,6 +39,7 @@ const XML_INVALID_CONTROL_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F]/g;
 export function escapeXml(text: string): string {
   return text
     .replace(XML_INVALID_CONTROL_CHARS, "")
+    .replace(UNPAIRED_SURROGATE, "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")

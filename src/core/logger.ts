@@ -2,14 +2,21 @@
  * Structured JSON logger
  *
  * Silent during tests unless DEBUG=true.
- * Automatically redacts phone numbers (recursively, by key name) and
- * previews long string fields by policy; set TALKER_LOG_VERBOSE=true to log
- * full content (see SECURITY.md).
+ * Automatically redacts phone numbers (recursively, by key name, including
+ * inside an array of raw phone strings) and previews every other string
+ * field to a fixed length once it exceeds that length - a value at or under
+ * the preview length logs in full, verbatim (see SECURITY.md). Set
+ * TALKER_LOG_VERBOSE=true to log full, untruncated content instead of the
+ * preview (phone redaction, and any field named in TALKER_LOG_REDACT_KEYS,
+ * still apply).
  */
+
+import { truncateGraphemeSafe } from "./text";
 
 type LogLevel = "info" | "warn" | "error";
 
-const PHONE_KEYS = new Set(["phoneNumber", "phone"]);
+const PHONE_KEYS = new Set(["phoneNumber", "phone", "From", "To"]);
+const REDACTED_PLACEHOLDER = "[redacted]";
 /** Diagnostic fields, not conversation content - never preview-truncated. */
 const UNTRUNCATED_KEYS = new Set(["error", "stack"]);
 const CONTENT_PREVIEW_LENGTH = 160;
@@ -31,6 +38,26 @@ function isVerbose(): boolean {
   return process.env.TALKER_LOG_VERBOSE === "true";
 }
 
+/**
+ * Field names to redact outright, in addition to the built-in phone
+ * redaction - opt-in for a host whose flow params or custom fields carry
+ * something more sensitive than ordinary conversation text (an email, a
+ * booking reference). Comma-separated, e.g.
+ * `TALKER_LOG_REDACT_KEYS=email,reference`. Read fresh on every call rather
+ * than cached at module load, matching TALKER_LOG_VERBOSE and every other
+ * env-driven policy here, and so a test can change it between assertions.
+ */
+function redactKeys(): Set<string> {
+  const raw = process.env.TALKER_LOG_REDACT_KEYS;
+  if (!raw) return new Set();
+  return new Set(
+    raw
+      .split(",")
+      .map((key) => key.trim())
+      .filter(Boolean),
+  );
+}
+
 const timestamp = () => new Date().toISOString();
 
 /**
@@ -49,43 +76,69 @@ export function redactPhone(phone: string): string {
  * full text when TALKER_LOG_VERBOSE=true. Applied to every string value
  * logged (other than diagnostic keys, see UNTRUNCATED_KEYS) so conversation
  * content (user messages, LLM output, extracted flow params) never lands
- * verbatim by accident.
+ * verbatim by accident. Grapheme-cluster-safe: a preview boundary that would
+ * split a surrogate pair (an emoji, most non-BMP text) drops the whole
+ * cluster instead of leaving a lone surrogate in the JSON output.
  */
 function redactContent(text: string): string {
   if (isVerbose() || text.length <= CONTENT_PREVIEW_LENGTH) return text;
-  return `${text.slice(0, CONTENT_PREVIEW_LENGTH)}...`;
+  return `${truncateGraphemeSafe(text, CONTENT_PREVIEW_LENGTH)}...`;
 }
 
-function redactValue(key: string, value: unknown, depth: number): unknown {
+/**
+ * Redact a single string value by the policy its key implies. `key` is the
+ * same for a top-level field and for each element of an array under that
+ * field (redactValue re-invokes this per array element with the array's own
+ * key, not a per-element one) - so `{ phoneNumber: ["+1...", "+1..."] }`
+ * phone-redacts every element the same way `{ phoneNumber: "+1..." }` would,
+ * rather than falling through to the length-preview policy the way a plain
+ * `typeof value === "string"` check keyed only on depth 0 used to.
+ */
+function redactString(key: string, value: string): string {
+  if (PHONE_KEYS.has(key)) return redactPhone(value);
+  return UNTRUNCATED_KEYS.has(key) ? value : redactContent(value);
+}
+
+function redactValue(
+  key: string,
+  value: unknown,
+  depth: number,
+  keysToRedact: Set<string>,
+): unknown {
   if (depth >= MAX_REDACT_DEPTH) return "[max depth exceeded]";
+  // Checked ahead of every type-specific branch below (string, Date, Error,
+  // array, object) so a named key is redacted outright no matter what shape
+  // its value takes - an object-valued flow param (`{ extracted: { email:
+  // ... } }` logged whole) or a number must not slip through just because
+  // only the string branch used to check this.
+  if (keysToRedact.has(key)) return REDACTED_PLACEHOLDER;
   if (value instanceof Date) return value.toISOString();
   if (value instanceof Error) return value.message;
-  if (typeof value === "string") return UNTRUNCATED_KEYS.has(key) ? value : redactContent(value);
-  if (Array.isArray(value)) return value.map((item) => redactValue(key, item, depth + 1));
+  if (typeof value === "string") return redactString(key, value);
+  if (Array.isArray(value)) {
+    return value.map((item) => redactValue(key, item, depth + 1, keysToRedact));
+  }
   if (value && typeof value === "object") {
-    return redactData(value as Record<string, unknown>, depth + 1);
+    return redactData(value as Record<string, unknown>, depth + 1, keysToRedact);
   }
   return value;
 }
 
 /**
  * Redact sensitive/verbose fields in log data, recursively.
- * Fields named "phoneNumber" or "phone" (at any depth) are phone-redacted;
- * every other string field is content-previewed.
+ * Fields named "phoneNumber", "phone", "From" or "To" (at any depth,
+ * including inside an array of raw phone strings) are phone-redacted;
+ * fields named in TALKER_LOG_REDACT_KEYS are replaced outright; every other
+ * string field is content-previewed.
  */
 function redactData(
-  data?: Record<string, unknown>,
-  depth = 0,
-): Record<string, unknown> | undefined {
-  if (!data) return data;
-
+  data: Record<string, unknown>,
+  depth: number,
+  keysToRedact: Set<string>,
+): Record<string, unknown> {
   const redacted: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
-    if (PHONE_KEYS.has(key) && typeof value === "string") {
-      redacted[key] = redactPhone(value);
-    } else {
-      redacted[key] = redactValue(key, value, depth);
-    }
+    redacted[key] = redactValue(key, value, depth, keysToRedact);
   }
   return redacted;
 }
@@ -96,7 +149,7 @@ const log = (level: LogLevel, message: string, data?: Record<string, unknown>) =
     timestamp: timestamp(),
     level,
     message,
-    ...redactData(data),
+    ...(data ? redactData(data, 0, redactKeys()) : undefined),
   };
   console.log(JSON.stringify(entry));
 };

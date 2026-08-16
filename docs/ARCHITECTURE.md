@@ -170,7 +170,7 @@ behavior and checking a return value:
 | Gate | Enforces | Test |
 |---|---|---|
 | No `process.env` outside config seams | Capability modules stay injectable; env reads are confined to the few places that are explicitly about reading configuration | `src/seam-guards.test.ts` |
-| No raw `fetch`/URL literal to `api.openai.com` outside the OpenAI client module | Every outbound OpenAI call goes through the one place that honors a configurable base URL and abort/timeout | `src/seam-guards.test.ts` |
+| No raw `fetch`/URL literal to `api.openai.com` outside `openai-request.ts` | Every outbound OpenAI call resolves its URL through the one place that honors a configurable base URL, rather than a call site bypassing it with the public default | `src/seam-guards.test.ts` |
 | No hardcoded caller-facing `response`/`smsContent`/`whatsappContent` in `src/flows/` | Flow replies come from the phrase files, so a caller mid-flow hears their own language rather than an English default | `src/flows/phrase-guard.test.ts` |
 | Every `package.json` `exports` key resolves under both `import` and `require`, ships its declared types, and carries no test/map declarations | A subpath the build doesn't produce can't reach a consumer silently | `scripts/smoke-packed-install.sh`, run via `bun run test:packaged` |
 

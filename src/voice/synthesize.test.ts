@@ -132,6 +132,20 @@ describe("createSynthesizer", () => {
     expect(calls[0]?.input).toBe("abcde");
   });
 
+  it("does not split a surrogate pair when clamping to maxChars", async () => {
+    // "ab" + an astral emoji (a surrogate pair, length 2) - a naive
+    // substring(0, 3) would keep only the lone high surrogate.
+    const { client, calls } = monoClient();
+    const synthesize = createSynthesizer({ client, enabled: () => true, maxChars: 3 });
+
+    await synthesize("ab\u{1F600}cd");
+
+    const input = String(calls[0]?.input ?? "");
+    expect(input).toBe("ab");
+    const last = input.charCodeAt(input.length - 1);
+    expect(last >= 0xd800 && last <= 0xdbff).toBe(false);
+  });
+
   it("pins the default clamp value", () => {
     expect(DEFAULT_MAX_VOICE_TEXT_CHARS).toBe(550);
   });

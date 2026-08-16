@@ -30,6 +30,11 @@
 import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import { Hono } from "hono";
 import { startCleanup } from "./core/context";
+import {
+  DEFAULT_CLEANUP_INTERVAL_MS,
+  DEFAULT_CONTEXT_TTL_MS,
+  DEFAULT_PENDING_QUERY_TTL_MS,
+} from "./core/defaults";
 import { logger } from "./core/logger";
 import { assertWebhookSecurity } from "./core/webhook-security";
 import { initDbClient } from "./db/client";
@@ -40,9 +45,6 @@ import { sweepPending } from "./routes/call/pending";
 import { messagingRoutes } from "./routes/messaging";
 import type { TalkerConfig, TalkerDependencies } from "./types";
 
-const DEFAULT_CONTEXT_TTL_MS = 30 * 60 * 1000;
-const DEFAULT_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
-const DEFAULT_PENDING_QUERY_TTL_MS = 60 * 1000;
 const DEFAULT_MODEL = "gpt-4o-mini";
 
 export interface StandaloneConfig extends TalkerConfig {

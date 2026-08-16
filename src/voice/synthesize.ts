@@ -18,6 +18,7 @@
 import type OpenAI from "openai";
 import { getErrorMessage } from "../core/errors";
 import { logger } from "../core/logger";
+import { truncateGraphemeSafe } from "../core/text";
 import { parseOggOpus } from "./ogg";
 
 export interface VoiceNote {
@@ -74,7 +75,7 @@ export function createSynthesizer(config: SynthesizerConfig): Synthesizer {
     // null-not-throw contract the text fallback depends on.
     try {
       if (!config.enabled()) return null;
-      const input = text.trim().slice(0, maxChars);
+      const input = truncateGraphemeSafe(text.trim(), maxChars);
       if (!input) return null;
 
       const voice = config.voiceFor?.(options.personaId) ?? DEFAULT_VOICE;

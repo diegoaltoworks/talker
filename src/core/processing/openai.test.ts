@@ -16,11 +16,20 @@ import {
 } from "./openai-request";
 
 describe("resolveOpenAIRequestConfig", () => {
-  it("defaults to the public OpenAI chat completions URL and an 8s timeout", () => {
+  it("defaults to the public OpenAI chat completions URL and a 5s timeout", () => {
     expect(resolveOpenAIRequestConfig(undefined)).toEqual({
       apiUrl: DEFAULT_OPENAI_API_URL,
       timeoutMs: DEFAULT_OPENAI_REQUEST_TIMEOUT_MS,
     });
+  });
+
+  // Pinned to the literal, not just the constant it equals today: the
+  // ~15s webhook budget math in openai-request.ts's docstring (two
+  // sequential calls must fit well under half the budget) depends on this
+  // exact value, so a change here should read as a deliberate edit to that
+  // docstring's reasoning, not slip through as an untouched default.
+  it("defaults the timeout to exactly 5000ms", () => {
+    expect(DEFAULT_OPENAI_REQUEST_TIMEOUT_MS).toBe(5000);
   });
 
   it("honours a configured baseUrl", () => {

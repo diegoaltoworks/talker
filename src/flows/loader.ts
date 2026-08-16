@@ -13,7 +13,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { logger } from "../core/logger";
 import type { FlowDefinition, FlowHandler, FlowPrefill, LoadedFlow } from "../types";
-import { CURRENT_FLOW_CONTRACT_VERSION } from "../types";
+import { CURRENT_FLOW_CONTRACT_VERSION, LEGACY_FLOW_CONTRACT_VERSION } from "../types";
 
 /**
  * Load all flows from a directory
@@ -103,7 +103,7 @@ async function loadFlow(flowsDir: string, flowName: string): Promise<LoadedFlow>
       );
     }
   }
-  definition.contractVersion ??= CURRENT_FLOW_CONTRACT_VERSION;
+  definition.contractVersion ??= LEGACY_FLOW_CONTRACT_VERSION;
 
   const handlerModule = await import(handlerPath);
   const handler = handlerModule.execute as FlowHandler;

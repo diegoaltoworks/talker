@@ -60,13 +60,18 @@ bun run check
 ## Logging & Data Redaction
 
 The structured logger (`src/core/logger.ts`) redacts phone numbers by key
-name (`phoneNumber`/`phone`, at any nesting depth) and truncates every other
+name (`phoneNumber`/`phone`/`From`/`To`, at any nesting depth, including
+inside an array of raw phone strings) and truncates every other
 structured-data string field (conversation turns, extracted flow parameters,
 LLM output) to a 160-character preview once it exceeds that length -- shorter
-values, including a typical single-segment SMS, are logged in full. The log
-message string passed as the first argument (e.g. `"flow error"`) is a fixed
-label, never user content, and is not subject to this preview. Set
-`TALKER_LOG_VERBOSE=true` to log full, untruncated content when debugging
+values, including a typical single-segment SMS, are logged in full. Set
+`TALKER_LOG_REDACT_KEYS` to a comma-separated list of field names (e.g.
+`email,reference`) to replace those fields outright regardless of length,
+for a host whose flow params carry something more sensitive than ordinary
+conversation text. The log message string passed as the first argument (e.g.
+`"flow error"`) is a fixed label, never user content, and is not subject to
+this preview. Set `TALKER_LOG_VERBOSE=true` to log full, untruncated content
+when debugging
 locally -- do not enable it against production log output, since it defeats
 the content-preview policy (phone redaction still applies).
 

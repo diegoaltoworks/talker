@@ -17,6 +17,7 @@
 import type OpenAI from "openai";
 import { getErrorMessage } from "../core/errors";
 import { logger } from "../core/logger";
+import { truncateGraphemeSafe } from "../core/text";
 
 export interface TranscriberConfig {
   /** Lazy OpenAI client — injected so this module never reads env. */
@@ -66,7 +67,7 @@ export function createTranscriber(config: TranscriberConfig): Transcriber {
       if (!text) return null;
 
       logger.info("voice: transcribed", { bytes: bytes.length, chars: text.length });
-      return text.slice(0, maxChars);
+      return truncateGraphemeSafe(text, maxChars);
     } catch (error) {
       logger.warn("voice: transcription failed", { error: getErrorMessage(error) });
       return null;

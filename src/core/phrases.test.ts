@@ -1,5 +1,5 @@
-import { describe, expect, it } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { afterEach, describe, expect, it } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -14,6 +14,19 @@ import {
 } from "./phrases";
 
 const _languageDir = join(__dirname, "../../language");
+
+// Every test below makes its own scratch language dir; tracking and
+// removing them here (rather than per-test) keeps each `it` block a
+// one-liner and guarantees cleanup even when an assertion throws.
+const tempDirs: string[] = [];
+function makeTempLangDir(): string {
+  const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+  tempDirs.push(dir);
+  return dir;
+}
+afterEach(() => {
+  for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+});
 
 describe("Phrases", () => {
   describe("loadPhrases", () => {
@@ -48,7 +61,7 @@ describe("Phrases", () => {
     });
 
     it("should not read a JSON file outside the language directory", () => {
-      const root = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      const root = makeTempLangDir();
       const dir = join(root, "langs");
       mkdirSync(dir);
       writeFileSync(join(root, "secret.json"), JSON.stringify({ greeting: "leaked" }));
@@ -113,7 +126,7 @@ describe("Phrases", () => {
     });
 
     it("should fall back to the built-in English error copy when a language file predates the flow.error key", () => {
-      const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      const dir = makeTempLangDir();
       writeFileSync(
         join(dir, "de.json"),
         JSON.stringify({
@@ -185,7 +198,7 @@ describe("Phrases", () => {
     });
 
     it("should drop blank entries and fall back to English when none survive", () => {
-      const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      const dir = makeTempLangDir();
       writeFileSync(
         join(dir, "en.json"),
         JSON.stringify({ flow: { cancellationKeywords: ["cancel", "   "] } }),
@@ -197,7 +210,7 @@ describe("Phrases", () => {
     });
 
     it("should normalize a lone string into a single-entry list", () => {
-      const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      const dir = makeTempLangDir();
       writeFileSync(
         join(dir, "en.json"),
         JSON.stringify({ flow: { cancellationKeywords: "abort" } }),
@@ -275,7 +288,7 @@ describe("Phrases", () => {
     });
 
     it("should fall back to the built-in English voice copy when a language file predates the voice namespace", () => {
-      const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      const dir = makeTempLangDir();
       writeFileSync(
         join(dir, "de.json"),
         JSON.stringify({
@@ -318,7 +331,7 @@ describe("Phrases", () => {
 
   describe("load-time fallback merge", () => {
     it("falls back to English for a top-level key missing from the raw file, without ever surfacing undefined", () => {
-      const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      const dir = makeTempLangDir();
       writeFileSync(join(dir, "de.json"), JSON.stringify({ error: "Fehler." }));
 
       const phrases = loadPhrases("de", dir);
@@ -329,21 +342,21 @@ describe("Phrases", () => {
     });
 
     it("falls back to English when a leaf value has the wrong type", () => {
-      const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      const dir = makeTempLangDir();
       writeFileSync(join(dir, "de.json"), JSON.stringify({ greeting: 12345 }));
 
       expect(getPhrase("de", "greeting", dir)).toBe(getPhrase("en", "greeting"));
     });
 
     it("falls back to English for an empty rotation array instead of picking undefined", () => {
-      const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      const dir = makeTempLangDir();
       writeFileSync(join(dir, "de.json"), JSON.stringify({ greeting: [] }));
 
       expect(getPhrase("de", "greeting", dir)).toBe(getPhrase("en", "greeting"));
     });
 
     it("fills a missing nested namespace entirely from English without throwing", () => {
-      const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      const dir = makeTempLangDir();
       writeFileSync(join(dir, "de.json"), JSON.stringify({ greeting: "Hallo" }));
 
       expect(() => getSmsPhrase("de", "greeting", dir)).not.toThrow();
@@ -351,7 +364,7 @@ describe("Phrases", () => {
     });
 
     it("prefers the file's own whatsapp entry, then its sms entry, then English - in that order", () => {
-      const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      const dir = makeTempLangDir();
       writeFileSync(
         join(dir, "de.json"),
         JSON.stringify({
@@ -375,7 +388,7 @@ describe("Phrases", () => {
     });
 
     it("falls back all the way to English when the file has no sms block to borrow from either", () => {
-      const dir = mkdtempSync(join(tmpdir(), "talker-lang-"));
+      const dir = makeTempLangDir();
       writeFileSync(join(dir, "de.json"), JSON.stringify({ greeting: "Hallo" }));
 
       expect(getWhatsAppPhrase("de", "greeting", dir)).toBe(getWhatsAppPhrase("en", "greeting"));

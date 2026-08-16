@@ -155,7 +155,7 @@ export type {
   TwilioConfig,
   VoiceConfig,
 } from "./types";
-export { CURRENT_FLOW_CONTRACT_VERSION } from "./types";
+export { CURRENT_FLOW_CONTRACT_VERSION, LEGACY_FLOW_CONTRACT_VERSION } from "./types";
 // Voice capabilities (STT, TTS, Ogg/Opus inspection, daily spend guards).
 // Channel-agnostic factories with injected clients — see src/voice/index.ts.
 export type {

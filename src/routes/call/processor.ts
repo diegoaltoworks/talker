@@ -92,6 +92,13 @@ export async function processCall(
 
     // If flow completed but failed, transfer to human
     if (flowResult.flowCompleted && flowResult.flowSuccess === false) {
+      await persistSession(phoneNumber, "call");
+      persistFinalSession(phoneNumber, "call", "redirected", flowResult.response);
+      // Same reasoning as the shouldTransfer branch above: this call also
+      // ends in a <Dial> with no further <Gather>, so clear the context here
+      // rather than leaving it for the caller's own post-response
+      // persistSession to unconditionally overwrite "redirected" with "ended".
+      clearContext(phoneNumber);
       tapOutbound(flowResult.response);
       return transferTwiml(incoming.detectedLanguage, deps.config, flowResult.response);
     }

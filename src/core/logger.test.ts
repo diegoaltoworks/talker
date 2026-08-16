@@ -87,6 +87,21 @@ describe("Logger", () => {
       expect(messages[1]?.phone).toBe("***4321");
     });
 
+    it("redacts an array of raw phone strings under a phone key", () => {
+      const entry = loggedEntry(() =>
+        logger.info("bulk notify", { phoneNumber: ["+15551234567", "+15557654321"] }),
+      );
+      expect(entry.phoneNumber).toEqual(["***4567", "***4321"]);
+    });
+
+    it("redacts the Twilio From and To fields like phoneNumber", () => {
+      const entry = loggedEntry(() =>
+        logger.info("webhook body", { From: "+15551234567", To: "+15557654321" }),
+      );
+      expect(entry.From).toBe("***4567");
+      expect(entry.To).toBe("***4321");
+    });
+
     it("previews a long string field by default and never logs it verbatim", () => {
       const longMessage = `${"a".repeat(200)} secret`;
       const entry = loggedEntry(() => logger.info("INCOMING", { in: longMessage }));
@@ -133,6 +148,75 @@ describe("Logger", () => {
       const longError = "e".repeat(200);
       const entry = loggedEntry(() => logger.error("openai error", { error: longError }));
       expect(entry.error).toBe(longError);
+    });
+
+    it("previews a long string without splitting a surrogate pair at the boundary", () => {
+      // 160 "a"s land the cut exactly on an astral emoji (a surrogate pair).
+      const longMessage = `${"a".repeat(160)}\u{1F600}`;
+      const entry = loggedEntry(() => logger.info("INCOMING", { in: longMessage }));
+      expect(entry.in).toBe(`${"a".repeat(160)}...`);
+    });
+
+    describe("TALKER_LOG_REDACT_KEYS", () => {
+      const originalRedactKeys = process.env.TALKER_LOG_REDACT_KEYS;
+
+      afterEach(() => {
+        if (originalRedactKeys === undefined) delete process.env.TALKER_LOG_REDACT_KEYS;
+        else process.env.TALKER_LOG_REDACT_KEYS = originalRedactKeys;
+      });
+
+      it("replaces a named field outright, regardless of length", () => {
+        process.env.TALKER_LOG_REDACT_KEYS = "email";
+        const entry = loggedEntry(() => logger.info("flow params", { email: "a@example.com" }));
+        expect(entry.email).toBe("[redacted]");
+      });
+
+      it("redacts a named field nested inside an object", () => {
+        process.env.TALKER_LOG_REDACT_KEYS = "reference";
+        const entry = loggedEntry(() =>
+          logger.info("flow params", { extracted: { reference: "BK-12345", name: "Alex" } }),
+        );
+        const extracted = entry.extracted as Record<string, unknown>;
+        expect(extracted.reference).toBe("[redacted]");
+        expect(extracted.name).toBe("Alex");
+      });
+
+      it("redacts a named field whose own value is an object, not just a string", () => {
+        // A field logged as an object (`{ extracted: { ... } }`, the shape
+        // flow params actually take) must redact the same way a string-valued
+        // field does - the check has to run before the type-specific
+        // dispatch, not only inside the string branch.
+        process.env.TALKER_LOG_REDACT_KEYS = "extracted";
+        const entry = loggedEntry(() =>
+          logger.info("flow params", { extracted: { email: "a@example.com", name: "Alex" } }),
+        );
+        expect(entry.extracted).toBe("[redacted]");
+      });
+
+      it("redacts a named field whose value is a number", () => {
+        process.env.TALKER_LOG_REDACT_KEYS = "secret";
+        const entry = loggedEntry(() => logger.info("flow params", { secret: 12345 }));
+        expect(entry.secret).toBe("[redacted]");
+      });
+
+      it("collapses an array under a named field to one placeholder, not one per element", () => {
+        process.env.TALKER_LOG_REDACT_KEYS = "secret";
+        const entry = loggedEntry(() => logger.info("flow params", { secret: ["a", "b"] }));
+        expect(entry.secret).toBe("[redacted]");
+      });
+
+      it("still redacts under TALKER_LOG_VERBOSE=true", () => {
+        process.env.TALKER_LOG_REDACT_KEYS = "email";
+        process.env.TALKER_LOG_VERBOSE = "true";
+        const entry = loggedEntry(() => logger.info("flow params", { email: "a@example.com" }));
+        expect(entry.email).toBe("[redacted]");
+      });
+
+      it("does not redact fields left unnamed", () => {
+        process.env.TALKER_LOG_REDACT_KEYS = "email";
+        const entry = loggedEntry(() => logger.info("flow params", { name: "Alex" }));
+        expect(entry.name).toBe("Alex");
+      });
     });
   });
 });

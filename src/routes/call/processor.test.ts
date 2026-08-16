@@ -8,6 +8,7 @@
 
 import { afterEach, describe, expect, it, mock } from "bun:test";
 import type { ServerDependencies } from "@diegoaltoworks/chatter";
+import type { Client } from "@libsql/client";
 import type { FlowResult, TalkerDependencies } from "../../types";
 
 let flowResultToReturn: FlowResult = { isFlowActive: false, response: "", flowCompleted: false };
@@ -40,7 +41,10 @@ mock.module("../../core/processing/openai", () => ({ callOpenAI }));
 
 // Dynamic import so it resolves after the mock.module() calls above - a static
 // import of ./processor would be hoisted ahead of the mock registration.
-const { clearAllContexts, getLastPrompt, stopCleanup } = await import("../../core/context");
+const { clearAllContexts, getContext, getLastPrompt, stopCleanup } = await import(
+  "../../core/context"
+);
+const { setDbClient } = await import("../../db/client");
 const { FlowRegistry } = await import("../../flows/registry");
 const { processCall } = await import("./processor");
 
@@ -160,6 +164,7 @@ describe("processCall transfer, end-call, and default chat branches", () => {
     incomingOverride = {};
     clearAllContexts();
     stopCleanup();
+    setDbClient(null);
   });
 
   it("transfers to a human without consulting the flow engine when shouldTransfer is set", async () => {
@@ -195,7 +200,51 @@ describe("processCall transfer, end-call, and default chat branches", () => {
     expect(twiml).toContain("<Hangup/>");
     expect(twiml).not.toContain("<Gather");
     expect(processFlow).not.toHaveBeenCalled();
+    // getLastPrompt is null either way here (nothing on this path ever calls
+    // setLastPrompt) - getContext is the assertion that actually fails if
+    // clearContext is removed from this branch.
     expect(getLastPrompt(phoneNumber)).toBeNull();
+    expect(getContext(phoneNumber)).toBeUndefined();
+  });
+
+  it("persists 'redirected' and clears context when a flow completes but fails", async () => {
+    flowResultToReturn = {
+      isFlowActive: false,
+      flowCompleted: true,
+      flowSuccess: false,
+      response: "Let me get you a person.",
+    };
+    const phoneNumber = "+15551234583";
+    const writes: Array<{ reason: unknown; transferReason: unknown }> = [];
+    setDbClient({
+      execute: async ({ sql, args }: { sql: string; args: unknown[] }) => {
+        if (sql.includes("talker_sessions")) {
+          writes.push({ reason: args[3], transferReason: args[8] });
+        }
+        return {};
+      },
+      close: () => {},
+    } as unknown as Client);
+
+    const twiml = await processCall(
+      makeDeps({ transferNumber: "+441234567890" }),
+      new FlowRegistry(""),
+      phoneNumber,
+      "book a flight",
+      "+15559876543",
+    );
+    await Promise.resolve();
+
+    expect(twiml).toContain("<Dial>+441234567890</Dial>");
+    // getLastPrompt is null either way here (nothing on this path ever calls
+    // setLastPrompt) - getContext is the assertion that actually fails if
+    // clearContext is removed from this branch.
+    expect(getLastPrompt(phoneNumber)).toBeNull();
+    expect(getContext(phoneNumber)).toBeUndefined();
+    expect(writes.length).toBeGreaterThan(0);
+    const last = writes[writes.length - 1];
+    expect(last.reason).toBe("redirected");
+    expect(last.transferReason).toBe("Let me get you a person.");
   });
 
   it("falls through to the chatbot and gathers again when no flow and no transfer/end-call intent apply", async () => {

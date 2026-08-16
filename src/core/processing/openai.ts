@@ -7,6 +7,7 @@
 
 import type { TalkerDependencies } from "../../types";
 import { logger } from "../logger";
+import { fetchOpenAIChatCompletion } from "./openai-fetch";
 import { resolveOpenAIRequestConfig } from "./openai-request";
 
 /**
@@ -48,12 +49,7 @@ export async function callOpenAI(
 
   const { apiUrl, timeoutMs } = resolveOpenAIRequestConfig(deps.config.processing);
 
-  const response = await fetch(apiUrl, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(requestBody),
-    signal: AbortSignal.timeout(timeoutMs),
-  });
+  const response = await fetchOpenAIChatCompletion(apiUrl, headers, requestBody, timeoutMs);
 
   if (!response.ok) {
     const error = await response.text();

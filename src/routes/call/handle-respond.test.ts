@@ -36,8 +36,20 @@ const callOpenAI = mock(
 );
 mock.module("../../core/processing/openai", () => ({ callOpenAI }));
 
-// Dynamic import so it resolves after the mock.module() call above - a static
-// import of ./index would be hoisted ahead of the mock registration.
+// mock.module is process-global, not scoped to this file - another test
+// file's mock.module("../../flows/manager", ...) call would otherwise
+// silently outlive its own file and decide what "no active flow" means
+// here. Pin it explicitly rather than relying on the real FlowRegistry("")
+// resolving the same way regardless of load order.
+const processFlow = mock(async () => ({
+  isFlowActive: false,
+  flowCompleted: false,
+  response: "",
+}));
+mock.module("../../flows/manager", () => ({ processFlow }));
+
+// Dynamic import so it resolves after the mock.module() calls above - a
+// static import of ./index would be hoisted ahead of the mock registration.
 const { callRoutes } = await import("./index");
 
 function createTestDeps(overrides?: Partial<TalkerDependencies["config"]>): TalkerDependencies {

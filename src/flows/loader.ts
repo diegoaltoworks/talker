@@ -77,8 +77,20 @@ async function loadFlow(flowsDir: string, flowName: string): Promise<LoadedFlow>
   if (!definition.triggerKeywords || definition.triggerKeywords.length === 0) {
     throw new Error(`Flow ${flowName} has no trigger keywords`);
   }
-  if (!definition.schema || Object.keys(definition.schema).length === 0) {
-    throw new Error(`Flow ${flowName} has no schema`);
+  const schemaProperties = definition.schema?.properties;
+  if (
+    !schemaProperties ||
+    typeof schemaProperties !== "object" ||
+    Array.isArray(schemaProperties)
+  ) {
+    // `properties` may legitimately be `{}` (a zero-parameter flow, e.g. a
+    // keyword-triggered handoff) - that's what this loader fork exists to
+    // allow, unlike chatter's loader which rejects an empty properties
+    // object outright. What must be present is a `properties` object at all:
+    // extractFlowParams (../flows/manager.ts) reads it unconditionally, so a
+    // schema with `properties` missing, `null` or an array would throw a
+    // TypeError deep in the flow pipeline instead of a clear error here.
+    throw new Error(`Flow ${flowName} has no schema.properties`);
   }
 
   const handlerModule = await import(handlerPath);

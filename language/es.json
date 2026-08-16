@@ -1,58 +1,60 @@
 {
-  "greeting": "Hola! Soy su asistente de voz. Como puedo ayudarle hoy?",
-  "didNotCatch": "No entendi eso. Podria repetirlo, por favor?",
-  "didNotHear": "No escuche nada. Adios!",
-  "didNotHearRetry": "Lo siento, no entendi eso. Podria intentarlo de nuevo?",
+  "greeting": "¡Hola! Soy su asistente de voz. ¿Cómo puedo ayudarle hoy?",
+  "didNotCatch": "No entendí eso. ¿Podría repetirlo, por favor?",
+  "didNotHear": "No escuché nada. ¡Adiós!",
+  "didNotHearRetry": "Lo siento, no entendí eso. ¿Podría intentarlo de nuevo?",
   "didNotHearFinal": "Lo siento mucho pero no puedo escuchar lo que dice. Por favor, llame de nuevo. Hasta pronto.",
   "transfer": "No hay problema, le transfiero ahora.",
   "acknowledgment": "Un momento, por favor.",
   "farewell": {
-    "morning": "De nada! Que tenga un buen dia. Adios!",
-    "afternoon": "De nada! Que tenga una buena tarde. Adios!",
-    "evening": "De nada! Que tenga una buena noche. Adios!"
+    "morning": "¡De nada! Que tenga un buen día. ¡Adiós!",
+    "afternoon": "¡De nada! Que tenga una buena tarde. ¡Adiós!",
+    "evening": "¡De nada! Que tenga una buena noche. ¡Adiós!"
   },
-  "error": "Lo siento, encontre un error. Por favor, intentelo mas tarde. Adios!",
-  "timeout": "Lo siento, tarde demasiado en responder. Por favor, intentelo de nuevo. Adios!",
-  "lostQuestion": "Lo siento, perdi el hilo de su pregunta. Podria repetir?",
-  "rateLimited": "Por favor, intentelo de nuevo en un momento.",
-  "chatError": "Lo siento, encontre un error al procesar su pregunta.",
-  "replyLanguageMismatch": "Reconozca de forma breve y educada que no puede responder en el idioma de quien llama, luego continue su respuesta en el idioma especificado arriba.",
+  "error": "Lo siento, encontré un error. Por favor, inténtelo más tarde. ¡Adiós!",
+  "timeout": "Lo siento, tardé demasiado en responder. Por favor, inténtelo de nuevo. ¡Adiós!",
+  "lostQuestion": "Lo siento, perdí el hilo de su pregunta. ¿Podría repetir?",
+  "rateLimited": "Por favor, inténtelo de nuevo en un momento.",
+  "chatError": "Lo siento, encontré un error al procesar su pregunta.",
   "flow": {
-    "cancelled": "No hay problema! He cancelado eso. En que mas puedo ayudar?",
-    "error": "Lo siento, algo salio mal con eso. Empecemos de nuevo - en que puedo ayudar?",
-    "needMoreDetails": "Podria darme mas detalles?",
+    "cancelled": "¡No hay problema! He cancelado eso. ¿En qué más puedo ayudar?",
+    "error": "Lo siento, algo salió mal con eso. Empecemos de nuevo - ¿en qué puedo ayudar?",
+    "needMoreDetails": "¿Podría darme más detalles?",
     "cancellationKeywords": [
       "cancelar",
       "cancela",
-      "cancelalo",
-      "olvidalo",
-      "olvidate",
-      "dejalo",
-      "dejelo",
+      "cancélalo",
+      "olvídalo",
+      "olvídate",
+      "déjalo",
+      "déjelo",
       "detente",
       "stop",
       "cancel"
     ]
   },
   "sms": {
-    "greeting": "Hola! Soy su asistente de voz. Como puedo ayudarle?",
-    "greetingShort": "Hola! Enviame su pregunta!",
-    "callForHelp": "Para consultas complejas, llamenos directamente.",
-    "processingError": "Tengo problemas para procesar eso. Por favor intentelo de nuevo o llamenos.",
-    "genericError": "Lo siento, algo salio mal. Por favor intente de nuevo."
+    "greeting": "¡Hola! Soy su asistente de voz. ¿Cómo puedo ayudarle?",
+    "greetingShort": "¡Hola! ¡Envíeme su pregunta!",
+    "callForHelp": "Para consultas complejas, llámenos directamente.",
+    "processingError": "Tengo problemas para procesar eso. Por favor inténtelo de nuevo o llámenos.",
+    "genericError": "Lo siento, algo salió mal. Por favor intente de nuevo."
   },
   "whatsapp": {
-    "greeting": "Hola! Soy su asistente. Envieme un mensaje y le ayudare!",
-    "greetingShort": "Hola! Como puedo ayudarle?",
-    "callForHelp": "Para consultas complejas, llamenos o responda aqui con mas detalles.",
-    "processingError": "Tengo problemas para procesar eso. Por favor envie su mensaje de nuevo.",
-    "genericError": "Lo siento, algo salio mal. Por favor intente de nuevo."
+    "greeting": "¡Hola! Soy su asistente. ¡Envíeme un mensaje y le ayudaré!",
+    "greetingShort": "¡Hola! ¿Cómo puedo ayudarle?",
+    "callForHelp": "Para consultas complejas, llámenos o responda aquí con más detalles.",
+    "processingError": "Tengo problemas para procesar eso. Por favor envíe su mensaje de nuevo.",
+    "genericError": "Lo siento, algo salió mal. Por favor intente de nuevo."
   },
   "voice": {
-    "overCapPerNumber": "Ha alcanzado el limite diario de respuestas de voz. Por favor escriba su mensaje en su lugar.",
-    "overCapGlobal": "Las respuestas de voz estan al maximo de capacidad ahora mismo. Por favor escriba su mensaje en su lugar.",
+    "overCapPerNumber": "Ha alcanzado el límite diario de respuestas de voz. Por favor escriba su mensaje en su lugar.",
+    "overCapGlobal": "Las respuestas de voz están al máximo de capacidad ahora mismo. Por favor escriba su mensaje en su lugar.",
     "limitUnavailable": "No puedo verificar la disponibilidad de voz ahora mismo. Por favor escriba su mensaje en su lugar.",
-    "unintelligible": "No pude entender ese audio. Podria intentarlo de nuevo, o escribir su mensaje?",
-    "answerFailed": "Algo salio mal al preparar una respuesta. Por favor intente de nuevo."
+    "unintelligible": "No pude entender ese audio. ¿Podría intentarlo de nuevo, o escribir su mensaje?",
+    "answerFailed": "Algo salió mal al preparar una respuesta. Por favor intente de nuevo."
+  },
+  "prompts": {
+    "replyLanguageMismatch": "Reconozca de forma breve y educada que no puede responder en el idioma de quien llama, luego continúe su respuesta en el idioma especificado arriba."
   }
 }

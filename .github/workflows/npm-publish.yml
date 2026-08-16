@@ -98,8 +98,10 @@ jobs:
 
       # The bump type is derived from every commit since the last release tag
       # (not just the triggering one), so a chore/fix/docs merge ships a patch
-      # and a feat merge (or any commit with a BREAKING CHANGE: footer) ships
-      # a minor. See scripts/next-version.ts.
+      # and a feat merge ships a minor. A breaking change (a `!` before the
+      # colon, or a BREAKING CHANGE: footer) ships a major once the package is
+      # past 1.0, which is why the base version is passed in: below 1.0.0 the
+      # same commit only reaches minor. See scripts/next-version.ts.
       - name: Bump version
         id: bump
         run: |
@@ -112,7 +114,7 @@ jobs:
             BASE_VERSION=$(node -p "require('./package.json').version")
           fi
           RANGE="${LATEST_TAG:+${LATEST_TAG}..}HEAD"
-          BUMP=$(git log "$RANGE" --format='%B%x00' | bun scripts/next-version.ts bump)
+          BUMP=$(git log "$RANGE" --format='%B%x00' | bun scripts/next-version.ts bump "$BASE_VERSION")
           NEW_VERSION=$(bun scripts/next-version.ts apply "$BASE_VERSION" "$BUMP")
           # A collision means the tag this run wants already exists - most
           # often a concurrent or re-run publish beat this one to it. Retrying

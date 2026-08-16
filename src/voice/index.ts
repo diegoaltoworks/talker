@@ -20,17 +20,13 @@ export type {
   VoiceLimitsStore,
 } from "./limits";
 // GLOBAL_LIMIT_KEY, pickDailyLimit and utcDayKey are internal helpers of
-// ./limits (see their @deprecated tags there) re-exported here only because
-// this barrel re-exports the whole module; they are candidates for removal
-// from this barrel in a future release.
+// ./limits and are deliberately not re-exported here: a host configures
+// limits through resolveVoiceLimitsConfig and createVoiceLimiter.
 export {
   createVoiceLimiter,
   DEFAULT_GLOBAL_DAILY_LIMIT,
   DEFAULT_PER_NUMBER_DAILY_LIMIT,
-  GLOBAL_LIMIT_KEY,
-  pickDailyLimit,
   resolveVoiceLimitsConfig,
-  utcDayKey,
 } from "./limits";
 export type { OggOpusInfo } from "./ogg";
 export { findSuspiciousOggComments, parseOggOpus } from "./ogg";

@@ -67,8 +67,9 @@ export async function getTruncatedBody(c: Context): Promise<ParsedBody> {
   return c.req.parseBody();
 }
 
-/** @deprecated Use `truncateInputMiddleware` - this only truncates, it never validates or filters content. */
+/**
+ * @deprecated Removed in 1.0.0. Use `truncateInputMiddleware` - this only
+ * truncates, it never validates or filters content, and the name claimed
+ * otherwise.
+ */
 export const inputSanitizeMiddleware = truncateInputMiddleware;
-
-/** @deprecated Use `getTruncatedBody`. */
-export const getSanitizedBody = getTruncatedBody;

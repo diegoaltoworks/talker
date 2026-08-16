@@ -25,6 +25,7 @@
 import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import type { Hono } from "hono";
 import { DEFAULT_PROCESSING_MODEL } from "./core/defaults";
+import { normalizeReplyLanguages } from "./core/language";
 import { logger } from "./core/logger";
 import { assertWebhookSecurity } from "./core/webhook-security";
 import { resolveStore } from "./db/resolve-store";
@@ -49,10 +50,14 @@ export async function createTelephonyRoutes(
 
   assertWebhookSecurity(config);
 
-  // Resolve publicUrl: explicit config > chatter's bot.publicUrl > undefined
+  // Resolve publicUrl: explicit config > chatter's bot.publicUrl > undefined,
+  // and put replyLanguages into the shape reply-language matching expects
+  // (see normalizeReplyLanguages) so a mis-cased entry cannot silently narrow
+  // every reply.
   const resolvedConfig: TalkerConfig = {
     ...config,
     publicUrl: config.publicUrl || chatterDeps.config.bot?.publicUrl,
+    replyLanguages: normalizeReplyLanguages(config.replyLanguages),
   };
 
   // Resolve the session/message/status store: `config.store` if set, else

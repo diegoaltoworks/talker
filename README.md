@@ -515,15 +515,20 @@ voice and the `<Gather>` speech-recognition language are still driven by the
 caller's actual detected language (see "Custom Voices" below) - narrowing
 `replyLanguages` does not change which voice reads the reply back, and every
 other phrase (retries, errors, farewells) still speaks the detected
-language, not the narrowed one. `replyLanguages` entries must be the
-lowercase codes detection emits (`en`, `pt-BR`, not `EN`).
+language, not the narrowed one. `replyLanguages` entries are the codes
+detection emits (`en`, `pt-BR`); casing is normalized for you when the mount
+is built, so `'EN'` and `'pt-br'` work, and an entry that cannot be a
+language code at all is dropped with a warning rather than left in the list
+where it could never match.
 
-The acknowledgment text comes from `phrases.replyLanguageMismatch` in
+The acknowledgment text comes from `prompts.replyLanguageMismatch` in
 `language/<replyLanguage>.json`, so it can be translated and overridden the
-same way as every other phrase (see "Custom Language Files" above). It is
-worded without naming a specific language, since a language file that
-doesn't override this key falls back to the built-in English copy - naming
-"English" there would contradict a reply narrowed to another language.
+same way as every other phrase (see "Custom Language Files" above). It sits
+under `prompts` rather than at the top level because it is an instruction to
+the model, never spoken or sent to a caller. It is worded without naming a
+specific language, since a language file that doesn't override this key falls
+back to the built-in English copy - naming "English" there would contradict a
+reply narrowed to another language.
 
 ### Custom Prompts
 

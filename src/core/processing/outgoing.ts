@@ -10,7 +10,7 @@ import { addMessage, resolveLanguage } from "../context";
 import { getErrorMessage } from "../errors";
 import { resolveReplyLanguage } from "../language";
 import { logger } from "../logger";
-import { getPhrase } from "../phrases";
+import { getPromptPhrase } from "../phrases";
 import { callOpenAI } from "./openai";
 import { getOutgoingPrompt } from "./prompts";
 
@@ -31,7 +31,7 @@ export async function processOutgoing(
     );
     const prompt = getOutgoingPrompt(deps);
     const mismatchInstruction = mismatch
-      ? `\n${getPhrase(replyLanguage, "replyLanguageMismatch", deps.config.languageDir)}`
+      ? `\n${getPromptPhrase(replyLanguage, "replyLanguageMismatch", deps.config.languageDir)}`
       : "";
     const promptWithContext = `${prompt}\n\n---\nChannel: ${channel}\nRespond in: ${replyLanguage}${mismatchInstruction}`;
 
@@ -42,7 +42,7 @@ export async function processOutgoing(
 
     addMessage(phoneNumber, "assistant", result || botResponse, channel);
 
-    logger.info("OUTGOING", {
+    logger.info("outgoing response processed", {
       phoneNumber,
       channel,
       in: botResponse,

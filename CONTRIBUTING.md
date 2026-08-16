@@ -136,6 +136,34 @@ talker/
   - `test: add tests`
   - `refactor: restructure code`
   - `chore: maintenance tasks`
+- Mark a breaking change with `!` before the colon (`feat!:`, `fix(api)!:`)
+  or a `BREAKING CHANGE:` footer in the commit body. Past 1.0 this ships a
+  major version; before 1.0 it still only reaches minor (see Release
+  Process). The subject that drives the version on `main` is the squash-merge
+  commit's, which is the PR title - so put the marker in the PR title, not
+  only in a commit on the branch.
+
+## Deprecating a public name
+
+Nothing exported from the package root is deleted without a deprecation
+window first. A deprecation is a promise with a date on it, so:
+
+1. Tag the old name `@deprecated`, and say **which version removes it** as a
+   literal: `@deprecated Removed in 1.0.0. Use \`getChannelPhrase\`.` A tag
+   that says a name "may be dropped in a future release without notice" is a
+   disclaimer, not a deprecation - a host reading it cannot tell whether to
+   migrate this week or ignore it for a year.
+2. Keep the old name working as a thin wrapper over the new one. Deprecated
+   is not broken.
+3. Rewire this package's own callers to the new name in the same PR, so the
+   deprecated path has no internal users left holding it up.
+4. Remove it in the version the tag named, not before and not silently later.
+
+`bun run check:deprecations` (`scripts/deprecations.ts`, part of `bun run
+check`) enforces steps 1 and 4's precondition: every `@deprecated` in `src/`
+must name a removal version and may not hedge. A name that was never
+reachable from the package root is not a public API and does not need a
+window - delete it.
 
 ## Definition of Done
 
@@ -190,7 +218,12 @@ release starts from a reviewed pull request:
    - Re-runs the same gates (`bun run check`), builds, and smoke-tests the
      packed tarball
    - Derives the version from the conventional-commit subjects since the last
-     release tag - any `feat:` ships a minor, anything else ships a patch
+     release tag - any `feat:` ships a minor, anything else ships a patch.
+     A breaking change (a `!` before the colon, or a `BREAKING CHANGE:` /
+     `BREAKING-CHANGE:` footer) ships a major once the package is past 1.0;
+     below 1.0.0 it still only reaches minor, since semver leaves 0.x
+     compatibility undefined and minor is already the strongest signal the
+     range has. See `scripts/next-version.ts`
    - Tags the release, publishes to NPM, and creates the GitHub release with
      auto-generated notes
 

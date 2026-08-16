@@ -66,13 +66,3 @@ export function messagingRoutes(
 
   return app;
 }
-
-/** @deprecated Use `messagingRoutes(deps, registry, "sms")`. */
-export function smsRoutes(deps: TalkerDependencies, registry: FlowRegistry) {
-  return messagingRoutes(deps, registry, "sms");
-}
-
-/** @deprecated Use `messagingRoutes(deps, registry, "whatsapp")`. */
-export function whatsappRoutes(deps: TalkerDependencies, registry: FlowRegistry) {
-  return messagingRoutes(deps, registry, "whatsapp");
-}

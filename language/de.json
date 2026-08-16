@@ -1,26 +1,25 @@
 {
   "greeting": "Hallo! Ich bin Ihr Sprachassistent. Wie kann ich Ihnen heute helfen?",
-  "didNotCatch": "Das habe ich nicht verstanden. Koennten Sie das bitte wiederholen?",
-  "didNotHear": "Ich habe nichts gehoert. Auf Wiedersehen.",
-  "didNotHearRetry": "Entschuldigung, ich habe das nicht verstanden. Koennten Sie es noch einmal versuchen?",
-  "didNotHearFinal": "Es tut mir wirklich leid, aber ich kann nicht hoeren, was Sie sagen. Bitte rufen Sie erneut an. Bis bald.",
+  "didNotCatch": "Das habe ich nicht verstanden. Könnten Sie das bitte wiederholen?",
+  "didNotHear": "Ich habe nichts gehört. Auf Wiedersehen.",
+  "didNotHearRetry": "Entschuldigung, ich habe das nicht verstanden. Könnten Sie es noch einmal versuchen?",
+  "didNotHearFinal": "Es tut mir wirklich leid, aber ich kann nicht hören, was Sie sagen. Bitte rufen Sie erneut an. Bis bald.",
   "transfer": "Kein Problem, ich verbinde Sie jetzt.",
   "acknowledgment": "Einen Moment bitte.",
   "farewell": {
-    "morning": "Gern geschehen! Einen schoenen Tag noch. Auf Wiedersehen!",
-    "afternoon": "Gern geschehen! Einen schoenen Nachmittag noch. Auf Wiedersehen!",
-    "evening": "Gern geschehen! Einen schoenen Abend noch. Auf Wiedersehen!"
+    "morning": "Gern geschehen! Einen schönen Tag noch. Auf Wiedersehen!",
+    "afternoon": "Gern geschehen! Einen schönen Nachmittag noch. Auf Wiedersehen!",
+    "evening": "Gern geschehen! Einen schönen Abend noch. Auf Wiedersehen!"
   },
-  "error": "Entschuldigung, es ist ein Fehler aufgetreten. Bitte versuchen Sie es spaeter erneut. Auf Wiedersehen.",
+  "error": "Entschuldigung, es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut. Auf Wiedersehen.",
   "timeout": "Entschuldigung, ich habe zu lange gebraucht. Bitte versuchen Sie es erneut. Auf Wiedersehen.",
-  "lostQuestion": "Es tut mir leid, ich habe Ihre Frage verloren. Koennten Sie das wiederholen?",
+  "lostQuestion": "Es tut mir leid, ich habe Ihre Frage verloren. Könnten Sie das wiederholen?",
   "rateLimited": "Bitte versuchen Sie es gleich noch einmal.",
   "chatError": "Entschuldigung, bei der Bearbeitung Ihrer Frage ist ein Fehler aufgetreten.",
-  "replyLanguageMismatch": "Erkennen Sie kurz und hoeflich an, dass Sie nicht in der Sprache des Anrufers antworten koennen, und fahren Sie dann in der oben angegebenen Sprache fort.",
   "flow": {
     "cancelled": "Kein Problem! Ich habe das abgebrochen. Wie kann ich helfen?",
     "error": "Entschuldigung, dabei ist etwas schiefgelaufen. Fangen wir noch einmal an - wie kann ich helfen?",
-    "needMoreDetails": "Koennten Sie mir mehr Details nennen?",
+    "needMoreDetails": "Könnten Sie mir mehr Details nennen?",
     "cancellationKeywords": [
       "abbrechen",
       "abbruch",
@@ -34,22 +33,25 @@
   "sms": {
     "greeting": "Hallo! Ich bin Ihr Sprachassistent. Wie kann ich Ihnen helfen?",
     "greetingShort": "Hallo! Senden Sie mir Ihre Frage!",
-    "callForHelp": "Fuer komplexe Fragen rufen Sie uns direkt an.",
+    "callForHelp": "Für komplexe Fragen rufen Sie uns direkt an.",
     "processingError": "Ich habe Schwierigkeiten, das zu verarbeiten. Bitte versuchen Sie es erneut oder rufen Sie uns an.",
     "genericError": "Entschuldigung, etwas ist schief gelaufen. Bitte versuchen Sie es erneut."
   },
   "whatsapp": {
     "greeting": "Hallo! Ich bin Ihr Assistent. Senden Sie mir eine Nachricht und ich helfe Ihnen gerne!",
     "greetingShort": "Hallo! Wie kann ich helfen?",
-    "callForHelp": "Fuer komplexe Fragen rufen Sie uns an oder antworten Sie hier mit mehr Details.",
+    "callForHelp": "Für komplexe Fragen rufen Sie uns an oder antworten Sie hier mit mehr Details.",
     "processingError": "Ich habe Schwierigkeiten, das zu verarbeiten. Bitte senden Sie Ihre Nachricht erneut.",
     "genericError": "Entschuldigung, etwas ist schief gelaufen. Bitte versuchen Sie es erneut."
   },
   "voice": {
     "overCapPerNumber": "Sie haben das heutige Sprachnachrichten-Limit erreicht. Bitte tippen Sie Ihre Nachricht stattdessen.",
     "overCapGlobal": "Sprachnachrichten sind gerade ausgelastet. Bitte tippen Sie Ihre Nachricht stattdessen.",
-    "limitUnavailable": "Ich kann die Sprachnachrichten-Verfuegbarkeit gerade nicht pruefen. Bitte tippen Sie Ihre Nachricht stattdessen.",
-    "unintelligible": "Ich konnte diese Audioaufnahme nicht verstehen. Koennten Sie es erneut versuchen oder Ihre Nachricht tippen?",
+    "limitUnavailable": "Ich kann die Sprachnachrichten-Verfügbarkeit gerade nicht prüfen. Bitte tippen Sie Ihre Nachricht stattdessen.",
+    "unintelligible": "Ich konnte diese Audioaufnahme nicht verstehen. Könnten Sie es erneut versuchen oder Ihre Nachricht tippen?",
     "answerFailed": "Beim Vorbereiten einer Antwort ist etwas schiefgelaufen. Bitte versuchen Sie es erneut."
+  },
+  "prompts": {
+    "replyLanguageMismatch": "Erkennen Sie kurz und höflich an, dass Sie nicht in der Sprache des Anrufers antworten können, und fahren Sie dann in der oben angegebenen Sprache fort."
   }
 }

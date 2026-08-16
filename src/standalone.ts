@@ -30,6 +30,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { DEFAULT_PROCESSING_MODEL } from "./core/defaults";
+import { normalizeReplyLanguages } from "./core/language";
 import { logger } from "./core/logger";
 import { assertWebhookSecurity } from "./core/webhook-security";
 import { resolveStore } from "./db/resolve-store";
@@ -59,9 +60,17 @@ export async function createStandaloneServer(config: StandaloneConfig) {
 
   assertWebhookSecurity(config);
 
+  // Put replyLanguages into the shape reply-language matching expects (see
+  // normalizeReplyLanguages) so a mis-cased entry cannot silently narrow every
+  // reply. Done once here rather than per request.
+  const resolvedConfig: StandaloneConfig = {
+    ...config,
+    replyLanguages: normalizeReplyLanguages(config.replyLanguages),
+  };
+
   // Resolve the session/message/status store: `config.store` if set, else
   // `config.database` if set, else a no-op. See src/db/resolve-store.ts.
-  const store = await resolveStore(config);
+  const store = await resolveStore(resolvedConfig);
 
   // Initialize flow registry. Flow intent detection and parameter extraction
   // need a real OpenAI SDK client (chatter's flow engine calls it directly),
@@ -86,7 +95,7 @@ export async function createStandaloneServer(config: StandaloneConfig) {
   // and explicitly guards on `deps.chatter` being present.
   const deps: TalkerDependencies = {
     openaiClient,
-    config,
+    config: resolvedConfig,
     openaiApiKey: config.openaiApiKey,
     openaiModel: config.processing?.model || DEFAULT_PROCESSING_MODEL,
     store,

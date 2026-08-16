@@ -1,7 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { Hono } from "hono";
 import {
-  getSanitizedBody,
   getTruncatedBody,
   inputSanitizeMiddleware,
   truncateInputMiddleware,
@@ -74,8 +73,8 @@ describe("Input Truncation", () => {
       expect(inputSanitizeMiddleware).toBe(truncateInputMiddleware);
     });
 
-    it("getSanitizedBody is the same function as getTruncatedBody", () => {
-      expect(getSanitizedBody).toBe(getTruncatedBody);
+    it("getTruncatedBody is still exported under its own name", () => {
+      expect(typeof getTruncatedBody).toBe("function");
     });
   });
 });

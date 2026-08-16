@@ -27,9 +27,10 @@ function keywordPattern(keyword: string): RegExp {
 }
 
 /**
- * Drop diacritics so ASCII phrase-file keywords match accented speech-to-text
- * output ("annule" matches "annulé", "olvidalo" matches "olvídalo"). The
- * phrase files are written without accents; callers are not.
+ * Drop diacritics from both sides of the comparison, so a keyword matches
+ * however the accent survived the trip: the shipped phrase files spell their
+ * keywords natively ("annulé", "olvídalo"), and speech-to-text output may or
+ * may not, depending on the engine and the speaker.
  */
 function fold(value: string): string {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -74,7 +75,7 @@ export function shouldExitFlow(
 
 /**
  * Get exit message for a specific language.
- * @deprecated Use `getFlowPhrase(language, "cancelled", languageDir)`.
+ * @deprecated Removed in 1.0.0. Use `getFlowPhrase(language, "cancelled", languageDir)`.
  */
 export function getExitMessage(language: string, languageDir?: string): string {
   return getFlowPhrase(language, "cancelled", languageDir);

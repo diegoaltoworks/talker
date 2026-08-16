@@ -329,11 +329,10 @@ export function clearActiveFlow(phoneNumber: string): void {
 // No-speech retry management
 
 /**
- * @deprecated Internal call-flow bookkeeping (see `src/routes/call/handle-nospeech.ts`);
- * internal callers within this package are unaffected. Not part of the
- * documented public API — unlike its read-only sibling `getNoSpeechRetries`,
- * which was never exported from the package root at all — and the package
- * root re-export may be dropped in a future release without notice.
+ * Internal call-flow bookkeeping for the no-speech ladder (see
+ * `src/routes/call/handle-nospeech.ts`). Module-level, not package-level: the
+ * package root no longer re-exports it, matching its read-only sibling
+ * `getNoSpeechRetries`, which was never exported from the root at all.
  */
 export function incrementNoSpeechRetries(phoneNumber: string): number {
   const context = contexts.get(phoneNumber);
@@ -349,10 +348,9 @@ export function getNoSpeechRetries(phoneNumber: string): number {
 }
 
 /**
- * @deprecated Internal call-flow bookkeeping (see `src/routes/call/handle-respond.ts`);
- * internal callers within this package are unaffected. Not part of the
- * documented public API, and the package root re-export may be dropped in a
- * future release without notice.
+ * Internal call-flow bookkeeping for the no-speech ladder (see
+ * `src/routes/call/handle-respond.ts`). Module-level, not package-level: the
+ * package root does not re-export it.
  */
 export function resetNoSpeechRetries(phoneNumber: string): void {
   const context = contexts.get(phoneNumber);
@@ -373,11 +371,8 @@ export function getLastPrompt(phoneNumber: string): string | null {
 }
 
 /**
- * Clear all contexts (for testing)
- *
- * @deprecated Test-only reset helper; existing test usage is unaffected. Not
- * part of the documented public API, and the package root re-export may be
- * dropped in a future release without notice.
+ * Clear all contexts. A test-only reset helper, exported from this module for
+ * this package's own tests and not from the package root.
  */
 export function clearAllContexts(): void {
   contexts.clear();

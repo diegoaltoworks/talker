@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { countEmDashes } from "./check-em-dashes";
 
 // Built from a code point rather than written as a literal character, so
@@ -27,5 +28,15 @@ describe("countEmDashes", () => {
 
   test("a plain hyphen is not mistaken for an em-dash", () => {
     expect(countEmDashes({ "a.ts": "a - hyphen, not an em-dash" })).toEqual({});
+  });
+});
+
+describe("the published manifest", () => {
+  test("package.json is scanned, and its description carries no em-dash", () => {
+    const source = readFileSync(`${import.meta.dir}/check-em-dashes.ts`, "utf-8");
+    expect(source).toContain('"package.json",');
+
+    const manifest = readFileSync(`${import.meta.dir}/../package.json`, "utf-8");
+    expect(countEmDashes({ "package.json": manifest })).toEqual({});
   });
 });

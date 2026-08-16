@@ -12,13 +12,5 @@ export { createLibsqlTalkerStore } from "./libsql-store";
 export { runMigrations } from "./migrate";
 export { persistFinalSession, persistSession } from "./persist";
 export { resolveStore } from "./resolve-store";
-export {
-  generateId,
-  generateSessionId,
-  insertMessage,
-  saveSessionWithMessages,
-  updateSessionIncremental,
-  upsertSession,
-} from "./sessions";
 export type { MessageRecord, MessageStatusRecord, SessionRecord, TalkerStore } from "./store";
-export { createNullTalkerStore } from "./store";
+export { createNullTalkerStore, generateId, generateSessionId } from "./store";

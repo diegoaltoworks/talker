@@ -16,10 +16,11 @@ import {
   setDetectedLanguage,
 } from "../core/context";
 import { getFlowPhrase } from "../core/phrases";
-import type { FlowDefinition, FlowHandlerResult, LoadedFlow, TalkerDependencies } from "../types";
+import type { TalkerDependencies } from "../types";
 import { type FlowEngineLoader, loadFlowEngine } from "./engine";
 import { processFlow } from "./manager";
 import type { FlowRegistry } from "./registry";
+import type { FlowDefinition, FlowHandlerResult, LoadedFlow } from "./types";
 
 // One property, nothing required: chatter's extractParameters() recomputes
 // allParamsFilled from `required`, so the flow completes in one turn while the

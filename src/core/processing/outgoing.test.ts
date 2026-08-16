@@ -30,7 +30,7 @@ mock.module("./openai", () => ({ callOpenAI }));
 // Dynamic import so it resolves after the mock.module() call above - a static
 // import of ./outgoing would be hoisted ahead of the mock registration.
 const { clearAllContexts, setDetectedLanguage } = await import("../context");
-const { getPhrase } = await import("../phrases");
+const { getPromptPhrase } = await import("../phrases");
 const { processOutgoing } = await import("./outgoing");
 
 function makeDeps(configOverrides: Partial<TalkerDependencies["config"]> = {}): TalkerDependencies {
@@ -53,20 +53,20 @@ describe("processOutgoing reply-language narrowing", () => {
     setDetectedLanguage(PHONE, "fr");
     await processOutgoing(makeDeps(), PHONE, "hello", "call");
     expect(capturedSystemPrompt).toContain("Respond in: fr");
-    expect(capturedSystemPrompt).not.toContain(getPhrase("en", "replyLanguageMismatch"));
+    expect(capturedSystemPrompt).not.toContain(getPromptPhrase("en", "replyLanguageMismatch"));
   });
 
   it("narrows to the allowlist's first entry and appends the acknowledgment for an out-of-list language", async () => {
     setDetectedLanguage(PHONE, "fr");
     await processOutgoing(makeDeps({ replyLanguages: ["en", "pt"] }), PHONE, "hello", "call");
     expect(capturedSystemPrompt).toContain("Respond in: en");
-    expect(capturedSystemPrompt).toContain(getPhrase("en", "replyLanguageMismatch"));
+    expect(capturedSystemPrompt).toContain(getPromptPhrase("en", "replyLanguageMismatch"));
   });
 
   it("replies in kind with no acknowledgment when the detected language is in the allowlist", async () => {
     setDetectedLanguage(PHONE, "pt");
     await processOutgoing(makeDeps({ replyLanguages: ["en", "pt"] }), PHONE, "hello", "call");
     expect(capturedSystemPrompt).toContain("Respond in: pt");
-    expect(capturedSystemPrompt).not.toContain(getPhrase("pt", "replyLanguageMismatch"));
+    expect(capturedSystemPrompt).not.toContain(getPromptPhrase("pt", "replyLanguageMismatch"));
   });
 });

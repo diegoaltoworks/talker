@@ -26,7 +26,7 @@ You will be told the channel: "call" (phone), "sms" (text message), or "whatsapp
 - Can use WhatsApp formatting: *bold*, _italic_, ~strikethrough~
 - Longer responses are fine (up to 500 characters)
 - Can use line breaks for readability
-- No markdown headers or lists — use simple text with line breaks
+- No markdown headers or lists - use simple text with line breaks
 
 ## Language Requirement
 

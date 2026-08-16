@@ -2,12 +2,12 @@
 
 <div align="center">
 
-**Telephony plugin for Chatter — voice call and SMS support via Twilio**
+**Telephony plugin for Chatter - voice call and SMS support via Twilio**
 
 [![NPM Version](https://img.shields.io/npm/v/@diegoaltoworks/talker)](https://www.npmjs.com/package/@diegoaltoworks/talker)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[Features](#features) • [Quick Start](#quick-start) • [Examples](#examples) • [Configuration](#configuration) • [Customization](#customization)
+[Features](#features) - [Quick Start](#quick-start) - [Examples](#examples) - [Configuration](#configuration) - [Customization](#customization)
 
 </div>
 
@@ -33,7 +33,7 @@ bun add @diegoaltoworks/talker
 bun add @diegoaltoworks/talker hono
 ```
 
-**As a Chatter plugin** — one server, one port, web chat + phone + SMS:
+**As a Chatter plugin** - one server, one port, web chat + phone + SMS:
 
 ```typescript
 import { createServer } from '@diegoaltoworks/chatter';
@@ -58,7 +58,7 @@ const app = await createServer({
 Bun.serve({ port: 8181, fetch: app.fetch });
 ```
 
-**As a standalone server** — point at a remote chatbot API:
+**As a standalone server** - point at a remote chatbot API:
 
 ```typescript
 import { createStandaloneServer } from '@diegoaltoworks/talker';
@@ -84,16 +84,16 @@ Bun.serve({ port: 3000, fetch: app.fetch });
 `hono` is the only hard requirement. The rest are optional peers: talker imports
 them for types only and loads them on first use, so importing the package never
 fails because one is missing, and installing one you don't need is never
-necessary. A feature whose peer is absent says so — naming the package and the
-fix — at the point of use rather than at import.
+necessary. A feature whose peer is absent says so - naming the package and the
+fix - at the point of use rather than at import.
 
 That guarantee is about `import`, not `tsc`: talker's `.d.ts` graph still
 references each optional peer's own type declarations (for the consumers that
 do have them installed), and TypeScript must resolve that whole graph to bind
 the package's shape even for a host using none of those features. Set
-`"skipLibCheck": true` in your `tsconfig.json` — already the effective default
+`"skipLibCheck": true` in your `tsconfig.json` - already the effective default
 for most bundler-generated configs (Vite, Next.js, etc.) and the standard
-recommendation for any project depending on third-party packages — and this is
+recommendation for any project depending on third-party packages - and this is
 a non-issue; without it, a hono-only host's `tsc` run fails to resolve
 `@diegoaltoworks/chatter`, `@libsql/client` and `openai` even though none of
 them are installed or needed.
@@ -108,8 +108,8 @@ them are installed or needed.
 
 | Import | What it gives you |
 | --- | --- |
-| `@diegoaltoworks/talker` | Everything — route factories, plugin and standalone entry points, voice capabilities, flows, TwiML helpers, and the Twilio REST helpers |
-| `@diegoaltoworks/talker/twilio` | Only the outbound Twilio REST helpers — `sendSMS`, `sendWhatsApp`, `stripWhatsAppPrefix` and the `SendMessageOptions` type — for senders that never mount a webhook |
+| `@diegoaltoworks/talker` | Everything - route factories, plugin and standalone entry points, voice capabilities, flows, TwiML helpers, and the Twilio REST helpers |
+| `@diegoaltoworks/talker/twilio` | Only the outbound Twilio REST helpers - `sendSMS`, `sendWhatsApp`, `stripWhatsAppPrefix` and the `SendMessageOptions` type - for senders that never mount a webhook |
 
 Both are dual ESM/CJS and ship their own type declarations. The subpath is a
 narrower slice of the root export, not a different implementation; an app that
@@ -118,11 +118,11 @@ wasteful rather than wrong.
 
 ## Examples
 
-**[Complete Examples](./examples/)** — Ready-to-run examples for all use cases:
+**[Complete Examples](./examples/)** - Ready-to-run examples for all use cases:
 
-- **[Chatter Plugin](./examples/chatter-plugin.ts)** — Single server with web chat + phone + SMS
-- **[Standalone Server](./examples/standalone.ts)** — Phone/SMS with your own chatbot backend
-- **[Custom Flows](./examples/custom-flows.ts)** — Structured conversations with parameter collection
+- **[Chatter Plugin](./examples/chatter-plugin.ts)** - Single server with web chat + phone + SMS
+- **[Standalone Server](./examples/standalone.ts)** - Phone/SMS with your own chatbot backend
+- **[Custom Flows](./examples/custom-flows.ts)** - Structured conversations with parameter collection
 
 ## Configuration
 
@@ -145,7 +145,7 @@ interface TalkerConfig {
   publicUrl?: string;
 
   // Mount the webhooks without signature validation. Development only.
-  // Default: false — see "Webhook signature validation" below.
+  // Default: false - see "Webhook signature validation" below.
   allowUnsignedWebhooks?: boolean;
 
   // Phone number for human handoff
@@ -174,7 +174,7 @@ interface TalkerConfig {
     thinkingAcknowledgmentEnabled?: boolean; // "One moment please" pattern
   };
 
-  // Remote chatbot API (standalone mode — not needed in plugin mode)
+  // Remote chatbot API (standalone mode - not needed in plugin mode)
   chatbot?: {
     url: string;               // e.g., "https://bot.example.com/api/public/chat"
     apiKey?: string;           // Sent as x-api-key header
@@ -271,8 +271,8 @@ interface TalkerConfig {
 
 In plugin mode, a message is answered by the first of:
 
-1. `chatFn`, if set — full override, bypasses chatter entirely.
-2. `chatbot.url`, if set — remote HTTP API (standalone mode).
+1. `chatFn`, if set - full override, bypasses chatter entirely.
+2. `chatbot.url`, if set - remote HTTP API (standalone mode).
 3. Chatter's RAG pipeline, via chatter's `prepareChat`. The assembled system
    prompt layers base rules, then a persona (chatter's default, or
    `personaFn`'s per-interaction override), then a hint naming the channel
@@ -281,7 +281,7 @@ In plugin mode, a message is answered by the first of:
    here) for per-sender role-gated knowledge; an unidentified caller is
    always clamped to the channel's default buckets. The assembled prompt is
    answered via chatter's `answerOnce`, so a chatter-level `answerFn` (an
-   agent framework, a graph runtime — set on the chatter server config, not
+   agent framework, a graph runtime - set on the chatter server config, not
    here) answers telephony turns exactly like every other chatter surface;
    with no `answerFn` configured this is the same built-in OpenAI completion
    as always. The caller's phone number is passed as `sender` (omitted for
@@ -289,7 +289,7 @@ In plugin mode, a message is answered by the first of:
 
 ### Hook error semantics
 
-These hooks sit on the request path. Each fails differently by design — a
+These hooks sit on the request path. Each fails differently by design - a
 config-time override (`chatFn`) has nowhere else to fall back to, while an
 enrichment hook (`personaFn`, `greetingFn`) degrades to a sane default, and an
 observability tap (`onMessage`, `onMessageStatus`) must never affect delivery
@@ -297,7 +297,7 @@ at all:
 
 | Hook | Purpose | On throw/reject |
 |---|---|---|
-| `chatFn` | Full chat override | Logged; caller gets a generic apology reply (no fall-through to `chatbot`/chatter — the host asked to own this path) |
+| `chatFn` | Full chat override | Logged; caller gets a generic apology reply (no fall-through to `chatbot`/chatter - the host asked to own this path) |
 | `personaFn` | Per-interaction persona swap | Logged; chatter's default persona layer is used instead |
 | `greetingFn` | Per-caller dynamic greeting | Logged; the phrase-file greeting is used instead |
 | `onMessage` | Inbound/outbound message tap | Logged; fire-and-forget, never delays or affects the reply |
@@ -308,7 +308,7 @@ after the response is already decided, so it may still be running (or not yet
 started) when the webhook's 200 is sent. On a runtime that freezes execution
 once a response is returned (serverless platforms in particular), a handler
 doing further async work can be cut off mid-flight. Neither hook is a
-guarantee of completion — only of non-blocking, logged-on-failure delivery.
+guarantee of completion - only of non-blocking, logged-on-failure delivery.
 
 ## Twilio Setup
 
@@ -336,12 +336,12 @@ Twilio console but recommended.
 Every telephony webhook is protected by Twilio's `X-Twilio-Signature` header,
 validated with `twilio.authToken`. Validation fails closed:
 
-- **No `twilio.authToken`** — mounting throws. There is no way to tell a genuine
+- **No `twilio.authToken`** - mounting throws. There is no way to tell a genuine
   Twilio request from a forged one, so the routes are not exposed at all.
-- **`allowUnsignedWebhooks: true`** — mounting proceeds with an unmissable
+- **`allowUnsignedWebhooks: true`** - mounting proceeds with an unmissable
   warning and requests are accepted unsigned. This is for local development and
   tests; anyone who can reach the endpoints can impersonate Twilio.
-- **Missing or wrong signature** — the request is rejected with `403`.
+- **Missing or wrong signature** - the request is rejected with `403`.
 
 Signatures are computed over the exact URL Twilio called, including any query
 string. Behind a reverse proxy (where the request URL talker sees is not the
@@ -364,9 +364,9 @@ Each flow is a directory with three files:
 
 ```
 config/flows/addNumbers/
-  flow.json         — Definition (id, keywords, parameter schema)
-  handler.ts        — Exports an execute() function
-  instructions.md   — System prompt for parameter extraction
+  flow.json         - Definition (id, keywords, parameter schema)
+  handler.ts        - Exports an execute() function
+  instructions.md   - System prompt for parameter extraction
 ```
 
 **flow.json:**
@@ -486,7 +486,7 @@ createTelephonyRoutes(app, deps, {
 ### Voice Capabilities
 
 Speech-to-text, text-to-speech, container inspection and daily spend guards ship
-as plain root exports rather than route options — they are channel-agnostic
+as plain root exports rather than route options - they are channel-agnostic
 functions, so a host wires them into whichever transport it runs (Twilio
 webhooks, a socket-based worker, its own adapter) by calling the factories
 directly. Nothing here reads the environment; the OpenAI client is injected, and
@@ -520,7 +520,7 @@ const text = await transcribe(inboundAudioBytes);   // string | null
 const note = await synthesize('Your table is booked.'); // { bytes, seconds } | null
 ```
 
-**Both return `null` rather than throwing** — on every disabled, empty, API-failure
+**Both return `null` rather than throwing** - on every disabled, empty, API-failure
 and validation-failure path. Synthesis also refuses output that is not parseable
 Ogg/Opus or is not mono, since some mobile clients will not play a stereo voice
 note. Callers are expected to fall back to a text reply; the contract exists so
@@ -530,12 +530,12 @@ that fallback is always reachable.
 cannot measure, and is what the synthesizer uses for that validation. It walks
 the container's page structure rather than scanning for the `OggS` capture
 pattern, so payload bytes cannot pose as a page header and drive the reported
-duration — inbound voice notes are attacker-controlled, and this is a root
+duration - inbound voice notes are attacker-controlled, and this is a root
 export intended to be pointed at them.
 
 Daily spend guards cap voice usage per number and globally. Storage stays with
 the host: implement `VoiceLimitsStore` against whatever database you already run.
-The type is structural, so no import or subclassing is needed — an object with a
+The type is structural, so no import or subclassing is needed - an object with a
 matching `incrementAndGet` satisfies it.
 
 ```typescript
@@ -550,15 +550,15 @@ if (!check.allowed) { /* check.reason: 'per-number' | 'global' */ }
 
 `checkAndReserve` must be called exactly once per voice round-trip, **before**
 transcription starts, so one unit covers transcribe + reply. The increment is
-permanent and unconditional — there is no release path, so a retry burns a
+permanent and unconditional - there is no release path, so a retry burns a
 second unit. `incrementAndGet` must increment and read back atomically; a
 read-then-write races across instances.
 
-`runVoiceReply(deps)` chains reserve → download → transcribe → answer →
-synthesize → voice-or-text into the full round-trip, with the hard invariant
+`runVoiceReply(deps)` chains reserve -> download -> transcribe -> answer ->
+synthesize -> voice-or-text into the full round-trip, with the hard invariant
 that every branch attempts a delivered message: a limit hit, a transcription
 failure or a synthesis failure all fall back to a text reply rather than
-silence. It is channel-agnostic — no Twilio/webhook types in its signature —
+silence. It is channel-agnostic - no Twilio/webhook types in its signature -
 so a host wires the pieces above (plus its own `answer` and send functions)
 into it directly. Fallback copy comes from `getVoicePhrase`, so it lives in
 `language/*.json` alongside the other phrase namespaces rather than being
@@ -587,27 +587,27 @@ const outcome = await runVoiceReply({
 // outcome: 'voice' | 'text' | 'over-cap' | 'limit-error' | 'no-audio' | 'transcribe-failed' | 'answer-failed'
 ```
 
-`sendText` is the one call in the ladder that is never wrapped — a failure to
+`sendText` is the one call in the ladder that is never wrapped - a failure to
 deliver even the guaranteed fallback propagates to the caller instead of
 resolving to a silent "undeliverable" outcome.
 
 **Bringing your own audio.** TTS-synthesized voice notes (`createSynthesizer`,
-above) never need any of this — OpenAI's own Opus output carries no inherited
+above) never need any of this - OpenAI's own Opus output carries no inherited
 container metadata. This only applies if you send a **custom, user-recorded**
 audio file (not synthesized here) as a voice note, e.g. `ptt:true` on WhatsApp.
 
 A phone recording is typically M4A/AAC, and transcoding it with ffmpeg's
-*default* settings —
+*default* settings -
 
 ```bash
 ffmpeg -i recording.m4a -c:a libopus out.ogg
 ```
 
-— produces a file that `parseOggOpus` accepts, that ffmpeg itself decodes
+- produces a file that `parseOggOpus` accepts, that ffmpeg itself decodes
 without warning, but that some stricter players (WhatsApp's Android extractor
 among them) refuse to play at all. The cause: ffmpeg's default metadata
-mapping carries the source container's fields — MP4 atoms like `major_brand`,
-`compatible_brands`, `com.android.version` — into the Ogg comment (`OpusTags`)
+mapping carries the source container's fields - MP4 atoms like `major_brand`,
+`compatible_brands`, `com.android.version` - into the Ogg comment (`OpusTags`)
 header, where they are nonsensical. Lenient readers ignore them; WhatsApp's
 does not.
 
@@ -628,7 +628,7 @@ notes are expected to have (see the synthesizer's own mono check, above).
 reproduce the WhatsApp-side failure first: it inspects the `OpusTags` comment
 header for exactly this class of leftover container field and returns their
 keys (`[]` if the file is clean, `null` if there is no readable comment header
-to inspect at all). It is a signal, not a validity check — `parseOggOpus`'s
+to inspect at all). It is a signal, not a validity check - `parseOggOpus`'s
 own pass/fail contract is unaffected by what this finds.
 
 ```typescript
@@ -674,8 +674,8 @@ starts, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and
 | `src/core/processing/` | OpenAI-powered incoming pre-processor and outgoing post-processor |
 | `src/core/chatbot/` | HTTP client for remote chatbot APIs (standalone mode) |
 | `src/core/` | Context store, TwiML generation, voice config, phrases, logger |
-| `src/voice/` | Channel-agnostic voice capabilities — STT, TTS, Ogg/Opus parsing, daily spend guards |
-| `src/flows/` | Flow lifecycle and presentation — registry, session state, per-channel rendering (intent detection and parameter extraction live in `@diegoaltoworks/chatter/flows`) |
+| `src/voice/` | Channel-agnostic voice capabilities - STT, TTS, Ogg/Opus parsing, daily spend guards |
+| `src/flows/` | Flow lifecycle and presentation - registry, session state, per-channel rendering (intent detection and parameter extraction live in `@diegoaltoworks/chatter/flows`) |
 | `src/routes/call/` | Individual Hono handlers for each Twilio voice webhook |
 | `src/routes/messaging/` | Hono handlers for SMS and WhatsApp webhooks, parameterized by channel |
 | `src/adapters/` | Twilio REST API client (outbound SMS) |

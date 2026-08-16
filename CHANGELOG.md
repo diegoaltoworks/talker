@@ -9,7 +9,7 @@ Every merge to `main` publishes automatically (see [CONTRIBUTING.md](CONTRIBUTIN
 so this file cannot track every release one-for-one. From `v0.46.0` onward,
 GitHub auto-generates a [release page](https://github.com/diegoaltoworks/talker/releases)
 per tag with the complete per-version commit list; earlier tags have no
-release page (the listener that was meant to generate them never fired — see
+release page (the listener that was meant to generate them never fired - see
 `v0.46.0`'s own release for the fix). This file curates the notable and
 breaking changes, grouped under the version they actually shipped in.
 
@@ -21,13 +21,13 @@ breaking changes, grouped under the version they actually shipped in.
 
 - Several `src/core/context.ts` log calls interpolated the caller's phone
   number straight into the log message string (e.g. `` `context created for
-  ${phoneNumber}` ``), which bypassed `logger`'s field-based redaction — that
+  ${phoneNumber}` ``), which bypassed `logger`'s field-based redaction - that
   only redacts values under keys named `phoneNumber`/`phone`, not text baked
   into the message itself. Phone numbers now go through as a data field on
   every call, so they get redacted like everywhere else.
 - The flow loader's schema check (`src/flows/loader.ts`) verified that
   `flow.json`'s `schema` object was non-empty, not that it had a `properties`
-  key — a schema missing `properties` entirely passed validation here and
+  key - a schema missing `properties` entirely passed validation here and
   then threw a `TypeError` deep inside parameter extraction instead of a
   clear load-time error. The check now validates `schema.properties`
   directly, which is also the exact shape a zero-parameter flow needs to keep
@@ -36,7 +36,7 @@ breaking changes, grouped under the version they actually shipped in.
 ### Changed
 
 - The `sanitizedPhone`/`sanitized` locals in `src/db/persist.ts` and
-  `src/db/sessions.ts` are renamed to `normalizedPhone`/`normalized` — they
+  `src/db/sessions.ts` are renamed to `normalizedPhone`/`normalized` - they
   strip formatting characters for session-id stability, not for privacy; the
   number is stored as plaintext in `talker_sessions.phone_number` either way.
   No behavior change.
@@ -76,7 +76,7 @@ breaking changes, grouped under the version they actually shipped in.
 - TwiML helpers now escape every value they interpolate. `gatherTwiml`,
   `sayTwiml`, `transferTwiml`, `acknowledgmentTwiml` and `farewellTwiml`
   embedded text verbatim, so an `&`, `<` or `>` in a greeting, phrase, flow
-  response or bot reply produced invalid XML — Twilio answered with error
+  response or bot reply produced invalid XML - Twilio answered with error
   12100 and dropped the call. The hand-rolled TwiML in the initial-call
   handler escapes its greeting too. Callers must now pass plain text:
   pre-escaped input would be escaped twice and read out as entities.
@@ -94,7 +94,7 @@ breaking changes, grouped under the version they actually shipped in.
   forgot the token exposed `/call`, `/sms` and `/whatsapp` to anyone who could
   reach them, with no signal that signatures were not being checked. Set
   `twilio.authToken`, or set `allowUnsignedWebhooks: true` to keep the old
-  behaviour for development — that path mounts with a loud warning.
+  behaviour for development - that path mounts with a loud warning.
 
 ### Fixed
 
@@ -129,12 +129,12 @@ breaking changes, grouped under the version they actually shipped in.
   nor a parameterless flow needs the engine.
 - A flow that declares no parameters no longer makes a parameter-extraction
   call. There was nothing to extract from an empty schema, so this only removes
-  an LLM round trip — and it is what keeps the keyword-triggered handoff alive
+  an LLM round trip - and it is what keeps the keyword-triggered handoff alive
   when the flow engine is unavailable.
 
 ### Changed
 
-- **Breaking:** `initDbClient()` is now `async` and must be awaited — an
+- **Breaking:** `initDbClient()` is now `async` and must be awaited - an
   unawaited call leaves `getDbClient()` returning `null` on the next line, and
   its rejection unhandled. It rejects with an actionable error when
   `@libsql/client` cannot be loaded; other connection failures keep the
@@ -184,7 +184,7 @@ breaking changes, grouped under the version they actually shipped in.
   (Ogg/Opus container inspection), and `createVoiceLimiter` /
   `resolveVoiceLimitsConfig` (per-number and global daily spend guards)
 - `VoiceLimitsStore`, a structural interface letting a host back the daily
-  counters with its own storage — talker takes on no database dependency
+  counters with its own storage - talker takes on no database dependency
 
 `parseOggOpus` walks the container's page structure rather than scanning for the
 capture pattern, so payload bytes cannot pose as a page header; the

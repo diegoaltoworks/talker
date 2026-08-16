@@ -33,7 +33,7 @@ export {
   utcDayKey,
 } from "./limits";
 export type { OggOpusInfo } from "./ogg";
-export { parseOggOpus } from "./ogg";
+export { findSuspiciousOggComments, parseOggOpus } from "./ogg";
 export type { SynthesizeOptions, Synthesizer, SynthesizerConfig, VoiceNote } from "./synthesize";
 export { createSynthesizer, DEFAULT_MAX_VOICE_TEXT_CHARS } from "./synthesize";
 export type { Transcriber, TranscriberConfig } from "./transcribe";

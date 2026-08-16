@@ -1,10 +1,13 @@
 import { describe, expect, it } from "bun:test";
-import { parseOggOpus } from "./ogg";
+import { findSuspiciousOggComments, parseOggOpus } from "./ogg";
 import {
   concatBytes,
   oggOpusStream,
+  oggOpusStreamWithComments,
   oggPage,
   opusHead,
+  opusTags,
+  opusTagsWithOversizedField,
   pageWithDecoyInPayload,
   unknownGranulePage,
 } from "./ogg.fixtures";
@@ -122,5 +125,72 @@ describe("parseOggOpus", () => {
     backing.set(stream, 32);
     const view = backing.subarray(32, 32 + stream.length);
     expect(parseOggOpus(view)).toEqual({ channels: 1, seconds: 5 });
+  });
+});
+
+describe("findSuspiciousOggComments", () => {
+  it("returns an empty array for ordinary encoder comments", () => {
+    const stream = oggOpusStreamWithComments(1, 48000, ["ENCODER=Lavc61.19.100 libopus"]);
+    expect(findSuspiciousOggComments(stream)).toEqual([]);
+  });
+
+  it("flags MP4/QuickTime container fields carried over by a lossy transcode", () => {
+    const stream = oggOpusStreamWithComments(1, 48000, [
+      "major_brand=isom",
+      "compatible_brands=isomiso2avc1mp41",
+      "ENCODER=Lavc61.19.100 libopus",
+    ]);
+    expect(findSuspiciousOggComments(stream)).toEqual(["major_brand", "compatible_brands"]);
+  });
+
+  it("flags reverse-DNS-style keys as never a standard Vorbis comment field", () => {
+    const stream = oggOpusStreamWithComments(1, 48000, ["com.android.version=14"]);
+    expect(findSuspiciousOggComments(stream)).toEqual(["com.android.version"]);
+  });
+
+  it("returns null when there is no comment page at all", () => {
+    expect(findSuspiciousOggComments(oggOpusStream(1, 48000))).toBeNull();
+  });
+
+  it("returns null for a buffer too short to hold a page header", () => {
+    expect(findSuspiciousOggComments(new TextEncoder().encode("OggS"))).toBeNull();
+  });
+
+  it("returns null when the comment page itself is truncated", () => {
+    const stream = oggOpusStreamWithComments(1, 48000, ["TITLE=ok"]);
+    // Cut inside the comment page's own framing (past the identification
+    // page, short of the trailing audio page) so the page walk's own
+    // pageEnd-past-buffer guard fires before the comment fields are read.
+    expect(findSuspiciousOggComments(stream.subarray(0, stream.length - 40))).toBeNull();
+  });
+
+  it("returns null when a comment's declared field length overruns the page", () => {
+    // Page framing (the segment table) is intact and correct; only the
+    // field-length header inside the OpusTags payload lies about how many
+    // bytes follow, exercising parseCommentPage's inner bounds check.
+    const commentPage = oggPage(0, opusTagsWithOversizedField("TITLE=ok", 9999));
+    const stream = concatBytes(
+      oggPage(0, opusHead(1)),
+      commentPage,
+      oggPage(48000, new Uint8Array([0x00])),
+    );
+    expect(findSuspiciousOggComments(stream)).toBeNull();
+  });
+
+  it("returns null when the second page is not a real OpusTags header", () => {
+    // A non-Opus stream whose second page happens to start with the
+    // OpusTags magic must not be mistaken for a real comment header — the
+    // first page has to check out as OpusHead first.
+    const stream = concatBytes(
+      oggPage(0, new Uint8Array(19)),
+      oggPage(0, opusTags(["major_brand=isom"])),
+      oggPage(48000, new Uint8Array([0x00])),
+    );
+    expect(findSuspiciousOggComments(stream)).toBeNull();
+  });
+
+  it("does not affect parseOggOpus's own result when comments are present", () => {
+    const stream = oggOpusStreamWithComments(1, 48000 * 3, ["major_brand=isom"]);
+    expect(parseOggOpus(stream)).toEqual({ channels: 1, seconds: 3 });
   });
 });

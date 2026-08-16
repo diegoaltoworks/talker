@@ -591,6 +591,55 @@ const outcome = await runVoiceReply({
 deliver even the guaranteed fallback propagates to the caller instead of
 resolving to a silent "undeliverable" outcome.
 
+**Bringing your own audio.** TTS-synthesized voice notes (`createSynthesizer`,
+above) never need any of this — OpenAI's own Opus output carries no inherited
+container metadata. This only applies if you send a **custom, user-recorded**
+audio file (not synthesized here) as a voice note, e.g. `ptt:true` on WhatsApp.
+
+A phone recording is typically M4A/AAC, and transcoding it with ffmpeg's
+*default* settings —
+
+```bash
+ffmpeg -i recording.m4a -c:a libopus out.ogg
+```
+
+— produces a file that `parseOggOpus` accepts, that ffmpeg itself decodes
+without warning, but that some stricter players (WhatsApp's Android extractor
+among them) refuse to play at all. The cause: ffmpeg's default metadata
+mapping carries the source container's fields — MP4 atoms like `major_brand`,
+`compatible_brands`, `com.android.version` — into the Ogg comment (`OpusTags`)
+header, where they are nonsensical. Lenient readers ignore them; WhatsApp's
+does not.
+
+The fix is to strip inherited metadata and encode for voice rather than music:
+
+```bash
+ffmpeg -i recording.m4a -map_metadata -1 -application voip \
+  -avoid_negative_ts make_zero -ac 1 -ar 48000 -c:a libopus out.ogg
+```
+
+`-map_metadata -1` drops the carried-over container fields, `-application
+voip` switches Opus to its voice-tuned mode (the default is music-tuned), and
+`-avoid_negative_ts make_zero` avoids a negative first timestamp some
+transcodes leave behind. `-ac 1 -ar 48000` match the mono/48kHz shape voice
+notes are expected to have (see the synthesizer's own mono check, above).
+
+`findSuspiciousOggComments(bytes)` gives an early warning without needing to
+reproduce the WhatsApp-side failure first: it inspects the `OpusTags` comment
+header for exactly this class of leftover container field and returns their
+keys (`[]` if the file is clean, `null` if there is no readable comment header
+to inspect at all). It is a signal, not a validity check — `parseOggOpus`'s
+own pass/fail contract is unaffected by what this finds.
+
+```typescript
+import { findSuspiciousOggComments } from '@diegoaltoworks/talker';
+
+const suspicious = findSuspiciousOggComments(uploadedBytes);
+if (suspicious && suspicious.length > 0) {
+  console.warn('audio carries container metadata that may not play on strict players:', suspicious);
+}
+```
+
 ## Architecture
 
 ```

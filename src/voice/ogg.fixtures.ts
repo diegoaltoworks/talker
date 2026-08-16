@@ -23,6 +23,11 @@ export function concatBytes(...parts: Uint8Array[]): Uint8Array {
  * be faithful; serial, sequence and CRC are inert here.
  */
 export function oggPage(granule: number, payload: Uint8Array): Uint8Array {
+  if (payload.length > 255) {
+    throw new Error(
+      "fixture payload exceeds one segment (255 bytes) — this builder does not do segment continuation",
+    );
+  }
   const page = new Uint8Array(28 + payload.length);
   const view = new DataView(page.buffer);
   page.set(new TextEncoder().encode("OggS"), 0);
@@ -50,6 +55,68 @@ export function opusHead(channels: number): Uint8Array {
 /** A complete stream: an OpusHead page plus an audio page carrying `granule`. */
 export function oggOpusStream(channels: number, granule: number): Uint8Array {
   return concatBytes(oggPage(0, opusHead(channels)), oggPage(granule, new Uint8Array([0x00])));
+}
+
+/** An OpusTags comment header page carrying the given "KEY=value" strings. */
+export function opusTags(comments: string[]): Uint8Array {
+  const encoder = new TextEncoder();
+  const vendor = encoder.encode("fixture");
+  const uint32 = (n: number) => {
+    const bytes = new Uint8Array(4);
+    new DataView(bytes.buffer).setUint32(0, n, true);
+    return bytes;
+  };
+  const parts = [
+    encoder.encode("OpusTags"),
+    uint32(vendor.length),
+    vendor,
+    uint32(comments.length),
+  ];
+  for (const comment of comments) {
+    const bytes = encoder.encode(comment);
+    parts.push(uint32(bytes.length), bytes);
+  }
+  return concatBytes(...parts);
+}
+
+/**
+ * An OpusTags page carrying one comment field whose declared length is
+ * larger than the bytes actually present. Page framing (the segment table)
+ * is intact and correct — only the field-length header inside the payload
+ * lies, exercising the inner bounds check separately from truncated framing.
+ */
+export function opusTagsWithOversizedField(comment: string, declaredLength: number): Uint8Array {
+  const encoder = new TextEncoder();
+  const vendor = encoder.encode("fixture");
+  const uint32 = (n: number) => {
+    const bytes = new Uint8Array(4);
+    new DataView(bytes.buffer).setUint32(0, n, true);
+    return bytes;
+  };
+  return concatBytes(
+    encoder.encode("OpusTags"),
+    uint32(vendor.length),
+    vendor,
+    uint32(1),
+    uint32(declaredLength),
+    encoder.encode(comment),
+  );
+}
+
+/**
+ * A complete stream with a comment (OpusTags) page between the identification
+ * header and the audio page — the layout real Ogg/Opus encoders produce.
+ */
+export function oggOpusStreamWithComments(
+  channels: number,
+  granule: number,
+  comments: string[],
+): Uint8Array {
+  return concatBytes(
+    oggPage(0, opusHead(channels)),
+    oggPage(0, opusTags(comments)),
+    oggPage(granule, new Uint8Array([0x00])),
+  );
 }
 
 /**

@@ -184,6 +184,7 @@ export {
   DEFAULT_MAX_VOICE_TEXT_CHARS,
   DEFAULT_PER_NUMBER_DAILY_LIMIT,
   DEFAULT_TRANSCRIPT_MAX_CHARS,
+  findSuspiciousOggComments,
   GLOBAL_LIMIT_KEY,
   parseOggOpus,
   pickDailyLimit,

@@ -435,7 +435,7 @@ createTelephonyRoutes(app, deps, {
 });
 ```
 
-See [prompts/incoming.md](./prompts/incoming.md) and [prompts/outgoing.md](./prompts/outgoing.md) for the default prompts.
+See [prompts/incoming.md](./prompts/incoming.md) and [prompts/outgoing.md](./prompts/outgoing.md) for the default prompts. `getIncomingPrompt(deps)` and `getOutgoingPrompt(deps)` return the prompt actually in force, custom path or packaged default.
 
 ### Custom Voices
 

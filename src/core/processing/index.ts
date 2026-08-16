@@ -7,4 +7,4 @@
 export { processIncoming } from "./incoming";
 export { callOpenAI } from "./openai";
 export { processOutgoing } from "./outgoing";
-export { resetPromptCache } from "./prompts";
+export { getIncomingPrompt, getOutgoingPrompt, resetPromptCache } from "./prompts";

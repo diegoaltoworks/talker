@@ -29,7 +29,7 @@
     "build": "bun run build:clean && bun run build:types && bun run build:esm && bun run build:cjs",
     "build:clean": "rm -rf dist",
     "build:types": "tsc -p tsconfig.build.json --emitDeclarationOnly --outDir dist",
-    "build:esm": "esbuild src/index.ts src/adapters/twilio.ts --bundle --format=esm --outdir=dist --outbase=src --out-extension:.js=.mjs --external:hono --external:openai --external:@diegoaltoworks/chatter --external:@diegoaltoworks/chatter/* --external:@libsql/client --platform=node --target=node24",
+    "build:esm": "esbuild src/index.ts src/adapters/twilio.ts --bundle --format=esm --define:__dirname=import.meta.dirname --outdir=dist --outbase=src --out-extension:.js=.mjs --external:hono --external:openai --external:@diegoaltoworks/chatter --external:@diegoaltoworks/chatter/* --external:@libsql/client --platform=node --target=node24",
     "build:cjs": "esbuild src/index.ts src/adapters/twilio.ts --bundle --format=cjs --outdir=dist --outbase=src --external:hono --external:openai --external:@diegoaltoworks/chatter --external:@diegoaltoworks/chatter/* --external:@libsql/client --platform=node --target=node24",
     "test": "bun test",
     "test:unit": "bun test src/",

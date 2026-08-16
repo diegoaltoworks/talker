@@ -2,7 +2,7 @@
 
 Talker is the voice/telephony modality adapter for
 [`@diegoaltoworks/chatter`](https://github.com/diegoaltoworks/chatter): it
-converts between a text-based brain and voice/SMS/WhatsApp webhooks —
+converts between a text-based brain and voice/SMS/WhatsApp webhooks -
 speech-to-text, text-to-speech, Ogg/Opus handling, phrase rendering, TwiML
 timing, and delivery status. Brain concerns (RAG assembly, persona
 resolution, slot filling) live in chatter. See
@@ -12,14 +12,14 @@ for how that split was decided and what it implies for where new code goes.
 For the call/message flow and directory layout, see the
 [Architecture](../README.md#architecture) and
 [Project Structure](../README.md#project-structure) sections of the README.
-This document covers the invariants that hold across that structure — the
+This document covers the invariants that hold across that structure - the
 things a change must not break even though nothing stops a `tsc` pass from
 breaking them.
 
 ## Invariants
 
 Each of these is enforced by a test, not just a comment. If you touch code
-near one, run its test file before and after — a green `bun run check` alone
+near one, run its test file before and after - a green `bun run check` alone
 doesn't prove the invariant survived, only that nothing else regressed.
 
 ### Fail-closed webhooks
@@ -37,7 +37,7 @@ signs the full request URL including its query string.
 
 ### Every branch delivers
 
-`runVoiceReply`'s reserve → download → transcribe → answer → synthesize →
+`runVoiceReply`'s reserve -> download -> transcribe -> answer -> synthesize ->
 send ladder guarantees a message reaches the caller on every path: a denied
 reservation, a download/transcription/synthesis failure, or a voice-send
 failure all fall back to text. Only a text-send failure is allowed to
@@ -45,7 +45,7 @@ surface to the caller as an error, because there is nothing left to fall
 back to.
 
 - Implementation: `src/voice/ladder.ts`
-- Test: `src/voice/ladder.test.ts` — one case per failure branch, plus
+- Test: `src/voice/ladder.test.ts` - one case per failure branch, plus
   `"never calls download/transcribe/answer/synthesize once a fallback fires
   earlier in the ladder"` pinning the short-circuit behavior
 
@@ -60,7 +60,7 @@ entry may be a single string or a rotating array.
 - Implementation: `src/core/phrases.ts`
 - Test: `src/core/phrases.test.ts`, `src/core/phrasesRotation.test.ts` cover
   the loader (`getPhrase`, fallbacks, path traversal). The "never a
-  hardcoded string in route code" half is convention, not a gate — there is
+  hardcoded string in route code" half is convention, not a gate - there is
   no automated check for a raw string literal reaching a caller; watch for
   it in review the way you'd watch for a stray `console.log`.
 
@@ -69,7 +69,7 @@ entry may be a single string or a rotating array.
 Capability modules never construct a client or read `process.env`
 themselves; a host injects `client: () => OpenAI` (or leaves it disabled).
 This is what lets `src/voice/` and the flow engine's optional peers
-(`openai`, `@diegoaltoworks/chatter`, `@libsql/client`) stay optional —
+(`openai`, `@diegoaltoworks/chatter`, `@libsql/client`) stay optional -
 a hono-only install can import the package without any of them present, and
 a disabled or misconfigured capability degrades to `null`/an actionable
 error instead of throwing at module load.
@@ -91,7 +91,7 @@ sweeps. They are correct for a single process and nothing more: running
 multiple instances behind a load balancer without sticky routing (or
 without moving this state to `db/`, which is durable and shared) silently
 fragments rate limits and loses in-flight call state across instances. This
-is a deliberate scope boundary, not an oversight — call it out in any change
+is a deliberate scope boundary, not an oversight - call it out in any change
 that adds new in-process state, and prefer the existing `db/` persistence
 layer when state must survive a restart or be shared across instances.
 
@@ -105,7 +105,7 @@ layer when state must survive a restart or be shared across instances.
 ## No-untested-numbers rule
 
 Every numeric constant that governs behavior a caller or texter can
-perceive — timeouts, budgets, rate limits, retry counts, character limits —
+perceive - timeouts, budgets, rate limits, retry counts, character limits -
 ships with a test that pins the number, not just the code path around it. A
 constant with no test asserting its value is free to drift during a refactor
 without anyone noticing until it's in production. Examples already in the
@@ -126,19 +126,19 @@ codebase:
 When a ticket doesn't name a precedent to follow, these are the load-bearing
 examples worth copying the shape of:
 
-- **Channel-agnostic capability factories** — `src/voice/` (`synthesize.ts`,
+- **Channel-agnostic capability factories** - `src/voice/` (`synthesize.ts`,
   `transcribe.ts`, `limits.ts`): plain functions taking an injected client
   and config, returning `null` on disabled/failure instead of throwing, with
   every export re-barreled from `src/voice/index.ts`. This is the shape any
   new capability module should take.
-- **Hermetic tests against the real dependency's exports** —
+- **Hermetic tests against the real dependency's exports** -
   `src/core/chat.test.ts`: rather than hand-rolling a stand-in for
   chatter's `prepareChat`/`resolveBuckets`, it imports chatter's real
   implementations and only mocks the one seam under test (`answerOnce`).
   This catches wiring drift that a hand-rolled mock would hide. Prefer this
   over mocking a whole dependency when the dependency's own exports are
   cheap to call directly.
-- **Static guard tests for runtime contracts** — `src/peer-deps.test.ts`:
+- **Static guard tests for runtime contracts** - `src/peer-deps.test.ts`:
   a contract that can only be proven by exercising the packed artifact
   (optional peers must never be load-bearing at import time) still gets a
   fast static test that catches the same class of regression before a
@@ -148,8 +148,8 @@ examples worth copying the shape of:
 
 ## CI grep-gates
 
-Three invariants are enforced structurally — by scanning source or a built
-artifact for a call site in the wrong place — rather than by exercising
+Three invariants are enforced structurally - by scanning source or a built
+artifact for a call site in the wrong place - rather than by exercising
 behavior and checking a return value:
 
 | Gate | Enforces | Test |
@@ -160,8 +160,8 @@ behavior and checking a return value:
 
 The first two are `bun test` files, so `bun run check` (which runs
 `bun test`) fails on a violation the same way it fails on a broken test. The
-third is not part of `bun run check` — it builds and packs a tarball, which
-is too slow for the inner dev loop — so it runs as its own CI job ("Packed
+third is not part of `bun run check` - it builds and packs a tarball, which
+is too slow for the inner dev loop - so it runs as its own CI job ("Packed
 tarball imports and resolves every exports key"). Run it locally with
 `bun run test:packaged` before a release-shaped change to `package.json`'s
 `exports` or `files`.

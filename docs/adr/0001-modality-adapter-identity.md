@@ -57,12 +57,12 @@ talker.
 - New capability code defaults to `src/voice/`-style channel-agnostic
   factories with injected clients (see
   [`ARCHITECTURE.md`](../ARCHITECTURE.md#exemplar-patterns)), not routes
-  options — a Baileys-only or non-Twilio host should be able to call them
+  options - a Baileys-only or non-Twilio host should be able to call them
   directly.
 - Changes that touch prompt assembly, persona resolution, or intent/slot
   logic belong in chatter first; talker consumes the resulting seam rather
   than re-implementing it. Tickets that need a seam chatter doesn't have yet
-  are blocked until chatter publishes it — check the peer range in
+  are blocked until chatter publishes it - check the peer range in
   `package.json` before starting.
 - Talker's flow directory loader intentionally does not delegate to
   chatter's loader: chatter's schema check requires at least one property,

@@ -140,13 +140,13 @@ require `bun run check` green; the rest is per type:
 |---|---|
 | **Feature** | Tests for every new branch, including failure paths (see `src/voice/ladder.test.ts` for the shape: one test per fallback). User-facing strings added to `language/*.json`, never hardcoded. A doc update if it changes behavior a host configures or depends on (README, `docs/ARCHITECTURE.md`, or both). |
 | **Bug fix** | A regression test that fails without the fix and passes with it. If the bug was a violated invariant (see `docs/ARCHITECTURE.md`), consider whether it needs a standing guard test like `src/peer-deps.test.ts`, not just a one-off case. |
-| **Docs / chore** | No behavior change, so no new tests — but if the doc describes a number (a timeout, a limit, a count), it must match what the code actually does; don't restate a constant without checking it. |
+| **Docs / chore** | No behavior change, so no new tests - but if the doc describes a number (a timeout, a limit, a count), it must match what the code actually does; don't restate a constant without checking it. |
 
 Two things apply across all types:
 
 - **Numbers are tested, not just documented.** A timeout, budget, rate
   limit, or char limit that governs perceivable behavior needs a test
-  pinning its value — see `docs/ARCHITECTURE.md`'s "No-untested-numbers
+  pinning its value - see `docs/ARCHITECTURE.md`'s "No-untested-numbers
   rule".
 - **New capability modules follow `src/voice/`'s shape**: injected
   clients, no `process.env` reads, `null` (not a throw) on the
@@ -162,7 +162,7 @@ Two things apply across all types:
 3. **Pass CI**: All tests, linting, and type checks must pass
 4. **Update Changelog** (notable or breaking changes only): add an entry under
    `[Unreleased]` in CHANGELOG.md. Every merge to `main` publishes immediately
-   (see below), so the version your change ships as is not known at PR time —
+   (see below), so the version your change ships as is not known at PR time -
    a maintainer moves the entry from `[Unreleased]` into a versioned section
    once the release tag exists. Most day-to-day fixes don't need an entry at
    all: from `v0.46.0` onward, [GitHub Releases](https://github.com/diegoaltoworks/talker/releases)
@@ -184,7 +184,7 @@ release starts from a reviewed pull request:
    - Re-runs the same gates (`bun run check`), builds, and smoke-tests the
      packed tarball
    - Derives the version from the conventional-commit subjects since the last
-     release tag — any `feat:` ships a minor, anything else ships a patch
+     release tag - any `feat:` ships a minor, anything else ships a patch
    - Tags the release, publishes to NPM, and creates the GitHub release with
      auto-generated notes
 
@@ -198,7 +198,7 @@ without it the checked-in version is a floor, not the latest release.
 
 Dependabot PRs auto-merge, so nobody reads the diff before CI goes green.
 `scripts/release-guard.ts` therefore blocks the automated publish when an
-unreleased dependabot commit touched anything beyond a manifest or lockfile —
+unreleased dependabot commit touched anything beyond a manifest or lockfile -
 a workflow or Dockerfile bump changes what runs, and that needs a human.
 Manifest-only bumps ride along with the next release, so the guard can never
 wedge the release train against itself.

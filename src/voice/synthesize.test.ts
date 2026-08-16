@@ -132,6 +132,10 @@ describe("createSynthesizer", () => {
     expect(calls[0]?.input).toBe("abcde");
   });
 
+  it("pins the default clamp value", () => {
+    expect(DEFAULT_MAX_VOICE_TEXT_CHARS).toBe(550);
+  });
+
   it("defaults the clamp to DEFAULT_MAX_VOICE_TEXT_CHARS", async () => {
     const { client, calls } = monoClient();
     const synthesize = createSynthesizer({ client, enabled: () => true });

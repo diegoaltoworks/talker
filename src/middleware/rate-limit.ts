@@ -8,8 +8,8 @@
 import type { Context, Next } from "hono";
 import { logger } from "../core/logger";
 
-const DEFAULT_MAX_REQUESTS = 30;
-const DEFAULT_WINDOW_MS = 60_000; // 1 minute
+export const DEFAULT_MAX_REQUESTS = 30;
+export const DEFAULT_WINDOW_MS = 60_000; // 1 minute
 
 interface RateLimitEntry {
   timestamps: number[];

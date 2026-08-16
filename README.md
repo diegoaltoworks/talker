@@ -661,6 +661,12 @@ Phone Call / SMS
 
 **Call lifecycle:** Twilio posts to `/call` on ring, `/call/respond` on speech, `/call/no-speech` on silence, `/call/answer` after async acknowledgment, and `/call/status` on hangup.
 
+For the invariants that hold across this structure (fail-closed webhooks,
+every-branch-delivers, phrase-file-only strings, injected clients, the
+single-process state caveat) and why talker's scope stops where chatter's
+starts, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and
+[`docs/adr/0001-modality-adapter-identity.md`](docs/adr/0001-modality-adapter-identity.md).
+
 ## Project Structure
 
 | Directory | What lives there |

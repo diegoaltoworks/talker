@@ -63,6 +63,11 @@ describe("pickDailyLimit", () => {
 });
 
 describe("resolveVoiceLimitsConfig", () => {
+  it("pins the default daily limits", () => {
+    expect(DEFAULT_PER_NUMBER_DAILY_LIMIT).toBe(100);
+    expect(DEFAULT_GLOBAL_DAILY_LIMIT).toBe(500);
+  });
+
   it("defaults when nothing is configured", () => {
     expect(resolveVoiceLimitsConfig()).toEqual({
       perNumberDailyLimit: DEFAULT_PER_NUMBER_DAILY_LIMIT,

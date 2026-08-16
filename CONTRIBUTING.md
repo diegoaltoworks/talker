@@ -131,6 +131,30 @@ talker/
   - `refactor: restructure code`
   - `chore: maintenance tasks`
 
+## Definition of Done
+
+What "done" requires depends on what kind of change it is. All of them
+require `bun run check` green; the rest is per type:
+
+| Change type | Also requires |
+|---|---|
+| **Feature** | Tests for every new branch, including failure paths (see `src/voice/ladder.test.ts` for the shape: one test per fallback). User-facing strings added to `language/*.json`, never hardcoded. A doc update if it changes behavior a host configures or depends on (README, `docs/ARCHITECTURE.md`, or both). |
+| **Bug fix** | A regression test that fails without the fix and passes with it. If the bug was a violated invariant (see `docs/ARCHITECTURE.md`), consider whether it needs a standing guard test like `src/peer-deps.test.ts`, not just a one-off case. |
+| **Docs / chore** | No behavior change, so no new tests — but if the doc describes a number (a timeout, a limit, a count), it must match what the code actually does; don't restate a constant without checking it. |
+
+Two things apply across all types:
+
+- **Numbers are tested, not just documented.** A timeout, budget, rate
+  limit, or char limit that governs perceivable behavior needs a test
+  pinning its value — see `docs/ARCHITECTURE.md`'s "No-untested-numbers
+  rule".
+- **New capability modules follow `src/voice/`'s shape**: injected
+  clients, no `process.env` reads, `null` (not a throw) on the
+  disabled/failure path. `docs/ARCHITECTURE.md`'s "Exemplar patterns"
+  section has the short list of patterns worth copying, including
+  `src/core/chat.test.ts`'s hermetic-test pattern for tests that exercise a
+  real dependency instead of a hand-rolled mock.
+
 ## Pull Request Process
 
 1. **Update Documentation**: Update README.md and relevant docs for any new features

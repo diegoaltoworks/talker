@@ -26,15 +26,11 @@ export function callRoutes(deps: TalkerDependencies, registry: FlowRegistry) {
   const baseUrl = deps.config.publicUrl;
   const signatureOptions = { allowUnsigned: deps.config.allowUnsignedWebhooks };
 
-  // Security middleware stack
+  // Security middleware stack. "/call/*" also matches the bare "/call" path,
+  // so this alone covers every route registered below.
   app.use("/call/*", twilioSignatureMiddleware(authToken, baseUrl, signatureOptions));
   app.use("/call/*", rateLimitMiddleware(deps.config.rateLimit));
   app.use("/call/*", inputSanitizeMiddleware(deps.config.maxInputLength));
-
-  // Also apply to the root /call POST
-  app.post("/call", twilioSignatureMiddleware(authToken, baseUrl, signatureOptions));
-  app.post("/call", rateLimitMiddleware(deps.config.rateLimit));
-  app.post("/call", inputSanitizeMiddleware(deps.config.maxInputLength));
 
   app.post("/call", (c) => handleInitialCall(c, deps.config));
   app.post("/call/respond", (c) => handleRespond(c, deps, registry));

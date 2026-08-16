@@ -195,6 +195,24 @@ describe("handleInitialCall", () => {
     expect(finalText).toContain("<Say");
   });
 
+  it("applies the rate limiter exactly once per POST /call", async () => {
+    // "/call/*" already matches the bare "/call" path, so a second explicit
+    // registration on "/call" would run signature/rate-limit/sanitize twice
+    // per request. With maxRequests: 1, a double run exhausts the limit
+    // within the same request and the response comes back 429 instead of 200.
+    const deps = createTestDeps({ rateLimit: { maxRequests: 1, windowMs: 60_000 } });
+    const app = createApp(deps);
+
+    const first = await postCall(app, { From: "+15551234567" });
+    expect(first.status).toBe(200);
+
+    // The budget of 1 is now spent, confirming the limiter did run (not
+    // silently dropped) and ran exactly once (not twice, which would have
+    // failed the assertion above).
+    const second = await postCall(app, { From: "+15551234567" });
+    expect(second.status).toBe(429);
+  });
+
   it("fires an outbound onMessage event for the greeting", async () => {
     const events: MessageTapEvent[] = [];
     const deps = createTestDeps({ onMessage: (event) => void events.push(event) });

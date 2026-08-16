@@ -9,15 +9,16 @@
 import type { Context } from "hono";
 import { stripWhatsAppPrefix } from "../../adapters/twilio";
 import { resolveLanguage } from "../../core/context";
+import { UNKNOWN_PHONE_NUMBER } from "../../core/defaults";
 import { getErrorMessage } from "../../core/errors";
 import { resolveGreeting } from "../../core/greeting";
 import { logger } from "../../core/logger";
 import { emitMessageTap } from "../../core/message-tap";
 import { getChannelPhrase } from "../../core/phrases";
-import { messageTwiml } from "../../core/twiml";
+import { messageTwiml, twimlResponse } from "../../core/twiml";
 import { persistSession } from "../../db/persist";
 import type { FlowRegistry } from "../../flows/registry";
-import { getSanitizedBody } from "../../middleware/input-sanitize";
+import { getTruncatedBody } from "../../middleware/input-sanitize";
 import type { TalkerDependencies } from "../../types";
 import { type MessagingChannel, processMessage } from "./processor";
 
@@ -27,8 +28,8 @@ export async function handleIncomingMessage(
   registry: FlowRegistry,
   channel: MessagingChannel,
 ): Promise<Response> {
-  const body = await getSanitizedBody(c);
-  const phoneNumber = stripWhatsAppPrefix(((body.From as string) || "unknown").trim());
+  const body = await getTruncatedBody(c);
+  const phoneNumber = stripWhatsAppPrefix(((body.From as string) || UNKNOWN_PHONE_NUMBER).trim());
   const to = stripWhatsAppPrefix((body.To as string) || "");
   const messageBody = (body.Body as string) || "";
 
@@ -52,15 +53,13 @@ export async function handleIncomingMessage(
       to: phoneNumber,
       body: greeting,
     });
-    return c.text(messageTwiml(greeting), 200, {
-      "Content-Type": "text/xml",
-    });
+    return twimlResponse(c, messageTwiml(greeting));
   }
 
   try {
     const twiml = await processMessage(deps, registry, phoneNumber, messageBody, to, channel);
     persistSession(phoneNumber, channel, deps.store);
-    return c.text(twiml, 200, { "Content-Type": "text/xml" });
+    return twimlResponse(c, twiml);
   } catch (error) {
     logger.error(`${channel} processing error`, {
       phoneNumber,
@@ -79,8 +78,6 @@ export async function handleIncomingMessage(
       to: phoneNumber,
       body: errorMessage,
     });
-    return c.text(messageTwiml(errorMessage), 200, {
-      "Content-Type": "text/xml",
-    });
+    return twimlResponse(c, messageTwiml(errorMessage));
   }
 }

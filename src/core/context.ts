@@ -12,10 +12,26 @@
  * it when a host sets one (see `configureContextStore` and `src/mount.ts`).
  */
 
-import type { Channel, FlowState, TelephonyContext } from "../types";
+import type { FlowState } from "../flows/types";
+import type { Channel } from "../types";
 import { getErrorMessage } from "./errors";
 import { DEFAULT_LANGUAGE, isValidLanguageCode } from "./language";
 import { logger } from "./logger";
+
+/**
+ * Conversation context stored per phone number.
+ */
+export interface TelephonyContext {
+  phoneNumber: string;
+  channel: Channel;
+  detectedLanguage: string | null;
+  messageHistory: Array<{ role: "user" | "assistant"; content: string; timestamp: number }>;
+  activeFlow: FlowState | null;
+  noSpeechRetries: number;
+  lastPrompt: string | null;
+  createdAt: number;
+  lastActivity: number;
+}
 
 /**
  * Structural dependency for per-phone-number context storage - any object
@@ -227,6 +243,14 @@ export function resolveLanguage(phoneNumber: string): string {
 }
 
 /**
+ * Messages retained per phone number before older ones are dropped. Enough
+ * for the outgoing post-processor and flow-intent detection to see a few
+ * turns of back-and-forth without the context growing unbounded for a
+ * long-running call or SMS thread.
+ */
+const MESSAGE_HISTORY_LIMIT = 10;
+
+/**
  * Add a message to conversation history
  */
 export function addMessage(
@@ -237,9 +261,8 @@ export function addMessage(
 ): void {
   const context = getOrCreateContext(phoneNumber, channel);
   context.messageHistory.push({ role, content, timestamp: Date.now() });
-  // Keep last 10 messages to avoid context bloat
-  if (context.messageHistory.length > 10) {
-    context.messageHistory = context.messageHistory.slice(-10);
+  if (context.messageHistory.length > MESSAGE_HISTORY_LIMIT) {
+    context.messageHistory = context.messageHistory.slice(-MESSAGE_HISTORY_LIMIT);
   }
   contexts.set(phoneNumber, context);
 }

@@ -1,8 +1,10 @@
 /**
- * Input Sanitization Middleware
+ * Input Truncation Middleware
  *
  * Enforces a maximum length on user-supplied input fields (SpeechResult, Body).
  * Truncates silently rather than rejecting, since Twilio expects a TwiML response.
+ * Length truncation only - no content validation or filtering; see
+ * `truncateInputMiddleware`'s doc comment.
  */
 
 import type { Context, Next } from "hono";
@@ -14,17 +16,18 @@ const DEFAULT_MAX_INPUT_LENGTH = 1000;
 type ParsedBody = Awaited<ReturnType<Context["req"]["parseBody"]>>;
 
 /**
- * Hono middleware factory for input sanitization.
+ * Hono middleware factory that truncates user-supplied input.
  *
  * Intercepts the request body and truncates SpeechResult and Body fields
- * to the configured maximum length. Stores the sanitized values on the
- * context so downstream handlers see the truncated values.
+ * to the configured maximum length. Stores the truncated values on the
+ * context so downstream handlers see them. Truncation only: nothing here
+ * validates, filters, or rejects content - the name says what it does.
  *
- * Handlers must read the body via `getSanitizedBody(c)` rather than calling
+ * Handlers must read the body via `getTruncatedBody(c)` rather than calling
  * `c.req.parseBody()` again - Hono re-parses the raw form data fresh on
  * every call, which would silently discard the truncation done here.
  */
-export function inputSanitizeMiddleware(maxInputLength?: number) {
+export function truncateInputMiddleware(maxInputLength?: number) {
   const maxLen = maxInputLength ?? DEFAULT_MAX_INPUT_LENGTH;
 
   return async (c: Context, next: Next) => {
@@ -46,20 +49,26 @@ export function inputSanitizeMiddleware(maxInputLength?: number) {
       body.Body = truncateGraphemeSafe(body.Body, maxLen);
     }
 
-    c.set("sanitizedBody", body);
+    c.set("truncatedBody", body);
 
     return next();
   };
 }
 
 /**
- * Read the parsed request body, preferring the sanitized copy stored by
- * `inputSanitizeMiddleware` so truncation isn't lost to a second, fresh
+ * Read the parsed request body, preferring the truncated copy stored by
+ * `truncateInputMiddleware` so truncation isn't lost to a second, fresh
  * `c.req.parseBody()` parse. Falls back to parsing directly when the
  * middleware hasn't run (e.g. routes without it, or in tests).
  */
-export async function getSanitizedBody(c: Context): Promise<ParsedBody> {
-  const cached = c.get("sanitizedBody") as ParsedBody | undefined;
+export async function getTruncatedBody(c: Context): Promise<ParsedBody> {
+  const cached = c.get("truncatedBody") as ParsedBody | undefined;
   if (cached) return cached;
   return c.req.parseBody();
 }
+
+/** @deprecated Use `truncateInputMiddleware` - this only truncates, it never validates or filters content. */
+export const inputSanitizeMiddleware = truncateInputMiddleware;
+
+/** @deprecated Use `getTruncatedBody`. */
+export const getSanitizedBody = getTruncatedBody;

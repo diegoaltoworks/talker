@@ -7,10 +7,76 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { MessagingChannel, Phrases, PhraseValue } from "../types";
+import type { MessagingChannel } from "../types";
 import { resolvePackagedDir } from "./assets";
 import { DEFAULT_LANGUAGE, normalizeLanguage } from "./language";
 import { logger } from "./logger";
+
+/**
+ * A phrase entry: a single string, or an array to rotate through (a random
+ * variant is picked per use).
+ */
+export type PhraseValue = string | string[];
+
+/**
+ * Phrase file structure for each language
+ */
+export interface Phrases {
+  greeting: PhraseValue;
+  didNotCatch: PhraseValue;
+  /** Unused by the no-speech ladder, which speaks didNotHearRetry/didNotHearFinal instead. Kept for backward compatibility. */
+  didNotHear: PhraseValue;
+  didNotHearRetry: PhraseValue;
+  didNotHearFinal: PhraseValue;
+  transfer: PhraseValue;
+  acknowledgment: PhraseValue;
+  farewell: {
+    morning: PhraseValue;
+    afternoon: PhraseValue;
+    evening: PhraseValue;
+  };
+  error: PhraseValue;
+  timeout: PhraseValue;
+  lostQuestion: PhraseValue;
+  /** Spoken when the caller trips the per-number rate limit. */
+  rateLimited: PhraseValue;
+  /** Spoken or sent when the chat backend fails or returns nothing usable. */
+  chatError: PhraseValue;
+  flow: {
+    cancelled: PhraseValue;
+    error: PhraseValue;
+    /** Asked when the engine fills some parameters but returns no prompt of its own. */
+    needMoreDetails: PhraseValue;
+    /**
+     * Words and phrases that end an in-progress flow in this language. A list,
+     * not a rotation: every entry is matched, none is spoken. Matching is
+     * whole-word, case-insensitive and accent-insensitive, so ASCII entries
+     * still match accented speech-to-text output.
+     */
+    cancellationKeywords: PhraseValue;
+  };
+  sms: {
+    greeting: PhraseValue;
+    greetingShort: PhraseValue;
+    callForHelp: PhraseValue;
+    processingError: PhraseValue;
+    genericError: PhraseValue;
+  };
+  whatsapp: {
+    greeting: PhraseValue;
+    greetingShort: PhraseValue;
+    callForHelp: PhraseValue;
+    processingError: PhraseValue;
+    genericError: PhraseValue;
+  };
+  voice: {
+    overCapPerNumber: PhraseValue;
+    overCapGlobal: PhraseValue;
+    limitUnavailable: PhraseValue;
+    unintelligible: PhraseValue;
+    answerFailed: PhraseValue;
+  };
+}
 
 /** A phrase file as read off disk, before validation - any key may be missing or malformed. */
 type RawPhrases = {
@@ -248,6 +314,11 @@ export function getPhrase(language: string, key: SimplePhraseKey, languageDir?: 
   return pick(phrases[key]);
 }
 
+/** Hour (local time, exclusive upper bound) after which a farewell is "afternoon", not "morning". */
+const FAREWELL_MORNING_END_HOUR = 12;
+/** Hour (local time, exclusive upper bound) after which a farewell is "evening", not "afternoon". */
+const FAREWELL_AFTERNOON_END_HOUR = 18;
+
 /**
  * Get a time-of-day farewell phrase
  */
@@ -255,10 +326,10 @@ export function getFarewellPhrase(language: string, languageDir?: string): strin
   const phrases = loadPhrases(language, languageDir);
   const hour = new Date().getHours();
 
-  if (hour < 12) {
+  if (hour < FAREWELL_MORNING_END_HOUR) {
     return pick(phrases.farewell.morning);
   }
-  if (hour < 18) {
+  if (hour < FAREWELL_AFTERNOON_END_HOUR) {
     return pick(phrases.farewell.afternoon);
   }
   return pick(phrases.farewell.evening);
@@ -327,7 +398,8 @@ export function getChannelPhrase(
 }
 
 /**
- * Get an SMS-specific phrase
+ * Get an SMS-specific phrase.
+ * @deprecated Use `getChannelPhrase("sms", language, key, languageDir)`.
  */
 export function getSmsPhrase(
   language: string,
@@ -341,6 +413,7 @@ export function getSmsPhrase(
  * Get a WhatsApp-specific phrase.
  * Falls back to this language's sms copy, then to English - see
  * `getChannelPhrase`.
+ * @deprecated Use `getChannelPhrase("whatsapp", language, key, languageDir)`.
  */
 export function getWhatsAppPhrase(
   language: string,

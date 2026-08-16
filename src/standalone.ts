@@ -29,14 +29,13 @@
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { DEFAULT_PROCESSING_MODEL } from "./core/defaults";
 import { logger } from "./core/logger";
 import { assertWebhookSecurity } from "./core/webhook-security";
 import { resolveStore } from "./db/resolve-store";
 import { FlowRegistry } from "./flows/registry";
 import { mountTelephony } from "./mount";
 import type { TalkerConfig, TalkerDependencies } from "./types";
-
-const DEFAULT_MODEL = "gpt-4o-mini";
 
 export interface StandaloneConfig extends TalkerConfig {
   /** OpenAI API key (required in standalone mode) */
@@ -89,7 +88,7 @@ export async function createStandaloneServer(config: StandaloneConfig) {
     openaiClient,
     config,
     openaiApiKey: config.openaiApiKey,
-    openaiModel: config.processing?.model || DEFAULT_MODEL,
+    openaiModel: config.processing?.model || DEFAULT_PROCESSING_MODEL,
     store,
   };
 

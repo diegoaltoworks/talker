@@ -13,11 +13,12 @@
 import type { Context } from "hono";
 import { stripWhatsAppPrefix } from "../../adapters/twilio";
 import { resolveLanguage } from "../../core/context";
+import { UNKNOWN_PHONE_NUMBER } from "../../core/defaults";
 import { logger } from "../../core/logger";
 import { emitMessageTap } from "../../core/message-tap";
 import { getChannelPhrase } from "../../core/phrases";
-import { messageTwiml } from "../../core/twiml";
-import { getSanitizedBody } from "../../middleware/input-sanitize";
+import { messageTwiml, twimlResponse } from "../../core/twiml";
+import { getTruncatedBody } from "../../middleware/input-sanitize";
 import type { MessagingChannel, TalkerDependencies } from "../../types";
 
 /**
@@ -30,9 +31,9 @@ export async function handleFallback(
   deps: TalkerDependencies,
   channel: MessagingChannel,
 ): Promise<Response> {
-  const body = await getSanitizedBody(c);
+  const body = await getTruncatedBody(c);
 
-  const rawFrom = (body.From as string) || "unknown";
+  const rawFrom = (body.From as string) || UNKNOWN_PHONE_NUMBER;
   const rawTo = (body.To as string) || "";
   const phoneNumber = channel === "whatsapp" ? stripWhatsAppPrefix(rawFrom) : rawFrom.trim();
   const to = channel === "whatsapp" ? stripWhatsAppPrefix(rawTo) : rawTo;
@@ -73,5 +74,5 @@ export async function handleFallback(
     to: phoneNumber,
     body: errorMessage,
   });
-  return c.text(messageTwiml(errorMessage), 200, { "Content-Type": "text/xml" });
+  return twimlResponse(c, messageTwiml(errorMessage));
 }

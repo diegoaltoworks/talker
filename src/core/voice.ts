@@ -16,7 +16,7 @@ const DEFAULT_VOICES: Record<string, VoiceConfig> = {
   pt: { voice: "Polly.Ricardo", language: "pt-BR" },
 };
 
-const DEFAULT_VOICE = DEFAULT_VOICES.en;
+const DEFAULT_TELEPHONY_VOICE = DEFAULT_VOICES.en;
 
 /**
  * Get voice configuration for a language, with optional custom overrides.
@@ -38,7 +38,7 @@ export function getVoiceConfig(
     const voice = DEFAULT_VOICES[language];
     if (voice) return voice;
   }
-  return DEFAULT_VOICE;
+  return DEFAULT_TELEPHONY_VOICE;
 }
 
 /**

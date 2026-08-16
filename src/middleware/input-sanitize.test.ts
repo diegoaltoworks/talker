@@ -1,16 +1,21 @@
 import { describe, expect, it } from "bun:test";
 import { Hono } from "hono";
-import { getSanitizedBody, inputSanitizeMiddleware } from "./input-sanitize";
+import {
+  getSanitizedBody,
+  getTruncatedBody,
+  inputSanitizeMiddleware,
+  truncateInputMiddleware,
+} from "./input-sanitize";
 
 // Grapheme-safe truncation itself is tested against `truncateGraphemeSafe`
 // directly in core/text.test.ts, the function this middleware delegates to.
-describe("Input Sanitization", () => {
-  describe("inputSanitizeMiddleware + getSanitizedBody", () => {
+describe("Input Truncation", () => {
+  describe("truncateInputMiddleware + getTruncatedBody", () => {
     function appWithLimit(maxLen: number) {
       const app = new Hono();
-      app.use("*", inputSanitizeMiddleware(maxLen));
+      app.use("*", truncateInputMiddleware(maxLen));
       app.post("/", async (c) => {
-        const body = await getSanitizedBody(c);
+        const body = await getTruncatedBody(c);
         return c.json({ SpeechResult: body.SpeechResult, Body: body.Body });
       });
       return app;
@@ -53,7 +58,7 @@ describe("Input Sanitization", () => {
     it("falls back to a direct parse when the middleware hasn't run", async () => {
       const app = new Hono();
       app.post("/", async (c) => {
-        const body = await getSanitizedBody(c);
+        const body = await getTruncatedBody(c);
         return c.json({ SpeechResult: body.SpeechResult });
       });
 
@@ -61,6 +66,16 @@ describe("Input Sanitization", () => {
       const json = await res.json();
 
       expect(json.SpeechResult).toBe("hello");
+    });
+  });
+
+  describe("deprecated aliases", () => {
+    it("inputSanitizeMiddleware is the same function as truncateInputMiddleware", () => {
+      expect(inputSanitizeMiddleware).toBe(truncateInputMiddleware);
+    });
+
+    it("getSanitizedBody is the same function as getTruncatedBody", () => {
+      expect(getSanitizedBody).toBe(getTruncatedBody);
     });
   });
 });

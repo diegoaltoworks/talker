@@ -24,14 +24,13 @@
 
 import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import type { Hono } from "hono";
+import { DEFAULT_PROCESSING_MODEL } from "./core/defaults";
 import { logger } from "./core/logger";
 import { assertWebhookSecurity } from "./core/webhook-security";
 import { resolveStore } from "./db/resolve-store";
 import { FlowRegistry } from "./flows/registry";
 import { mountTelephony } from "./mount";
 import type { TalkerConfig, TalkerDependencies } from "./types";
-
-const DEFAULT_MODEL = "gpt-4o-mini";
 
 /**
  * Create and mount telephony routes on a Hono app (chatter plugin mode)
@@ -67,7 +66,7 @@ export async function createTelephonyRoutes(
     openaiClient: chatterDeps.client,
     config: resolvedConfig,
     openaiApiKey,
-    openaiModel: config.processing?.model || DEFAULT_MODEL,
+    openaiModel: config.processing?.model || DEFAULT_PROCESSING_MODEL,
     store,
   };
 

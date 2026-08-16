@@ -7,17 +7,21 @@
 
 import type { Context } from "hono";
 import { getLastPrompt, incrementNoSpeechRetries, resolveLanguage } from "../../core/context";
+import { UNKNOWN_PHONE_NUMBER } from "../../core/defaults";
 import { logger } from "../../core/logger";
 import { emitMessageTap } from "../../core/message-tap";
 import { getPhrase } from "../../core/phrases";
-import { gatherTwiml, sayTwiml } from "../../core/twiml";
+import { gatherTwiml, sayTwiml, twimlResponse } from "../../core/twiml";
 import type { TalkerConfig } from "../../types";
+
+/** Maximum no-speech retries before a call ends, when `TalkerConfig.maxNoSpeechRetries` is not configured. */
+export const DEFAULT_MAX_NO_SPEECH_RETRIES = 3;
 
 export async function handleNoSpeech(c: Context, config: TalkerConfig): Promise<Response> {
   const body = await c.req.parseBody();
-  const phoneNumber = ((body.From as string) || "unknown").trim();
+  const phoneNumber = ((body.From as string) || UNKNOWN_PHONE_NUMBER).trim();
   const to = (body.To as string) || "";
-  const maxRetries = config.maxNoSpeechRetries ?? 3;
+  const maxRetries = config.maxNoSpeechRetries ?? DEFAULT_MAX_NO_SPEECH_RETRIES;
 
   const retryCount = incrementNoSpeechRetries(phoneNumber);
   const language = resolveLanguage(phoneNumber);
@@ -32,7 +36,7 @@ export async function handleNoSpeech(c: Context, config: TalkerConfig): Promise<
       to: phoneNumber,
       body: finalMessage,
     });
-    return c.text(sayTwiml(finalMessage, language, config), 200, { "Content-Type": "text/xml" });
+    return twimlResponse(c, sayTwiml(finalMessage, language, config));
   }
 
   logger.info("retrying speech gather", { phoneNumber, retryCount, maxRetries });
@@ -53,7 +57,5 @@ export async function handleNoSpeech(c: Context, config: TalkerConfig): Promise<
     to: phoneNumber,
     body: prompt,
   });
-  return c.text(gatherTwiml(prompt, language, config, phoneNumber), 200, {
-    "Content-Type": "text/xml",
-  });
+  return twimlResponse(c, gatherTwiml(prompt, language, config, phoneNumber));
 }

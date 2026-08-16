@@ -31,7 +31,7 @@ export interface TranscriberConfig {
 }
 
 export const DEFAULT_TRANSCRIPT_MAX_CHARS = 2000;
-const DEFAULT_MODEL = "gpt-4o-mini-transcribe";
+const DEFAULT_TRANSCRIBE_MODEL = "gpt-4o-mini-transcribe";
 
 /** Transcribe audio bytes, or null when no usable transcript came back. */
 export type Transcriber = (bytes: Uint8Array) => Promise<string | null>;
@@ -60,7 +60,7 @@ export function createTranscriber(config: TranscriberConfig): Transcriber {
 
       const result = await config.client().audio.transcriptions.create({
         file: new File([buffer], "voice.ogg", { type: "audio/ogg" }),
-        model: config.model ?? DEFAULT_MODEL,
+        model: config.model ?? DEFAULT_TRANSCRIBE_MODEL,
       });
 
       const text = (result.text ?? "").trim();

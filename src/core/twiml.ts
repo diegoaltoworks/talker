@@ -8,11 +8,22 @@
  * and read out as "ampersand a m p semicolon".
  */
 
+import type { Context } from "hono";
 import type { TalkerConfig } from "../types";
+import { CALL_ANSWER_PATH, CALL_NO_SPEECH_PATH, CALL_RESPOND_PATH } from "./call-paths";
 import { setLastPrompt } from "./context";
 import { getFarewellPhrase, getPhrase } from "./phrases";
 import { getVoiceConfig } from "./voice";
 import { escapeXml } from "./xml";
+
+/**
+ * Send a TwiML response with the headers Twilio expects. Every route handler
+ * that returns TwiML goes through this - a bare `c.text(xml, 200, {...})` at
+ * each call site is how the content-type header drifted before.
+ */
+export function twimlResponse(c: Context, xml: string, status: 200 | 429 = 200): Response {
+  return c.text(xml, status, { "Content-Type": "text/xml" });
+}
 
 /**
  * Generate TwiML for a speech gather with response.
@@ -37,10 +48,10 @@ export function gatherTwiml(
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Gather input="speech" action="${prefix}/call/respond" method="POST" speechTimeout="auto" language="${escapeXml(lang)}">
+    <Gather input="speech" action="${prefix}${CALL_RESPOND_PATH}" method="POST" speechTimeout="auto" language="${escapeXml(lang)}">
         <Say voice="${escapeXml(voice)}" language="${escapeXml(lang)}">${escapeXml(prompt)}</Say>
     </Gather>
-    <Redirect method="POST">${prefix}/call/no-speech</Redirect>
+    <Redirect method="POST">${prefix}${CALL_NO_SPEECH_PATH}</Redirect>
 </Response>`;
 }
 
@@ -87,7 +98,7 @@ export function acknowledgmentTwiml(
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="${escapeXml(voice)}" language="${escapeXml(lang)}">${escapeXml(resolvedMessage)}</Say>
-    <Redirect method="POST">${prefix}/call/answer</Redirect>
+    <Redirect method="POST">${prefix}${CALL_ANSWER_PATH}</Redirect>
 </Response>`;
 }
 

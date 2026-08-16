@@ -40,7 +40,7 @@
 export type { SendMessageOptions } from "./adapters/twilio";
 // Twilio adapter
 export { sendSMS, sendWhatsApp, stripWhatsAppPrefix } from "./adapters/twilio";
-export type { ContextStore } from "./core/context";
+export type { ContextStore, TelephonyContext } from "./core/context";
 // clearAllContexts, incrementNoSpeechRetries and resetNoSpeechRetries are
 // internal helpers of ./core/context (see their @deprecated tags there)
 // re-exported here only because this barrel re-exports the whole module;
@@ -71,6 +71,7 @@ export {
 export { DEFAULT_LANGUAGE, isValidLanguageCode, normalizeLanguage } from "./core/language";
 // Logger
 export { logger, redactPhone } from "./core/logger";
+export type { Phrases, PhraseValue } from "./core/phrases";
 export {
   getCancellationKeywords,
   getChannelPhrase,
@@ -82,7 +83,6 @@ export {
   getWhatsAppPhrase,
   loadPhrases,
 } from "./core/phrases";
-
 // Core modules (for advanced customization)
 export {
   getIncomingPrompt,
@@ -90,6 +90,7 @@ export {
   processIncoming,
   processOutgoing,
 } from "./core/processing";
+export type { IncomingResult } from "./core/processing/incoming";
 // TwiML generators
 export {
   acknowledgmentTwiml,
@@ -114,8 +115,23 @@ export { loadFlowsFromDirectory } from "./flows/loader";
 export { processFlow, shouldExitFlow } from "./flows/manager";
 // Flow engine
 export { FlowRegistry } from "./flows/registry";
+export type {
+  FlowDefinition,
+  FlowExtractionResult,
+  FlowHandler,
+  FlowHandlerContext,
+  FlowHandlerResult,
+  FlowPrefill,
+  FlowResult,
+  FlowSchema,
+  FlowSchemaProperty,
+  FlowState,
+  IntentDetection,
+  LoadedFlow,
+} from "./flows/types";
+export { CURRENT_FLOW_CONTRACT_VERSION, LEGACY_FLOW_CONTRACT_VERSION } from "./flows/types";
 export { getExitMessage } from "./flows/utils";
-export { inputSanitizeMiddleware } from "./middleware/input-sanitize";
+export { inputSanitizeMiddleware, truncateInputMiddleware } from "./middleware/input-sanitize";
 export { rateLimitMiddleware, stopRateLimitCleanup } from "./middleware/rate-limit";
 // Security middleware
 export type { TwilioSignatureOptions } from "./middleware/twilio-signature";
@@ -133,36 +149,19 @@ export type { StandaloneConfig } from "./standalone";
 // Standalone entry point (no chatter required)
 export { createStandaloneServer } from "./standalone";
 // Types
-// Flow types
 export type {
   Channel,
   ChatbotConfig,
-  FlowDefinition,
-  FlowExtractionResult,
-  FlowHandler,
-  FlowHandlerContext,
-  FlowHandlerResult,
-  FlowPrefill,
-  FlowResult,
-  FlowSchema,
-  FlowSchemaProperty,
-  FlowState,
-  IncomingResult,
-  IntentDetection,
-  LoadedFlow,
   MessageStatusEvent,
   MessageTapEvent,
   MessagingChannel,
-  Phrases,
   ProcessingConfig,
   TalkerConfig,
   TalkerDependencies,
-  TelephonyContext,
   TelephonyFeatureFlags,
   TwilioConfig,
   VoiceConfig,
 } from "./types";
-export { CURRENT_FLOW_CONTRACT_VERSION, LEGACY_FLOW_CONTRACT_VERSION } from "./types";
 // Voice capabilities (STT, TTS, Ogg/Opus inspection, daily spend guards).
 // Channel-agnostic factories with injected clients — see src/voice/index.ts.
 export type {

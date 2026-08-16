@@ -6,8 +6,15 @@
  */
 
 import { Hono } from "hono";
+import {
+  CALL_ANSWER_PATH,
+  CALL_NO_SPEECH_PATH,
+  CALL_PATH,
+  CALL_RESPOND_PATH,
+  CALL_STATUS_PATH,
+} from "../../core/call-paths";
 import type { FlowRegistry } from "../../flows/registry";
-import { inputSanitizeMiddleware } from "../../middleware/input-sanitize";
+import { truncateInputMiddleware } from "../../middleware/input-sanitize";
 import { rateLimitMiddleware } from "../../middleware/rate-limit";
 import { twilioSignatureMiddleware } from "../../middleware/twilio-signature";
 import type { TalkerDependencies } from "../../types";
@@ -30,13 +37,13 @@ export function callRoutes(deps: TalkerDependencies, registry: FlowRegistry) {
   // so this alone covers every route registered below.
   app.use("/call/*", twilioSignatureMiddleware(authToken, baseUrl, signatureOptions));
   app.use("/call/*", rateLimitMiddleware(deps.config.rateLimit, deps.config));
-  app.use("/call/*", inputSanitizeMiddleware(deps.config.maxInputLength));
+  app.use("/call/*", truncateInputMiddleware(deps.config.maxInputLength));
 
-  app.post("/call", (c) => handleInitialCall(c, deps.config));
-  app.post("/call/respond", (c) => handleRespond(c, deps, registry));
-  app.post("/call/answer", (c) => handleAnswer(c, deps.config));
-  app.post("/call/no-speech", (c) => handleNoSpeech(c, deps.config));
-  app.post("/call/status", (c) => handleStatus(c, deps));
+  app.post(CALL_PATH, (c) => handleInitialCall(c, deps.config));
+  app.post(CALL_RESPOND_PATH, (c) => handleRespond(c, deps, registry));
+  app.post(CALL_ANSWER_PATH, (c) => handleAnswer(c, deps.config));
+  app.post(CALL_NO_SPEECH_PATH, (c) => handleNoSpeech(c, deps.config));
+  app.post(CALL_STATUS_PATH, (c) => handleStatus(c, deps));
 
   return app;
 }

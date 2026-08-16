@@ -7,17 +7,18 @@
 
 import type { Context } from "hono";
 import { clearContext } from "../../core/context";
+import { UNKNOWN_PHONE_NUMBER } from "../../core/defaults";
 import { resolveGreeting } from "../../core/greeting";
 import { DEFAULT_LANGUAGE } from "../../core/language";
 import { logger } from "../../core/logger";
 import { emitMessageTap } from "../../core/message-tap";
 import { getPhrase } from "../../core/phrases";
-import { gatherTwiml } from "../../core/twiml";
+import { gatherTwiml, twimlResponse } from "../../core/twiml";
 import type { TalkerConfig } from "../../types";
 
 export async function handleInitialCall(c: Context, config: TalkerConfig): Promise<Response> {
   const body = await c.req.parseBody();
-  const phoneNumber = ((body.From as string) || "unknown").trim();
+  const phoneNumber = ((body.From as string) || UNKNOWN_PHONE_NUMBER).trim();
   const to = (body.To as string) || "";
   logger.info("call started", { phoneNumber });
 
@@ -42,5 +43,5 @@ export async function handleInitialCall(c: Context, config: TalkerConfig): Promi
   // gatherTwiml nests the greeting inside Gather (barge-in) and redirects to
   // /call/no-speech on silence, so the retry ladder engages from turn one.
   const twiml = gatherTwiml(greeting, DEFAULT_LANGUAGE, config, phoneNumber);
-  return c.text(twiml, 200, { "Content-Type": "text/xml" });
+  return twimlResponse(c, twiml);
 }

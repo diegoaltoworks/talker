@@ -20,16 +20,11 @@ import { getErrorMessage } from "../core/errors";
 import { DEFAULT_LANGUAGE } from "../core/language";
 import { logger } from "../core/logger";
 import { getFlowPhrase } from "../core/phrases";
-import type {
-  Channel,
-  FlowExtractionResult,
-  FlowResult,
-  LoadedFlow,
-  TalkerDependencies,
-} from "../types";
+import type { Channel, TalkerDependencies } from "../types";
 import type { FlowRegistry } from "./registry";
+import type { FlowExtractionResult, FlowResult, LoadedFlow } from "./types";
 import { toChatterFlow } from "./types-adapter";
-import { shouldExitFlow as checkExitFlow, getExitMessage } from "./utils";
+import { shouldExitFlow as checkExitFlow } from "./utils";
 
 export { shouldExitFlow } from "./utils";
 
@@ -93,7 +88,7 @@ export async function processFlow(
     clearActiveFlow(phoneNumber);
     return {
       isFlowActive: false,
-      response: getExitMessage(language, deps.config.languageDir),
+      response: getFlowPhrase(language, "cancelled", deps.config.languageDir),
       flowCompleted: false,
       cancelled: true,
     };

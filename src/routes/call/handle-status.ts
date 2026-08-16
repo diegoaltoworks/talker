@@ -7,13 +7,14 @@
 
 import type { Context } from "hono";
 import { clearContext } from "../../core/context";
+import { UNKNOWN_PHONE_NUMBER } from "../../core/defaults";
 import { logger } from "../../core/logger";
 import { persistFinalSession, persistSession } from "../../db/persist";
 import type { TalkerDependencies } from "../../types";
 
 export async function handleStatus(c: Context, deps: TalkerDependencies): Promise<Response> {
   const body = await c.req.parseBody();
-  const phoneNumber = ((body.From as string) || "unknown").trim();
+  const phoneNumber = ((body.From as string) || UNKNOWN_PHONE_NUMBER).trim();
   const callStatus = body.CallStatus as string;
 
   logger.info("call status update", { phoneNumber, callStatus });

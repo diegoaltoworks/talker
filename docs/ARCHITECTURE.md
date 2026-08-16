@@ -229,9 +229,11 @@ behavior and checking a return value:
 | No hardcoded caller-facing text in `src/`: no literal `response`/`smsContent`/`whatsappContent`, no TwiML outside `src/core/twiml.ts`, no literal message into a TwiML builder, no literal language into a phrase lookup | Everything a caller hears or reads comes from the phrase files in the language they are speaking, rather than an English default frozen at a call site | `src/phrase-guard.test.ts` |
 | Every `package.json` `exports` key resolves under both `import` and `require`, ships its declared types, and carries no test/map declarations | A subpath the build doesn't produce can't reach a consumer silently | `scripts/smoke-packed-install.sh`, run via `bun run test:packaged` |
 | Every emitted `dist/**/*.{js,mjs}` bundle stays under its budget in `scripts/bundle-budgets.ts`, and every emitted bundle has a budget entry | Bundle-size creep (a new dependency pulled in, an accidental non-external import) is a build failure, not a silent regression discovered later | `scripts/bundle-budgets.ts`, run via `bun run check:bundle-budgets` |
+| Em-dash count across source, scripts, tests, docs and CI workflows stays at or under a pinned baseline (a ratchet, not a hard zero - see CONTRIBUTING.md) | The "no em-dashes" style rule is enforced instead of only documented, without requiring every pre-existing occurrence to be rewritten in one pass | `scripts/check-em-dashes.ts`, run via `bun run check:em-dashes` |
 
 The first three are `bun test` files, so `bun run check` (which runs
 `bun test`) fails on a violation the same way it fails on a broken test. The
+em-dash gate is a standalone script also wired into `bun run check`. The
 last two build `dist/` first (a packed tarball for the exports gate, plain
 `esbuild` output for the bundle-budget gate) - too slow for the inner dev
 loop - so they run as their own CI steps inside the "Packed tarball imports

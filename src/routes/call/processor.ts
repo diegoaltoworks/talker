@@ -41,8 +41,15 @@ export async function processCall(
   // Transfer to human if requested
   if (incoming.shouldTransfer) {
     logger.info("transferring to human", { phoneNumber, language: incoming.detectedLanguage });
-    persistSession(phoneNumber, "call");
+    await persistSession(phoneNumber, "call");
     persistFinalSession(phoneNumber, "call", "redirected", incoming.processedMessage);
+    // transferTwiml <Dial>s straight to a human with no further <Gather> -
+    // talker won't be asked to handle this call again, same as the
+    // shouldEndCall branch below. Clearing the context here (not just
+    // relying on the caller's own post-response persistSession call) stops
+    // that unconditional call from re-upserting reason:"ended" over the
+    // "redirected" write just above once the context it reads is gone.
+    clearContext(phoneNumber);
     const message = getPhrase(incoming.detectedLanguage, "transfer", deps.config.languageDir);
     tapOutbound(message);
     return transferTwiml(incoming.detectedLanguage, deps.config, message);
@@ -51,7 +58,7 @@ export async function processCall(
   // End call politely if user is done
   if (incoming.shouldEndCall) {
     logger.info("ending call - user done", { phoneNumber, language: incoming.detectedLanguage });
-    persistSession(phoneNumber, "call");
+    await persistSession(phoneNumber, "call");
     persistFinalSession(phoneNumber, "call", "ended");
     clearContext(phoneNumber);
     const message = getFarewellPhrase(incoming.detectedLanguage, deps.config.languageDir);

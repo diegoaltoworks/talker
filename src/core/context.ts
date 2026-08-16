@@ -13,15 +13,44 @@ import { logger } from "./logger";
 const contexts = new Map<string, TelephonyContext>();
 
 let cleanupTimer: ReturnType<typeof setInterval> | null = null;
+let cleanupConfig: { ttlMs: number; intervalMs: number } | null = null;
 
 /**
  * Start periodic cleanup of stale contexts. `onTick`, when given, runs on
  * every tick alongside context expiry - a way for other in-memory stores
  * (e.g. call/pending's PendingQuery map) to reuse this single timer instead
  * of running their own.
+ *
+ * The timer is a module-level singleton: a second call while one is already
+ * running is a no-op and its `ttlMs`/`intervalMs` are silently ignored (only
+ * `onTick` would matter here anyway, since both mounts share the same
+ * `contexts` map). Mounting `createTelephonyRoutes`/`createStandaloneServer`
+ * more than once in a process - two chatter instances, a test that doesn't
+ * call `stopCleanup()` between setups - inherits the first mount's config;
+ * this logs so that isn't silent. Call `stopCleanup()` first if a later
+ * mount's config should actually take effect.
+ *
+ * Unref'd so a lone pending interval never keeps a standalone/CLI process
+ * alive after everything else has finished - callers that do need to wait on
+ * it (tests measuring ticks) already await other signals, not process exit.
  */
 export function startCleanup(ttlMs: number, intervalMs: number, onTick?: () => void): void {
-  if (cleanupTimer) return;
+  if (cleanupTimer) {
+    const configChanged =
+      cleanupConfig && (cleanupConfig.ttlMs !== ttlMs || cleanupConfig.intervalMs !== intervalMs);
+    // A second call's onTick is always dropped silently, even when
+    // ttlMs/intervalMs match - it's a distinct closure every time (e.g. a
+    // second mount's own sweepPending(pendingQueryTtlMs) config), so there's
+    // no meaningful way to compare it against the one already wired up.
+    if (configChanged || onTick) {
+      logger.warn(
+        "startCleanup called again while a cleanup timer is already running - ignoring, first mount wins",
+        { active: cleanupConfig, ignored: { ttlMs, intervalMs, hasOnTick: !!onTick } },
+      );
+    }
+    return;
+  }
+  cleanupConfig = { ttlMs, intervalMs };
   cleanupTimer = setInterval(() => {
     const now = Date.now();
     for (const [phoneNumber, context] of contexts) {
@@ -36,6 +65,7 @@ export function startCleanup(ttlMs: number, intervalMs: number, onTick?: () => v
       logger.error("cleanup onTick failed", { error: getErrorMessage(error) });
     }
   }, intervalMs);
+  cleanupTimer.unref?.();
 }
 
 /**
@@ -45,6 +75,7 @@ export function stopCleanup(): void {
   if (cleanupTimer) {
     clearInterval(cleanupTimer);
     cleanupTimer = null;
+    cleanupConfig = null;
   }
 }
 

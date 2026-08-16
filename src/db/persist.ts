@@ -14,13 +14,16 @@ import { generateSessionId, insertMessage, upsertSession } from "./sessions";
 
 /**
  * Persist the current conversation state to the database.
- * Non-blocking — fires and forgets. Logs errors but never throws.
+ * Awaits the session row write (so a caller that also calls
+ * `persistFinalSession` right after can order the two - see its docstring),
+ * but message inserts stay fire-and-forget since they don't share a
+ * mutable field two calls could race on. Logs errors but never throws.
  */
-export function persistSession(
+export async function persistSession(
   phoneNumber: string,
   channel: Channel,
   conversationId?: string,
-): void {
+): Promise<void> {
   const context = getContext(phoneNumber);
   const language = getDetectedLanguage(phoneNumber) || "en";
   const messages = getMessageHistory(phoneNumber);
@@ -32,7 +35,7 @@ export function persistSession(
   const sessionId = generateSessionId(phoneNumber, context.createdAt);
   const now = Date.now();
 
-  upsertSession({
+  await upsertSession({
     id: sessionId,
     phoneNumber: normalizedPhone,
     channel,
@@ -63,6 +66,13 @@ export function persistSession(
 /**
  * Persist the final session state when a call completes.
  * Sets the reason and optional transfer reason.
+ *
+ * Writes the same session row `persistSession` does (upsert by session id),
+ * so a caller that reports both the ongoing state and the final outcome for
+ * one interaction must `await persistSession(...)` before calling this -
+ * otherwise `persistSession`'s hardcoded `reason: "ended"` can complete after
+ * this call's real reason and silently overwrite it (both are async database
+ * writes with no ordering guarantee unless the caller imposes one).
  */
 export function persistFinalSession(
   phoneNumber: string,

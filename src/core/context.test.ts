@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, spyOn } from "bun:test";
 import {
   addMessage,
   clearActiveFlow,
@@ -20,6 +20,7 @@ import {
   stopCleanup,
   updateFlowParams,
 } from "./context";
+import { logger } from "./logger";
 
 describe("Context Store", () => {
   afterEach(() => {
@@ -192,6 +193,81 @@ describe("Context Store", () => {
 
       await new Promise((r) => setTimeout(r, 20));
       expect(ticks).toBeGreaterThan(0);
+    });
+
+    it("should unref the interval so it never keeps the process alive on its own", () => {
+      stopCleanup();
+      const originalSetInterval = globalThis.setInterval;
+      let unrefCalled = false;
+      globalThis.setInterval = ((fn: (...args: unknown[]) => void, ms?: number) => {
+        const timer = originalSetInterval(fn, ms);
+        const originalUnref = timer.unref?.bind(timer);
+        timer.unref = () => {
+          unrefCalled = true;
+          return originalUnref?.() ?? timer;
+        };
+        return timer;
+      }) as typeof setInterval;
+
+      try {
+        startCleanup(1000, 5);
+        expect(unrefCalled).toBe(true);
+      } finally {
+        globalThis.setInterval = originalSetInterval;
+      }
+    });
+
+    it("should warn and keep the first mount's config on a second call with a different interval", async () => {
+      stopCleanup();
+      const warnSpy = spyOn(logger, "warn").mockImplementation(() => {});
+      let firstTicks = 0;
+      try {
+        startCleanup(1000, 5, () => {
+          firstTicks += 1;
+        });
+
+        startCleanup(2000, 9999);
+
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+        const [, data] = warnSpy.mock.calls[0] as [string, Record<string, unknown>];
+        expect(data.active).toEqual({ ttlMs: 1000, intervalMs: 5 });
+        expect(data.ignored).toMatchObject({ ttlMs: 2000, intervalMs: 9999 });
+
+        // The second call's 9999ms interval did not replace the first's 5ms
+        // one - onTick keeps firing on the original cadence.
+        await new Promise((r) => setTimeout(r, 20));
+        expect(firstTicks).toBeGreaterThan(0);
+      } finally {
+        warnSpy.mockRestore();
+      }
+    });
+
+    it("should warn on a second call even with the same ttl/interval, since its onTick is dropped", () => {
+      stopCleanup();
+      const warnSpy = spyOn(logger, "warn").mockImplementation(() => {});
+      try {
+        startCleanup(1000, 5);
+        startCleanup(1000, 5, () => {});
+
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+        const [, data] = warnSpy.mock.calls[0] as [string, Record<string, unknown>];
+        expect((data.ignored as { hasOnTick: boolean }).hasOnTick).toBe(true);
+      } finally {
+        warnSpy.mockRestore();
+      }
+    });
+
+    it("should not warn on a second call with identical config and no onTick", () => {
+      stopCleanup();
+      const warnSpy = spyOn(logger, "warn").mockImplementation(() => {});
+      try {
+        startCleanup(1000, 5);
+        startCleanup(1000, 5);
+
+        expect(warnSpy).not.toHaveBeenCalled();
+      } finally {
+        warnSpy.mockRestore();
+      }
     });
   });
 });

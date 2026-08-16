@@ -105,6 +105,20 @@ export interface ProcessingConfig {
   incomingPromptPath?: string;
   /** Path to outgoing message system prompt */
   outgoingPromptPath?: string;
+  /**
+   * Base URL for the chat completions API the pre/post-processing pipeline
+   * calls (an Azure OpenAI deployment, a self-hosted gateway, a proxy).
+   * Default: "https://api.openai.com/v1/chat/completions"
+   */
+  baseUrl?: string;
+  /**
+   * Abort the pre/post-processing OpenAI request after this many
+   * milliseconds. A hung upstream request would otherwise hold the /call,
+   * /sms or /whatsapp webhook open indefinitely - callers already treat a
+   * failed call as "use the original text unmodified", so aborting is safe.
+   * Default: 8000 (8 seconds)
+   */
+  requestTimeoutMs?: number;
 }
 
 /**

@@ -38,6 +38,31 @@ describe("Input Sanitization", () => {
       const result = truncateInput(longInput, 1000);
       expect(result.length).toBe(1000);
     });
+
+    it("should not split a surrogate pair at the truncation boundary", () => {
+      // "ab" + an astral emoji (a surrogate pair, length 2) + "cd" -> length 6.
+      // Cutting at 3 lands inside the pair; a naive substring(0, 3) would keep
+      // only the lone high surrogate.
+      const input = "ab\u{1F600}cd";
+      const result = truncateInput(input, 3);
+      expect(result).toBe("ab");
+      // No lone surrogate at the end of the result.
+      const last = result.charCodeAt(result.length - 1);
+      expect(last >= 0xd800 && last <= 0xdbff).toBe(false);
+    });
+
+    it("should keep a whole astral character when it fits", () => {
+      const input = "ab\u{1F600}cd";
+      const result = truncateInput(input, 4);
+      expect(result).toBe("ab\u{1F600}");
+    });
+
+    it("should not split a base character and its combining mark", () => {
+      // "e" + combining acute accent (U+0301), then "f"
+      const input = "éf";
+      const result = truncateInput(input, 1);
+      expect(result).toBe("");
+    });
   });
 
   describe("inputSanitizeMiddleware + getSanitizedBody", () => {

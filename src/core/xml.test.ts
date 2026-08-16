@@ -35,4 +35,16 @@ describe("escapeXml", () => {
   it("should handle empty string", () => {
     expect(escapeXml("")).toBe("");
   });
+
+  it("should strip XML-invalid C0 control characters", () => {
+    expect(escapeXml("hello\x00\x01\x1Fworld")).toBe("helloworld");
+  });
+
+  it("should keep tab, newline, and carriage return", () => {
+    expect(escapeXml("a\tb\nc\rd")).toBe("a\tb\nc\rd");
+  });
+
+  it("should strip control characters mixed with entities", () => {
+    expect(escapeXml("a\x07 & b\x0Ec")).toBe("a &amp; bc");
+  });
 });

@@ -19,7 +19,7 @@ export async function handleStatus(c: Context): Promise<Response> {
 
   if (callStatus === "completed") {
     // Final save — persist all messages and mark session as ended
-    persistSession(phoneNumber, "call");
+    await persistSession(phoneNumber, "call");
     persistFinalSession(phoneNumber, "call", "ended");
     clearContext(phoneNumber);
   }

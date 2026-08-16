@@ -263,3 +263,16 @@ describe("chat chatFn", () => {
     expect(answerOnce).not.toHaveBeenCalled();
   });
 });
+
+describe("chat standalone mode (no chatter dependencies)", () => {
+  it("returns a generic error, rather than throwing, when neither chatFn nor chatbot nor chatter is configured", async () => {
+    const deps: TalkerDependencies = {
+      config: {},
+      openaiApiKey: "test-key",
+      openaiModel: "gpt-4o-mini",
+    };
+    const reply = await chat(deps, "+4470001", "hello", "sms");
+    expect(reply).toBe("Sorry, I encountered an error processing your question.");
+    expect(answerOnce).not.toHaveBeenCalled();
+  });
+});

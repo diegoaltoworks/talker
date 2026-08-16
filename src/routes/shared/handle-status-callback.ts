@@ -20,7 +20,7 @@ import { getErrorMessage } from "../../core/errors";
 import { fireAndForget } from "../../core/fire-and-forget";
 import { logger } from "../../core/logger";
 import { upsertMessageStatus } from "../../db/sessions";
-import type { MessageStatusEvent, TalkerDependencies } from "../../types";
+import type { MessageStatusEvent, MessagingChannel, TalkerDependencies } from "../../types";
 
 /**
  * Handle a message status callback from Twilio.
@@ -29,7 +29,7 @@ import type { MessageStatusEvent, TalkerDependencies } from "../../types";
 export async function handleStatusCallback(
   c: Context,
   deps: TalkerDependencies,
-  channel: "sms" | "whatsapp",
+  channel: MessagingChannel,
 ): Promise<Response> {
   const body = await c.req.parseBody();
 

@@ -54,9 +54,17 @@ async function extractFlowParams(
     return { extractedParams: {}, allParamsFilled: true };
   }
 
+  if (!deps.openaiClient) {
+    // Reachable only if a host builds TalkerDependencies by hand instead of
+    // via createTelephonyRoutes/createStandaloneServer, which both populate
+    // openaiClient exactly when a flow could ever reach here (a flow only
+    // loads with a client already available to bootstrap it).
+    throw new Error("flow parameter extraction requires deps.openaiClient, which is unset");
+  }
+
   const { extractParameters } = await registry.getEngine();
   return extractParameters(
-    deps.chatter.client,
+    deps.openaiClient,
     deps.openaiModel,
     toChatterFlow(flow),
     userMessage,

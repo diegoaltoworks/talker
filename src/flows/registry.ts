@@ -97,6 +97,16 @@ export class FlowRegistry {
     // rather than failing the webhook.
     if (this.flows.size === 0) return undefined;
 
+    if (!deps.openaiClient) {
+      // Reachable only if a host builds TalkerDependencies by hand instead
+      // of via createTelephonyRoutes/createStandaloneServer - both populate
+      // openaiClient exactly when a flow could ever reach here.
+      logger.warn("flow intent detection unavailable: deps.openaiClient is unset", {
+        phoneNumber,
+      });
+      return undefined;
+    }
+
     let detectIntent: FlowEngine["detectIntent"];
     try {
       ({ detectIntent } = await this.getEngine());
@@ -118,7 +128,7 @@ export class FlowRegistry {
       Array.from(this.flows, ([id, flow]) => [id, toChatterFlow(flow)] as const),
     );
     const detection = await detectIntent(
-      deps.chatter.client,
+      deps.openaiClient,
       deps.openaiModel,
       message,
       chatterFlows,

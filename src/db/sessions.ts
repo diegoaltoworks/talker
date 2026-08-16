@@ -7,7 +7,7 @@
 
 import { getErrorMessage } from "../core/errors";
 import { logger } from "../core/logger";
-import type { Channel } from "../types";
+import type { Channel, MessagingChannel } from "../types";
 import { getDbClient } from "./client";
 
 export interface SessionRecord {
@@ -206,7 +206,7 @@ export async function updateSessionIncremental(
  */
 export interface MessageStatusRecord {
   messageSid: string;
-  channel: "sms" | "whatsapp";
+  channel: MessagingChannel;
   from: string;
   to: string;
   status: string;

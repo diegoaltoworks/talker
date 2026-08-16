@@ -40,6 +40,7 @@
 export type { SendMessageOptions } from "./adapters/twilio";
 // Twilio adapter
 export { sendSMS, sendWhatsApp, stripWhatsAppPrefix } from "./adapters/twilio";
+export type { ContextStore } from "./core/context";
 // clearAllContexts, incrementNoSpeechRetries and resetNoSpeechRetries are
 // internal helpers of ./core/context (see their @deprecated tags there)
 // re-exported here only because this barrel re-exports the whole module;
@@ -49,6 +50,8 @@ export {
   clearActiveFlow,
   clearAllContexts,
   clearContext,
+  configureContextStore,
+  createInMemoryContextStore,
   getActiveFlow,
   getContext,
   getDetectedLanguage,
@@ -120,7 +123,6 @@ export { createTelephonyRoutes } from "./plugin";
 // Route factories (for custom setup)
 export { callRoutes } from "./routes/call";
 export { messagingRoutes, smsRoutes, whatsappRoutes } from "./routes/messaging";
-export type { MessagingChannel } from "./routes/messaging/processor";
 export { handleFallback } from "./routes/shared/handle-fallback";
 // Shared handlers (for custom route setups)
 export { handleStatusCallback } from "./routes/shared/handle-status-callback";
@@ -147,6 +149,7 @@ export type {
   LoadedFlow,
   MessageStatusEvent,
   MessageTapEvent,
+  MessagingChannel,
   Phrases,
   ProcessingConfig,
   TalkerConfig,

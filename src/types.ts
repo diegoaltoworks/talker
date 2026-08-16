@@ -6,11 +6,20 @@
  */
 
 import type { ServerDependencies } from "@diegoaltoworks/chatter";
+import type OpenAI from "openai";
+import type { ContextStore } from "./core/context";
 
 /**
  * Channel type for telephony interactions
  */
 export type Channel = "call" | "sms" | "whatsapp";
+
+/**
+ * Channel type for the two messaging (non-voice) surfaces. A subset of
+ * {@link Channel} - single-sourced here so route handlers, phrase lookup and
+ * db records that only ever see SMS/WhatsApp don't each respell the union.
+ */
+export type MessagingChannel = "sms" | "whatsapp";
 
 /**
  * Voice configuration for text-to-speech
@@ -50,7 +59,7 @@ export interface MessageStatusEvent {
   /** Message status: queued, sent, delivered, undelivered, failed, read */
   messageStatus: string;
   /** Channel the message was sent on */
-  channel: "sms" | "whatsapp";
+  channel: MessagingChannel;
   /** Sender phone number */
   from: string;
   /** Recipient phone number */
@@ -199,6 +208,18 @@ export interface TalkerConfig {
   cleanupIntervalMs?: number;
 
   /**
+   * Storage for per-phone-number conversation context. Default: an
+   * in-memory `Map` (`createInMemoryContextStore()`). The interface is
+   * synchronous, so this swaps for another in-process implementation - an
+   * LRU with its own eviction policy, a store instrumented for
+   * observability, a synchronous embedded-DB-backed store for durability
+   * across restarts - not a networked or remote one. See
+   * docs/ARCHITECTURE.md's "Single-process state caveat" and the
+   * `ContextStore` doc comment (`src/core/context.ts`).
+   */
+  contextStore?: ContextStore;
+
+  /**
    * How long an unresolved /call/answer acknowledgment entry is kept before
    * the cleanup sweep discards it (e.g. the caller hangs up before Twilio
    * requests /call/answer). Checked once per `cleanupIntervalMs` tick, so
@@ -263,7 +284,7 @@ export interface TalkerConfig {
    */
   greetingFn?: (
     phoneNumber: string,
-    channel: "call" | "sms" | "whatsapp",
+    channel: Channel,
   ) => Promise<string | null | undefined> | string | null | undefined;
 
   /**
@@ -290,10 +311,25 @@ export interface TalkerConfig {
 
 /**
  * Dependencies available to talker routes and handlers
+ *
+ * `chatter` is present in plugin mode (`createTelephonyRoutes`) and absent
+ * in standalone mode - standalone has no real `ServerDependencies` to hand
+ * over (no VectorStore, no PromptLoader), so it leaves the field unset
+ * rather than faking one with a cast. Code that only needs an OpenAI client
+ * (flow intent detection, parameter extraction) should read `openaiClient`
+ * instead, which both modes populate; code specific to chatter's RAG
+ * pipeline (`src/core/chat.ts`'s branch 3) reads `chatter` directly and must
+ * handle it being undefined.
  */
 export interface TalkerDependencies {
-  /** Chatter server dependencies (OpenAI client, VectorStore, PromptLoader, config) */
-  chatter: ServerDependencies;
+  /** Chatter server dependencies (OpenAI client, VectorStore, PromptLoader, config). Plugin mode only. */
+  chatter?: ServerDependencies;
+  /**
+   * OpenAI client for flow intent detection and parameter extraction.
+   * Plugin mode reuses `chatter.client`; standalone mode creates its own
+   * when `flowsDir` is configured. Undefined when flows are not in use.
+   */
+  openaiClient?: OpenAI;
   /** Talker-specific configuration */
   config: TalkerConfig;
   /** Resolved OpenAI API key for the processing pipeline */

@@ -27,23 +27,14 @@
  * ```
  */
 
-import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { startCleanup } from "./core/context";
-import {
-  DEFAULT_CLEANUP_INTERVAL_MS,
-  DEFAULT_CONTEXT_TTL_MS,
-  DEFAULT_PENDING_QUERY_TTL_MS,
-} from "./core/defaults";
 import { logger } from "./core/logger";
 import { assertWebhookSecurity } from "./core/webhook-security";
 import { initDbClient } from "./db/client";
 import { runMigrations } from "./db/migrate";
 import { FlowRegistry } from "./flows/registry";
-import { callRoutes } from "./routes/call";
-import { sweepPending } from "./routes/call/pending";
-import { messagingRoutes } from "./routes/messaging";
+import { mountTelephony } from "./mount";
 import type { TalkerConfig, TalkerDependencies } from "./types";
 
 const DEFAULT_MODEL = "gpt-4o-mini";
@@ -70,19 +61,6 @@ export async function createStandaloneServer(config: StandaloneConfig) {
 
   assertWebhookSecurity(config);
 
-  // Build a minimal ServerDependencies stub for standalone mode.
-  // Only the fields talker actually needs are populated.
-  const stubChatterDeps = {
-    config: { openai: { apiKey: config.openaiApiKey } },
-  } as unknown as ServerDependencies;
-
-  const deps: TalkerDependencies = {
-    chatter: stubChatterDeps,
-    config,
-    openaiApiKey: config.openaiApiKey,
-    openaiModel: config.processing?.model || DEFAULT_MODEL,
-  };
-
   // Initialize database if configured
   if (config.database?.url && config.database?.authToken) {
     await initDbClient(config.database.url, config.database.authToken);
@@ -94,22 +72,28 @@ export async function createStandaloneServer(config: StandaloneConfig) {
   // so `openai` is only imported here - kept a true optional peer for
   // standalone deployments that don't use flows.
   const registry = new FlowRegistry(config.flowsDir || "");
+  let openaiClient: TalkerDependencies["openaiClient"];
   if (config.flowsDir) {
     const { default: OpenAI } = await import("openai").catch(() => {
       throw new Error(
         "flowsDir is configured but the optional peer dependency 'openai' is not installed",
       );
     });
-    stubChatterDeps.client = new OpenAI({ apiKey: config.openaiApiKey });
+    openaiClient = new OpenAI({ apiKey: config.openaiApiKey });
     await registry.loadFlows();
   }
 
-  // Start context cleanup
-  startCleanup(
-    config.contextTtlMs ?? DEFAULT_CONTEXT_TTL_MS,
-    config.cleanupIntervalMs ?? DEFAULT_CLEANUP_INTERVAL_MS,
-    () => sweepPending(config.pendingQueryTtlMs ?? DEFAULT_PENDING_QUERY_TTL_MS),
-  );
+  // No `chatter` here: standalone mode has no real `ServerDependencies` to
+  // hand over (no VectorStore, no PromptLoader, no db) - leaving it unset is
+  // more honest than faking one with a cast. `src/core/chat.ts`'s chatter
+  // pipeline branch only runs when `chatFn`/`chatbot` are both unconfigured,
+  // and explicitly guards on `deps.chatter` being present.
+  const deps: TalkerDependencies = {
+    openaiClient,
+    config,
+    openaiApiKey: config.openaiApiKey,
+    openaiModel: config.processing?.model || DEFAULT_MODEL,
+  };
 
   // Create Hono app
   const app = new Hono();
@@ -121,18 +105,10 @@ export async function createStandaloneServer(config: StandaloneConfig) {
   // Health check
   app.get("/healthz", (c) => c.text("ok"));
 
-  // Mount telephony routes
-  const prefix = config.routePrefix || "";
-  app.route(prefix, callRoutes(deps, registry));
-  app.route(prefix, messagingRoutes(deps, registry, "sms"));
-  app.route(prefix, messagingRoutes(deps, registry, "whatsapp"));
+  mountTelephony(app, deps, registry);
 
   logger.info("standalone talker server ready", {
-    prefix: prefix || "/",
-    hasFlows: !!config.flowsDir,
-    flowCount: registry.getAllFlows().length,
     hasChatFn: !!config.chatFn,
-    hasTransferNumber: !!config.transferNumber,
   });
 
   return app;

@@ -18,7 +18,7 @@ import { emitMessageTap } from "../../core/message-tap";
 import { getChannelPhrase } from "../../core/phrases";
 import { messageTwiml } from "../../core/twiml";
 import { getSanitizedBody } from "../../middleware/input-sanitize";
-import type { TalkerDependencies } from "../../types";
+import type { MessagingChannel, TalkerDependencies } from "../../types";
 
 /**
  * Handle a fallback webhook from Twilio.
@@ -28,7 +28,7 @@ import type { TalkerDependencies } from "../../types";
 export async function handleFallback(
   c: Context,
   deps: TalkerDependencies,
-  channel: "sms" | "whatsapp",
+  channel: MessagingChannel,
 ): Promise<Response> {
   const body = await getSanitizedBody(c);
 

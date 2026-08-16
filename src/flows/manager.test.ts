@@ -67,31 +67,36 @@ function makeRegistry(
 // extractParameters() only reads extractedParams from the response - it
 // recomputes allParamsFilled itself from the (empty) `required` list, so that
 // flag is inert here and the flow always completes in one turn.
-function makeSucceedingClient(): TalkerDependencies["chatter"]["client"] {
+function makeSucceedingClient(): TalkerDependencies["openaiClient"] {
   const create = mock(async () => ({
     choices: [{ message: { content: JSON.stringify({ extractedParams: {} }) } }],
   }));
   return {
     chat: { completions: { create } },
-  } as unknown as TalkerDependencies["chatter"]["client"];
+  } as unknown as TalkerDependencies["openaiClient"];
 }
 
-function makeFailingClient(): TalkerDependencies["chatter"]["client"] {
+function makeFailingClient(): TalkerDependencies["openaiClient"] {
   const create = mock(async () => {
     throw new Error("OpenAI API error: 500");
   });
   return {
     chat: { completions: { create } },
-  } as unknown as TalkerDependencies["chatter"]["client"];
+  } as unknown as TalkerDependencies["openaiClient"];
 }
 
 function makeDeps(client = makeSucceedingClient()): TalkerDependencies {
   return {
-    chatter: { client } as TalkerDependencies["chatter"],
+    openaiClient: client,
     config: {},
     openaiApiKey: "test-key",
     openaiModel: "gpt-4o-mini",
   };
+}
+
+/** Distinct from `makeDeps(undefined)`, which - as a default-parameter call - still gets a client. */
+function makeDepsWithoutClient(): TalkerDependencies {
+  return { config: {}, openaiApiKey: "test-key", openaiModel: "gpt-4o-mini" };
 }
 
 describe("processFlow per-channel content", () => {
@@ -313,6 +318,21 @@ describe("processFlow cancel and error outcomes", () => {
     const registry = makeRegistry({ success: true, say: "UNUSED" });
     const deps = makeDeps(makeFailingClient());
     const phoneNumber = "+15551234572";
+
+    getOrCreateContext(phoneNumber);
+    setActiveFlow(phoneNumber, "testFlow", {});
+
+    const result = await processFlow(deps, registry, phoneNumber, "hello", "sms");
+
+    expect(result.error).toBe(true);
+    expect(result.response).toBe(getFlowPhrase("en", "error"));
+    expect(getActiveFlow(phoneNumber)).toBeFalsy();
+  });
+
+  it("marks an error and delivers the error phrase when deps.openaiClient is unset mid-flow", async () => {
+    const registry = makeRegistry({ success: true, say: "UNUSED" });
+    const deps = makeDepsWithoutClient();
+    const phoneNumber = "+15551234579";
 
     getOrCreateContext(phoneNumber);
     setActiveFlow(phoneNumber, "testFlow", {});

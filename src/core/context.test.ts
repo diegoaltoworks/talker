@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
 import {
   addMessage,
+  type ContextStore,
   clearActiveFlow,
   clearAllContexts,
   clearContext,
+  configureContextStore,
+  createInMemoryContextStore,
   getActiveFlow,
   getContext,
   getDetectedLanguage,
@@ -268,6 +271,64 @@ describe("Context Store", () => {
       } finally {
         warnSpy.mockRestore();
       }
+    });
+  });
+
+  describe("configureContextStore", () => {
+    afterEach(() => {
+      // Every other test in this file relies on the default in-memory
+      // store; restore it so a store swapped in here doesn't leak.
+      configureContextStore(createInMemoryContextStore());
+    });
+
+    it("routes reads and writes through an injected store instead of the built-in Map", () => {
+      const backing = new Map<string, ReturnType<typeof getOrCreateContext>>();
+      const fakeStore: ContextStore = {
+        get: (phoneNumber) => backing.get(phoneNumber),
+        set: (phoneNumber, context) => backing.set(phoneNumber, context),
+        delete: (phoneNumber) => backing.delete(phoneNumber),
+        clear: () => backing.clear(),
+        entries: () => backing.entries(),
+      };
+      configureContextStore(fakeStore);
+
+      const ctx = getOrCreateContext("+1234567890");
+      expect(backing.has("+1234567890")).toBe(true);
+      expect(getContext("+1234567890")).toBe(ctx);
+
+      clearContext("+1234567890");
+      expect(backing.has("+1234567890")).toBe(false);
+    });
+
+    it("sweeps stale entries from an injected store on cleanup, same as the default Map", async () => {
+      stopCleanup();
+      const backing = new Map<string, ReturnType<typeof getOrCreateContext>>();
+      const fakeStore: ContextStore = {
+        get: (phoneNumber) => backing.get(phoneNumber),
+        set: (phoneNumber, context) => backing.set(phoneNumber, context),
+        delete: (phoneNumber) => backing.delete(phoneNumber),
+        clear: () => backing.clear(),
+        entries: () => backing.entries(),
+      };
+      configureContextStore(fakeStore);
+
+      const ctx = getOrCreateContext("+1234567890");
+      ctx.lastActivity = Date.now() - 10_000;
+
+      startCleanup(50, 5);
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(backing.has("+1234567890")).toBe(false);
+    });
+
+    it("leaves entries already in a previous store unreachable after a second configure call", () => {
+      const firstStore = createInMemoryContextStore();
+      configureContextStore(firstStore);
+      getOrCreateContext("+1234567890");
+      expect(getContext("+1234567890")).toBeDefined();
+
+      configureContextStore(createInMemoryContextStore());
+      expect(getContext("+1234567890")).toBeUndefined();
     });
   });
 });

@@ -45,7 +45,7 @@ afterEach(() => {
 });
 
 /** A client whose use would mean an unexpected LLM call. */
-function makeUnusedClient(): TalkerDependencies["chatter"]["client"] {
+function makeUnusedClient(): TalkerDependencies["openaiClient"] {
   return {
     chat: {
       completions: {
@@ -54,14 +54,19 @@ function makeUnusedClient(): TalkerDependencies["chatter"]["client"] {
         }),
       },
     },
-  } as unknown as TalkerDependencies["chatter"]["client"];
+  } as unknown as TalkerDependencies["openaiClient"];
 }
 
 function makeDeps(): TalkerDependencies {
   return {
-    chatter: { client: makeUnusedClient() },
+    openaiClient: makeUnusedClient(),
     openaiModel: "test-model",
   } as unknown as TalkerDependencies;
+}
+
+/** Distinct from `makeDeps()`: no client at all, not just an unused one. */
+function makeDepsWithoutClient(): TalkerDependencies {
+  return { openaiModel: "test-model" } as unknown as TalkerDependencies;
 }
 
 describe("FlowRegistry.matchFlow", () => {
@@ -132,6 +137,23 @@ describe("FlowRegistry.matchFlow", () => {
     await registry.loadFlows();
 
     expect(await registry.matchFlow(makeDeps(), "+441234567890", "hello")).toBeUndefined();
+    expect(engineLoader).not.toHaveBeenCalled();
+  });
+
+  it("matches no flow, rather than rejecting, when deps.openaiClient is unset", async () => {
+    const engineLoader = mock(() =>
+      Promise.reject(new Error("engine must not be loaded without a client")),
+    ) as unknown as FlowEngineLoader;
+    const registry = new FlowRegistry(flowsDir, engineLoader);
+    await registry.loadFlows();
+
+    const matched = await registry.matchFlow(
+      makeDepsWithoutClient(),
+      "+441234567890",
+      "what are your hours?",
+    );
+
+    expect(matched).toBeUndefined();
     expect(engineLoader).not.toHaveBeenCalled();
   });
 });

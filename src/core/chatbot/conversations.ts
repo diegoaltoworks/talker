@@ -5,9 +5,10 @@
  * Only used in standalone mode (plugin mode uses chatter's own conversation handling).
  *
  * Module-level singleton, single-process only - see docs/ARCHITECTURE.md's
- * "Single-process state caveat". Unlike the other maps that section lists,
- * this one has no TTL sweep, so an entry lives until `clearConversation` is
- * called or the process restarts; nothing in src/routes/ calls it today.
+ * "Single-process state caveat". `sweepConversations` gives it the same TTL
+ * sweep as `src/core/context.ts` and `src/routes/call/pending.ts`; plugin and
+ * standalone mode call it from the shared cleanup tick (see `src/core/mount.ts`)
+ * with `contextTtlMs`, so an idle conversation doesn't outlive its context.
  * `conversationId` is minted locally (`crypto.randomUUID()`) purely for
  * log/DB correlation - it is never sent to the remote chatbot API and does
  * not change across calls from the same number, so read
@@ -67,4 +68,18 @@ export function clearConversation(phoneNumber: string): void {
 
 export function clearAllConversations(): void {
   conversations.clear();
+}
+
+/**
+ * Delete conversations idle for longer than `ttlMs`. Without this a caller
+ * who never triggers `clearConversation` - nothing in src/routes/ calls it -
+ * would leak an entry for the process lifetime.
+ */
+export function sweepConversations(ttlMs: number): void {
+  const now = Date.now();
+  for (const [phoneNumber, conversation] of conversations) {
+    if (now - conversation.lastActivityAt > ttlMs) {
+      conversations.delete(phoneNumber);
+    }
+  }
 }

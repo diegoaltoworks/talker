@@ -14,9 +14,9 @@ import { processIncoming, processOutgoing } from "../../core/processing";
 import { messageTwiml } from "../../core/twiml";
 import { processFlow } from "../../flows/manager";
 import type { FlowRegistry } from "../../flows/registry";
-import type { TalkerDependencies } from "../../types";
+import type { MessagingChannel, TalkerDependencies } from "../../types";
 
-export type MessagingChannel = "sms" | "whatsapp";
+export type { MessagingChannel };
 
 /**
  * Process an SMS or WhatsApp interaction and generate TwiML response

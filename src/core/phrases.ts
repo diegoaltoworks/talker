@@ -7,7 +7,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Phrases, PhraseValue } from "../types";
+import type { MessagingChannel, Phrases, PhraseValue } from "../types";
 import { resolvePackagedDir } from "./assets";
 import { DEFAULT_LANGUAGE, normalizeLanguage } from "./language";
 import { logger } from "./logger";
@@ -317,7 +317,7 @@ export function getCancellationKeywords(language: string, languageDir?: string):
  * namespace directly.
  */
 export function getChannelPhrase(
-  channel: "sms" | "whatsapp",
+  channel: MessagingChannel,
   language: string,
   key: keyof Phrases["sms"],
   languageDir?: string,

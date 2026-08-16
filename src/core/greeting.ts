@@ -6,14 +6,14 @@
  * back to the phrase-file greeting at the call site.
  */
 
-import type { TalkerConfig } from "../types";
+import type { Channel, TalkerConfig } from "../types";
 import { getErrorMessage } from "./errors";
 import { logger } from "./logger";
 
 export async function resolveGreeting(
   config: TalkerConfig,
   phoneNumber: string,
-  channel: "call" | "sms" | "whatsapp",
+  channel: Channel,
 ): Promise<string | null> {
   if (!config.greetingFn) return null;
   try {

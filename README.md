@@ -200,6 +200,14 @@ interface TalkerConfig {
   // Context cleanup interval. Default: 5 minutes
   cleanupIntervalMs?: number;
 
+  // Storage for per-phone-number conversation context. Default: an
+  // in-memory Map. Synchronous, so this swaps for another in-process
+  // implementation (an LRU with its own eviction, an instrumented store, a
+  // synchronous embedded-DB-backed store for restart durability) - not a
+  // networked one. Same structural-interface pattern as VoiceLimitsStore
+  // below, minus its async contract.
+  contextStore?: ContextStore;
+
   // How long an unresolved /call/answer acknowledgment is kept before the
   // cleanup sweep discards it. Checked once per cleanupIntervalMs tick, not
   // a hard deadline. Keep it above callAnswerBudgetMs. Default: 1 minute

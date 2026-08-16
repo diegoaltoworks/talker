@@ -1,8 +1,15 @@
 /**
  * Conversation Context Store
  *
- * In-memory Map-based context management for telephony sessions.
- * Stores per-phone-number state: language, message history, active flow, retry counts.
+ * Per-phone-number telephony session state: language, message history,
+ * active flow, retry counts. Held behind an injected, synchronous
+ * `ContextStore` (the structural-interface shape of `VoiceLimitsStore` - see
+ * `src/voice/limits.ts` - though not its async contract; see the interface
+ * doc below) so a host can swap the built-in `Map` for another in-process
+ * implementation: an LRU with its own eviction policy, a store instrumented
+ * for metrics/observability, or a test double. `createInMemoryContextStore()`
+ * is this module's own default; `TalkerConfig.contextStore` only overrides
+ * it when a host sets one (see `configureContextStore` and `src/mount.ts`).
  */
 
 import type { Channel, FlowState, TelephonyContext } from "../types";
@@ -10,7 +17,61 @@ import { getErrorMessage } from "./errors";
 import { DEFAULT_LANGUAGE, isValidLanguageCode } from "./language";
 import { logger } from "./logger";
 
-const contexts = new Map<string, TelephonyContext>();
+/**
+ * Structural dependency for per-phone-number context storage - any object
+ * with these methods satisfies it, the same shape as `VoiceLimitsStore`.
+ *
+ * Synchronous, unlike `VoiceLimitsStore`: every mutation in this module
+ * (bumping `lastActivity`, pushing to `messageHistory`, and so on) writes
+ * the updated `TelephonyContext` back through `set()` before returning, so
+ * an implementation is free to clone/serialize on both `get()` and `set()` -
+ * nothing outside this module holds onto a `TelephonyContext` across two
+ * calls and mutates it directly. That rules out only a store whose
+ * read/write genuinely cannot complete synchronously (a networked cache, a
+ * remote database) - those would need an async interface, which is a larger
+ * redesign this one does not attempt.
+ */
+export interface ContextStore {
+  get(phoneNumber: string): TelephonyContext | undefined;
+  set(phoneNumber: string, context: TelephonyContext): void;
+  delete(phoneNumber: string): void;
+  clear(): void;
+  /** A snapshot or live view of all entries, for the cleanup sweep. Order is not significant. */
+  entries(): Iterable<readonly [string, TelephonyContext]>;
+}
+
+/** The default `ContextStore`: a plain in-memory `Map`, single-process only. */
+export function createInMemoryContextStore(): ContextStore {
+  const contexts = new Map<string, TelephonyContext>();
+  return {
+    get: (phoneNumber) => contexts.get(phoneNumber),
+    set: (phoneNumber, context) => {
+      contexts.set(phoneNumber, context);
+    },
+    delete: (phoneNumber) => {
+      contexts.delete(phoneNumber);
+    },
+    clear: () => {
+      contexts.clear();
+    },
+    entries: () => contexts.entries(),
+  };
+}
+
+let contexts: ContextStore = createInMemoryContextStore();
+
+/**
+ * Swap the active `ContextStore`. Called by `src/mount.ts` (shared by
+ * `createTelephonyRoutes`/`createStandaloneServer`) only when
+ * `config.contextStore` is explicitly set - leaving it unset keeps this
+ * module's own default, shared across mounts in the same process. Any call
+ * replaces the store outright: entries already in the previous store become
+ * unreachable, so call it before serving traffic, not mid-flight.
+ */
+export function configureContextStore(newStore: ContextStore): void {
+  contexts = newStore;
+  logger.info("context store configured");
+}
 
 let cleanupTimer: ReturnType<typeof setInterval> | null = null;
 let cleanupConfig: { ttlMs: number; intervalMs: number } | null = null;
@@ -24,7 +85,7 @@ let cleanupConfig: { ttlMs: number; intervalMs: number } | null = null;
  * The timer is a module-level singleton: a second call while one is already
  * running is a no-op and its `ttlMs`/`intervalMs` are silently ignored (only
  * `onTick` would matter here anyway, since both mounts share the same
- * `contexts` map). Mounting `createTelephonyRoutes`/`createStandaloneServer`
+ * `ContextStore`). Mounting `createTelephonyRoutes`/`createStandaloneServer`
  * more than once in a process - two chatter instances, a test that doesn't
  * call `stopCleanup()` between setups - inherits the first mount's config;
  * this logs so that isn't silent. Call `stopCleanup()` first if a later
@@ -53,7 +114,10 @@ export function startCleanup(ttlMs: number, intervalMs: number, onTick?: () => v
   cleanupConfig = { ttlMs, intervalMs };
   cleanupTimer = setInterval(() => {
     const now = Date.now();
-    for (const [phoneNumber, context] of contexts) {
+    // Snapshotted before deleting: `entries()` only promises a `Map`-like
+    // *view*, and deleting mid-iteration is unspecified for anything else a
+    // host might inject.
+    for (const [phoneNumber, context] of Array.from(contexts.entries())) {
       if (now - context.lastActivity > ttlMs) {
         contexts.delete(phoneNumber);
         logger.info("context expired", { phoneNumber });
@@ -100,11 +164,11 @@ export function getOrCreateContext(
       createdAt: Date.now(),
       lastActivity: Date.now(),
     };
-    contexts.set(phoneNumber, context);
     logger.info("context created", { phoneNumber, channel });
   }
 
   context.lastActivity = Date.now();
+  contexts.set(phoneNumber, context);
   return context;
 }
 
@@ -132,6 +196,7 @@ export function setDetectedLanguage(phoneNumber: string, language: string): void
   const context = getOrCreateContext(phoneNumber);
   if (!context.detectedLanguage) {
     context.detectedLanguage = language;
+    contexts.set(phoneNumber, context);
     logger.info("detected language", { phoneNumber, language });
   }
 }
@@ -176,6 +241,7 @@ export function addMessage(
   if (context.messageHistory.length > 10) {
     context.messageHistory = context.messageHistory.slice(-10);
   }
+  contexts.set(phoneNumber, context);
 }
 
 /**
@@ -211,6 +277,7 @@ export function setActiveFlow(
     attempts: 0,
     startedAt: Date.now(),
   };
+  contexts.set(phoneNumber, context);
   logger.info("flow activated", { phoneNumber, flowName });
 }
 
@@ -224,6 +291,7 @@ export function updateFlowParams(phoneNumber: string, params: Record<string, unk
 
   context.activeFlow.params = { ...context.activeFlow.params, ...params };
   context.activeFlow.attempts += 1;
+  contexts.set(phoneNumber, context);
 }
 
 export function clearActiveFlow(phoneNumber: string): void {
@@ -232,6 +300,7 @@ export function clearActiveFlow(phoneNumber: string): void {
 
   logger.info("flow cleared", { phoneNumber, flowName: context.activeFlow?.flowName });
   context.activeFlow = null;
+  contexts.set(phoneNumber, context);
 }
 
 // No-speech retry management
@@ -248,6 +317,7 @@ export function incrementNoSpeechRetries(phoneNumber: string): number {
   if (!context) return 0;
 
   context.noSpeechRetries += 1;
+  contexts.set(phoneNumber, context);
   return context.noSpeechRetries;
 }
 
@@ -265,12 +335,14 @@ export function resetNoSpeechRetries(phoneNumber: string): void {
   const context = contexts.get(phoneNumber);
   if (context && context.noSpeechRetries > 0) {
     context.noSpeechRetries = 0;
+    contexts.set(phoneNumber, context);
   }
 }
 
 export function setLastPrompt(phoneNumber: string, prompt: string): void {
   const context = getOrCreateContext(phoneNumber);
   context.lastPrompt = prompt;
+  contexts.set(phoneNumber, context);
 }
 
 export function getLastPrompt(phoneNumber: string): string | null {

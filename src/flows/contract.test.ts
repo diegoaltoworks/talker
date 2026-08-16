@@ -83,7 +83,7 @@ function makeFakeClient(extractedParamsByCall: Array<Record<string, unknown>>) {
   });
   return {
     chat: { completions: { create } },
-  } as unknown as TalkerDependencies["chatter"]["client"];
+  } as unknown as TalkerDependencies["openaiClient"];
 }
 
 describe("flow directory contract", () => {
@@ -104,7 +104,7 @@ describe("flow directory contract", () => {
     expect(registry.getAllFlows().map((f) => f.definition.id)).toEqual(["contractFlow"]);
 
     const deps: TalkerDependencies = {
-      chatter: { client: makeFakeClient([{ name: "Ada" }]) } as TalkerDependencies["chatter"],
+      openaiClient: makeFakeClient([{ name: "Ada" }]),
       config: {},
       openaiApiKey: "test-key",
       openaiModel: "gpt-4o-mini",
@@ -132,7 +132,7 @@ describe("flow directory contract", () => {
 
     const deps: TalkerDependencies = {
       // First extraction turn finds nothing; second turn supplies `name`.
-      chatter: { client: makeFakeClient([{}, { name: "Ada" }]) } as TalkerDependencies["chatter"],
+      openaiClient: makeFakeClient([{}, { name: "Ada" }]),
       config: {},
       openaiApiKey: "test-key",
       openaiModel: "gpt-4o-mini",

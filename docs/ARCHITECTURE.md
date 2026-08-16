@@ -113,9 +113,8 @@ error instead of throwing at module load.
 
 ### Single-process state caveat
 
-Rate limiting (`src/middleware/rate-limit.ts`), pending-query tracking
-(`src/routes/call/pending.ts`), and context/session bookkeeping
-(`src/core/context.ts`) all live in module-level `Map`s and `setInterval`
+Rate limiting (`src/middleware/rate-limit.ts`) and pending-query tracking
+(`src/routes/call/pending.ts`) live in module-level `Map`s and `setInterval`
 sweeps. They are correct for a single process and nothing more: running
 multiple instances behind a load balancer without sticky routing (or
 without moving this state to `db/`, which is durable and shared) silently
@@ -124,25 +123,39 @@ is a deliberate scope boundary, not an oversight - call it out in any change
 that adds new in-process state, and prefer the existing `db/` persistence
 layer when state must survive a restart or be shared across instances.
 
+Context/session bookkeeping (`src/core/context.ts`) is the one exception
+with a partial escape hatch: it sits behind an injected, synchronous
+`ContextStore` (the same structural-interface pattern as `VoiceLimitsStore`
+in `src/voice/limits.ts`, though not its async contract - see the
+`ContextStore` doc comment). `createInMemoryContextStore()` - a plain `Map`
+- is what `TalkerConfig.contextStore` defaults to when left unset; a host
+can inject another in-process implementation (an LRU with its own eviction
+policy, a store instrumented for observability, a synchronous
+embedded-DB-backed store for durability across restarts), but not a
+networked or remote one without a larger async redesign this interface does
+not attempt - so this remains single-process only in the same sense as
+everything else on this list, just swappable within that constraint.
 `src/core/chatbot/conversations.ts` (the standalone HTTP chatbot client's
-per-phone-number history, keyed the same way) is the same shape but has no
-`setInterval` sweep at all, so it is not just single-process but genuinely
-unbounded for a caller who never triggers `clearConversation` - nothing
-calls it in `src/routes/`. Its `conversationId` is a `crypto.randomUUID()`
-minted locally for log/DB correlation; it is never sent to the remote
-chatbot and is not cleared when a call or message session ends, so two
-calls from the same number reuse the same id until the process restarts.
-`talker_sessions.conversation_id` (see `src/db/persist.ts`) should be read
-as "which in-process chatbot conversation produced this row," not as a
-per-call or per-session identifier.
+per-phone-number history, keyed the same way) stays a plain module-level
+`Map` - it has no such injection seam - but it does now get the same TTL
+sweep as everything else, via `sweepConversations()`, wired into the shared
+cleanup tick in `src/mount.ts`. Its `conversationId` is a
+`crypto.randomUUID()` minted locally for log/DB correlation; it is never
+sent to the remote chatbot and is not cleared when a call or message session
+ends, so two calls from the same number reuse the same id until the process
+restarts or the conversation is swept. `talker_sessions.conversation_id`
+(see `src/db/persist.ts`) should be read as "which in-process chatbot
+conversation produced this row," not as a per-call or per-session
+identifier.
 
 - Implementation: `src/middleware/rate-limit.ts`, `src/routes/call/pending.ts`,
-  `src/core/context.ts`, `src/core/chatbot/conversations.ts` (see the
-  "module-level singleton" doc comments in each)
-- Test: `src/middleware/rate-limit.test.ts`, `src/core/context.test.ts`
-  cover the single-process behavior directly; there is intentionally no
+  `src/core/context.ts`, `src/core/chatbot/conversations.ts`, `src/mount.ts`
+  (see the "module-level singleton" doc comments in each)
+- Test: `src/middleware/rate-limit.test.ts`, `src/core/context.test.ts` and
+  `src/mount.test.ts` cover the single-process behavior and the
+  `ContextStore` injection seam directly; there is intentionally no
   multi-process test, because there is no multi-process guarantee to prove.
-  `src/core/chatbot/conversations.ts` has no dedicated test file yet - its
+  `src/core/chatbot/conversations.test.ts` covers the sweep; its
   `conversationId` behavior is covered indirectly via `src/db/persist.test.ts`
 
 ## No-untested-numbers rule

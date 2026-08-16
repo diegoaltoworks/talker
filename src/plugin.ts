@@ -24,20 +24,12 @@
 
 import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import type { Hono } from "hono";
-import { startCleanup } from "./core/context";
-import {
-  DEFAULT_CLEANUP_INTERVAL_MS,
-  DEFAULT_CONTEXT_TTL_MS,
-  DEFAULT_PENDING_QUERY_TTL_MS,
-} from "./core/defaults";
 import { logger } from "./core/logger";
 import { assertWebhookSecurity } from "./core/webhook-security";
 import { initDbClient } from "./db/client";
 import { runMigrations } from "./db/migrate";
 import { FlowRegistry } from "./flows/registry";
-import { callRoutes } from "./routes/call";
-import { sweepPending } from "./routes/call/pending";
-import { messagingRoutes } from "./routes/messaging";
+import { mountTelephony } from "./mount";
 import type { TalkerConfig, TalkerDependencies } from "./types";
 
 const DEFAULT_MODEL = "gpt-4o-mini";
@@ -67,6 +59,7 @@ export async function createTelephonyRoutes(
 
   const deps: TalkerDependencies = {
     chatter: chatterDeps,
+    openaiClient: chatterDeps.client,
     config: resolvedConfig,
     openaiApiKey,
     openaiModel: config.processing?.model || DEFAULT_MODEL,
@@ -85,21 +78,5 @@ export async function createTelephonyRoutes(
     await registry.loadFlows();
   }
 
-  startCleanup(
-    config.contextTtlMs ?? DEFAULT_CONTEXT_TTL_MS,
-    config.cleanupIntervalMs ?? DEFAULT_CLEANUP_INTERVAL_MS,
-    () => sweepPending(config.pendingQueryTtlMs ?? DEFAULT_PENDING_QUERY_TTL_MS),
-  );
-
-  const prefix = config.routePrefix || "";
-  app.route(prefix, callRoutes(deps, registry));
-  app.route(prefix, messagingRoutes(deps, registry, "sms"));
-  app.route(prefix, messagingRoutes(deps, registry, "whatsapp"));
-
-  logger.info("telephony routes mounted", {
-    prefix: prefix || "/",
-    hasFlows: !!config.flowsDir,
-    flowCount: registry.getAllFlows().length,
-    hasTransferNumber: !!config.transferNumber,
-  });
+  mountTelephony(app, deps, registry);
 }

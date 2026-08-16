@@ -10,7 +10,6 @@ import { afterAll, describe, expect, it } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { ServerDependencies } from "@diegoaltoworks/chatter";
 import { Hono } from "hono";
 import { clearAllContexts, stopCleanup } from "../../src/core/context";
 import { FlowRegistry } from "../../src/flows/registry";
@@ -27,7 +26,6 @@ function createTestDeps(
   chatFn?: (phone: string, msg: string) => Promise<string>,
 ): TalkerDependencies {
   return {
-    chatter: {} as ServerDependencies,
     config: {
       // Unsigned test traffic: no Twilio auth token in these fixtures.
       allowUnsignedWebhooks: true,

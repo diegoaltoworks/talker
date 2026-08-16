@@ -65,6 +65,11 @@ export async function chat(
 
   // 3. Chatter RAG pipeline (plugin mode)
   try {
+    if (!deps.chatter) {
+      // Standalone mode with neither chatFn nor chatbot configured - there
+      // is no chatter pipeline to fall through to.
+      throw new Error("no chat method configured: set chatFn, chatbot, or run in plugin mode");
+    }
     const { answerOnce, prepareChat, resolveBuckets } = await import("@diegoaltoworks/chatter");
     const { client, store, prompts, config: chatterConfig } = deps.chatter;
 

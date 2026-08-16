@@ -22,6 +22,21 @@ describe("Flow Utils", () => {
       expect(shouldExitFlow("what is your name")).toBe(false);
       expect(shouldExitFlow("tell me more")).toBe(false);
     });
+
+    it("should not false-positive on words that merely contain a keyword", () => {
+      expect(shouldExitFlow("quite good, thanks")).toBe(false);
+      expect(shouldExitFlow("it's a nonstop flight")).toBe(false);
+      expect(shouldExitFlow("my flight has a stopover")).toBe(false);
+    });
+
+    it("should still match a keyword at the start or end of the message", () => {
+      expect(shouldExitFlow("cancel please")).toBe(true);
+      expect(shouldExitFlow("please cancel")).toBe(true);
+    });
+
+    it("should match the two-word 'never mind' phrase", () => {
+      expect(shouldExitFlow("never mind")).toBe(true);
+    });
   });
 
   describe("getExitMessage", () => {

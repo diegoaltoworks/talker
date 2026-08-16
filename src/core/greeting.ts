@@ -7,6 +7,7 @@
  */
 
 import type { TalkerConfig } from "../types";
+import { getErrorMessage } from "./errors";
 import { logger } from "./logger";
 
 export async function resolveGreeting(
@@ -18,7 +19,11 @@ export async function resolveGreeting(
   try {
     return (await config.greetingFn(phoneNumber, channel)) ?? null;
   } catch (error) {
-    logger.error("greetingFn error, using phrase greeting", { phoneNumber, channel, error });
+    logger.error("greetingFn error, using phrase greeting", {
+      phoneNumber,
+      channel,
+      error: getErrorMessage(error),
+    });
     return null;
   }
 }

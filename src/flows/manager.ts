@@ -110,7 +110,7 @@ export async function processFlow(
       logger.info("flow extracting params", {
         phoneNumber,
         flow: activeFlow.flowName,
-        msg: userMessage.substring(0, 160),
+        msg: userMessage,
       });
 
       const extraction = await extractFlowParams(
@@ -188,14 +188,14 @@ export async function processFlow(
     logger.info("flow started", {
       phoneNumber,
       flow: matchedFlow.definition.id,
-      msg: userMessage.substring(0, 160),
+      msg: userMessage,
     });
 
     try {
       logger.info("flow extracting params", {
         phoneNumber,
         flow: matchedFlow.definition.id,
-        msg: userMessage.substring(0, 160),
+        msg: userMessage,
       });
 
       const extraction = await extractFlowParams(

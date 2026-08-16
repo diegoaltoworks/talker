@@ -42,7 +42,7 @@ export async function handleFallback(
   logger.error("fallback webhook triggered", {
     channel,
     phoneNumber,
-    messageBody: messageBody.substring(0, 100),
+    messageBody,
     errorCode,
     errorUrl,
   });

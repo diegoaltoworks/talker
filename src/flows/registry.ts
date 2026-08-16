@@ -110,7 +110,7 @@ export class FlowRegistry {
 
     logger.info("detecting intent", {
       phoneNumber,
-      msg: message.substring(0, 160),
+      msg: message,
       hasContext: !!conversationContext && conversationContext.length > 0,
     });
 

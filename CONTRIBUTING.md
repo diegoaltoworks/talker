@@ -111,6 +111,8 @@ talker/
 - Double quotes for strings
 - Semicolons required
 - Max line length: 100 characters
+- No em-dashes, in code, docs, commit messages, or PR text - use a plain
+  hyphen with spaces, a comma, a colon, or restructure the sentence
 
 ### Testing
 

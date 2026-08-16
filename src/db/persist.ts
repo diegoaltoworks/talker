@@ -5,6 +5,7 @@
  * Safe to call when database is not configured — gracefully no-ops.
  */
 
+import { getConversation } from "../core/chatbot/conversations";
 import { getContext, getDetectedLanguage, getMessageHistory } from "../core/context";
 import { getErrorMessage } from "../core/errors";
 import { logger } from "../core/logger";
@@ -19,11 +20,7 @@ import { generateSessionId, insertMessage, upsertSession } from "./sessions";
  * but message inserts stay fire-and-forget since they don't share a
  * mutable field two calls could race on. Logs errors but never throws.
  */
-export async function persistSession(
-  phoneNumber: string,
-  channel: Channel,
-  conversationId?: string,
-): Promise<void> {
+export async function persistSession(phoneNumber: string, channel: Channel): Promise<void> {
   const context = getContext(phoneNumber);
   const language = getDetectedLanguage(phoneNumber) || "en";
   const messages = getMessageHistory(phoneNumber);
@@ -44,7 +41,7 @@ export async function persistSession(
     startedAt: context.createdAt,
     endedAt: now,
     durationMs: now - context.createdAt,
-    conversationId,
+    conversationId: getConversation(phoneNumber)?.conversationId,
   }).catch((err) => {
     logger.error("session persistence failed", { phoneNumber, error: getErrorMessage(err) });
   });
@@ -100,6 +97,7 @@ export function persistFinalSession(
     endedAt: now,
     durationMs: now - context.createdAt,
     transferReason,
+    conversationId: getConversation(phoneNumber)?.conversationId,
   }).catch((err) => {
     logger.error("final session persistence failed", {
       phoneNumber,

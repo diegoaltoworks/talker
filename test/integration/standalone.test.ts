@@ -263,4 +263,35 @@ describe("Standalone Server", () => {
       expect(res.status).toBe(403);
     });
   });
+
+  describe("CORS", () => {
+    it("enables CORS by default", async () => {
+      const app = await createStandaloneServer({
+        openaiApiKey: "test-key",
+        twilio: { authToken: "test-auth-token" },
+      });
+
+      const res = await app.fetch(
+        new Request("http://localhost/healthz", {
+          headers: { Origin: "https://example.com" },
+        }),
+      );
+      expect(res.headers.get("access-control-allow-origin")).toBe("*");
+    });
+
+    it("stays disabled when cors: false is configured", async () => {
+      const app = await createStandaloneServer({
+        openaiApiKey: "test-key",
+        twilio: { authToken: "test-auth-token" },
+        cors: false,
+      });
+
+      const res = await app.fetch(
+        new Request("http://localhost/healthz", {
+          headers: { Origin: "https://example.com" },
+        }),
+      );
+      expect(res.headers.get("access-control-allow-origin")).toBeNull();
+    });
+  });
 });

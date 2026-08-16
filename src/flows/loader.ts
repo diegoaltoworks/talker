@@ -11,6 +11,7 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { getErrorMessage } from "../core/errors";
 import { logger } from "../core/logger";
 import type { FlowDefinition, FlowHandler, FlowPrefill, LoadedFlow } from "../types";
 import { CURRENT_FLOW_CONTRACT_VERSION, LEGACY_FLOW_CONTRACT_VERSION } from "../types";
@@ -41,7 +42,7 @@ export async function loadFlowsFromDirectory(flowsDir: string): Promise<Map<stri
     } catch (error) {
       logger.error("failed to load flow", {
         flowName,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       });
     }
   }

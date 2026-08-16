@@ -8,12 +8,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Every merge to `main` publishes automatically (see [CONTRIBUTING.md](CONTRIBUTING.md#release-process)),
 so this file cannot track every release one-for-one. From `v0.46.0` onward,
 GitHub auto-generates a [release page](https://github.com/diegoaltoworks/talker/releases)
-per tag with the complete per-version commit list; earlier tags have no
-release page (the listener that was meant to generate them never fired - see
-`v0.46.0`'s own release for the fix). This file curates the notable and
-breaking changes, grouped under the version they actually shipped in.
+per tag with the complete per-version commit list. Most earlier tags have
+none - the listener meant to generate them was broken for most of that span
+(it did fire for `v0.16.0` and `v0.17.0`) until the `v0.46.0` release fixed it
+for good. This file curates the notable and breaking changes, grouped under
+the version they actually shipped in.
 
 ## [Unreleased]
+
+### Added
+
+- `talker_sessions.conversation_id` now populates for standalone
+  `chatbot.url` deployments (previously always `NULL` - the column was
+  threaded through but never read). It is a per-process log/DB correlation
+  id, not a per-call or per-session identifier; see
+  `src/core/chatbot/conversations.ts`'s docstring for the exact semantics.
+
+### Changed
+
+- `StandaloneConfig.cors` (previously declared but never wired to anything)
+  now actually enables permissive CORS by default via `hono/cors`, matching
+  its documented `Default: true`. Set `cors: false` to keep the previous
+  no-CORS behavior.
+
+## [0.54.0] - 2026-08-16
+
+### Added
+
+- Opt-in `TALKER_LOG_REDACT_KEYS` environment variable for full-field log
+  redaction beyond the default phone/content-preview policy.
+
+### Fixed
+
+- Log redaction skipped phone numbers inside an array of raw strings under a
+  phone-named key; Twilio's `From`/`To` fields are now included in the
+  phone-key set alongside the previous `phoneNumber`/`phone`.
+- The failed-flow transfer path now persists the "redirected" reason and
+  clears context like the other two transfer paths do, closing a bookkeeping
+  gap where this path alone left the session row saying "ended".
+- `escapeXml` strips unpaired UTF-16 surrogates as a backstop. New
+  `truncateGraphemeSafe` (`src/core/text.ts`) is now shared by input
+  sanitization, transcript/synthesis limits, and the logger's content
+  preview, so none of them can split a surrogate pair or a combining mark at
+  the truncation boundary.
+
+### Changed
+
+- New `LEGACY_FLOW_CONTRACT_VERSION` decouples the default applied to a flow
+  that omits `contractVersion` from `CURRENT_FLOW_CONTRACT_VERSION`, so a
+  future contract version bump cannot silently relabel already-shipped
+  legacy flows.
+- The `@libsql/client` peer range is bounded to `<1`, matching the guard
+  already applied to other peers with an open-ended major.
+
+## [0.53.0] - 2026-08-16
 
 ### Fixed
 
@@ -39,6 +87,105 @@ breaking changes, grouped under the version they actually shipped in.
   `flow.cancellationKeywords`. Phrase *files* are unaffected (any missing key
   still falls back to the built-in English copy), but code that constructs a
   complete `Phrases` object now has two more required keys.
+
+## [0.50.0] - 2026-08-16
+
+### Added
+
+- `./package.json` export entry, so tooling can resolve the installed
+  manifest without guessing a path.
+
+### Fixed
+
+- The flow loader now validates an optional `contractVersion` in `flow.json`
+  (defaults to 1, rejects out-of-range or non-integer values) instead of
+  silently loading a contract it does not understand.
+- The optional-peer-dependency static guard false-positived on inline `type`
+  modifiers (`import { type X } from "peer"`) and missed a bare top-level
+  `import()`/`await import()`, which is exactly as load-bearing as a static
+  import.
+- `.env.example`, the README, and the example app referenced
+  `OPENAI_CHATGPT_KEY`, a variable the code has never read - only
+  `OPENAI_API_KEY` is read.
+
+### Deprecated
+
+- `clearAllContexts`, `incrementNoSpeechRetries`, `resetNoSpeechRetries`,
+  `GLOBAL_LIMIT_KEY`, `utcDayKey`, and `pickDailyLimit` leaked onto the
+  package root re-export surface with no host use case and are marked
+  `@deprecated`, kept working per this repo's deprecate-before-remove rule.
+
+## [0.49.0] - 2026-08-16
+
+### Fixed
+
+- `escapeXml` strips XML-invalid control characters instead of passing them
+  through.
+- Input truncation is grapheme-cluster-safe (`Intl.Segmenter`), so it no
+  longer splits a surrogate pair or an orphaned combining mark at the
+  truncation boundary.
+- `persistSession`/`persistFinalSession` session-row writes are ordered so a
+  caller finalizing a transfer or ended call cannot have the terminal reason
+  clobbered by the interim "ended" write.
+- Context and rate-limit cleanup timers are `unref`'d and warn, instead of
+  silently no-opping, on a second mount with a different config.
+- `callOpenAI` honors a configurable base URL and aborts after a timeout, so
+  a hung upstream request can no longer hold a Twilio webhook open
+  indefinitely.
+
+## [0.48.0] - 2026-08-16
+
+### Changed
+
+- Log redaction is now recursive: `redactData` walks nested objects and
+  arrays (phone-redacting `phoneNumber`/`phone` at any depth, with a depth
+  cap against circular payloads), instead of only inspecting top-level keys.
+  Every other string field is now previewed to 160 characters by default
+  where it previously logged verbatim - opt into full text with
+  `TALKER_LOG_VERBOSE=true`. Diagnostic `error`/`stack` fields are exempt
+  from the preview; `Date`/`Error` values now serialize properly instead of
+  collapsing to `"{}"`.
+
+### Fixed
+
+- `shouldExitFlow`'s cancellation-keyword matching used plain substring
+  matching (`"quite good"` false-positived on `"quit"`); it now uses the
+  same word-boundary check `@diegoaltoworks/chatter/flows` ships.
+
+## [0.45.0] - 2026-08-16
+
+### Added
+
+- `isValidLanguageCode`/`normalizeLanguage` (`^[a-z]{2,3}(-[A-Z]{2})?$`),
+  exported for consumers that resolve languages themselves.
+
+### Fixed
+
+- **Security:** the LLM-detected language, which sticks for the session TTL,
+  could reach a filesystem path or object index unvalidated. `loadPhrases`
+  now normalizes before joining the filename, closing a path-traversal read
+  (`../secret`) outside the language directory; `setDetectedLanguage` rejects
+  a malformed code instead of storing it; `getVoiceConfig` reads both voice
+  maps with `Object.hasOwn`, so a language code of `constructor` falls back
+  to the English voice instead of an undefined one.
+
+## [0.44.0] - 2026-08-16
+
+### Fixed
+
+- The bundled ESM output (`dist/index.mjs`) passed `__dirname` straight
+  through and threw a `ReferenceError` on the first phrase or prompt lookup,
+  breaking the README's import quick start on the first inbound webhook.
+  `build:esm` now defines `__dirname` as `import.meta.dirname`; a new
+  `src/core/assets.ts` resolves `language/` and `prompts/` by walking up
+  from the running module to the package root instead of guessing a fixed
+  relative path per build layout, and degrades to built-in defaults with a
+  warning if the module directory is unavailable.
+
+### Added
+
+- `getIncomingPrompt`/`getOutgoingPrompt` exports, so the prompt actually in
+  force is observable.
 
 ## [0.43.0] - 2026-08-16
 

@@ -682,6 +682,8 @@ starts, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and
 | `src/routes/call/` | Individual Hono handlers for each Twilio voice webhook |
 | `src/routes/messaging/` | Hono handlers for SMS and WhatsApp webhooks, parameterized by channel |
 | `src/adapters/` | Twilio REST API client (outbound SMS) |
+| `src/db/` | Session persistence to Turso/libSQL (`talker_sessions`, `talker_messages`) |
+| `src/middleware/` | Twilio signature validation, rate limiting, input sanitization |
 | `examples/` | Ready-to-run examples for plugin, standalone, and custom flows |
 | `language/` | Built-in phrase files (en, fr, de, nl, es, pt) |
 | `prompts/` | Default system prompts for the processing pipeline |
@@ -693,9 +695,10 @@ bun install
 bun test                # Run all tests
 bun run test:unit       # Unit tests only
 bun run test:integration # Integration tests (some require OPENAI_API_KEY)
+bun run test:packaged   # Smoke-test the packed tarball (build, pack, install, boot)
 bun run typecheck       # Type checking
 bun run lint            # Biome linting
-bun run check           # All checks (typecheck + lint + test)
+bun run check           # All checks (typecheck + lint + test + security audit)
 bun run build           # Build for npm (dual ESM/CJS)
 ```
 

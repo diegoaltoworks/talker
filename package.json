@@ -103,7 +103,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.6",
-    "@diegoaltoworks/chatter": "^0.61.0",
+    "@diegoaltoworks/chatter": "^0.67.0",
     "@libsql/client": "^0.17.0",
     "@types/bun": "^1.1.12",
     "@types/node": "^26.1.2",

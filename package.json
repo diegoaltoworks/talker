@@ -85,7 +85,7 @@
     "node": ">=24.0.0"
   },
   "peerDependencies": {
-    "@diegoaltoworks/chatter": ">=0.32.0 <2",
+    "@diegoaltoworks/chatter": ">=0.32.0 <3",
     "@libsql/client": ">=0.6.0 <1",
     "hono": "^4.12.34 || ^5.0.0",
     "openai": "^4.0.0 || ^7.1.0"
@@ -108,7 +108,7 @@
     "@types/bun": "^1.1.12",
     "@types/node": "^26.1.2",
     "esbuild": "^0.28.0",
-    "hono": "^4.13.0",
+    "hono": "^4.13.13",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.8",
     "openai": "^7.1.0",

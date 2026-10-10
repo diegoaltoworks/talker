@@ -104,6 +104,8 @@ them are installed or needed.
 | `openai` | Standalone mode with `flowsDir`; the voice STT/TTS factories when you pass a real client | `createStandaloneServer` throws at setup if `flowsDir` is set; injected-client voice factories are unaffected |
 | `@libsql/client` | Session persistence (`database` config) | `initDbClient` rejects; omit `database` to run without persistence |
 
+Supported `@diegoaltoworks/chatter` versions: `>=0.32.0 <3` (0.x, 1.x and 2.x).
+
 ### Entry points
 
 | Import | What it gives you |

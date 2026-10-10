@@ -290,20 +290,20 @@ describe("peer dependency ranges", () => {
   });
 
   it("admits chatter minors published after this release", () => {
-    expect(peers["@diegoaltoworks/chatter"]).toBe(">=0.32.0 <2");
+    expect(peers["@diegoaltoworks/chatter"]).toBe(">=0.32.0 <3");
   });
 
-  it("admits a chatter 1.x a host installs alongside this release", () => {
+  it("admits a chatter 1.x or 2.x a host installs alongside this release", () => {
     // The version-level statement of the range above, and the one that
     // actually matters: chatter's 1.0 is the release npm currently refuses to
     // resolve against, so it is asserted by version rather than only by the
-    // range's spelling. 2.0.0 stays out - widening past the next major would
+    // range's spelling. 3.0.0 stays out - widening past the next major would
     // promise compatibility with an API nobody has designed yet.
     const range = peers["@diegoaltoworks/chatter"];
-    for (const version of ["0.32.0", "0.61.0", "1.0.0", "1.7.3"]) {
+    for (const version of ["0.32.0", "0.61.0", "1.0.0", "1.7.3", "2.0.0"]) {
       expect([version, Bun.semver.satisfies(version, range)]).toEqual([version, true]);
     }
-    for (const version of ["0.31.0", "2.0.0"]) {
+    for (const version of ["0.31.0", "3.0.0"]) {
       expect([version, Bun.semver.satisfies(version, range)]).toEqual([version, false]);
     }
   });
